@@ -24,6 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let allowed_origins = [
         HeaderValue::from_static("http://localhost:1420"),
         HeaderValue::from_static("http://127.0.0.1:1420"),
+        HeaderValue::from_static("https://hokutaka.github.io"),
     ];
 
     let cors = CorsLayer::new()

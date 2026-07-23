@@ -5,9 +5,13 @@
 いろいろ作って試す場所です。
 
 今はRust・C++・Assemblyで配列演算をしています。
-そのうち別のことも始まります。
+試すなら自己責任でお願いします。
 
-開発中です。試すなら自己責任でお願いします。
+ルートで
+```powershell 
+cargo run --release -p whitebase-server
+```
+その状態でGitHub Pagesを開くと動きます。
 
 ## Documentation
 
