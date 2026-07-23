@@ -8,7 +8,7 @@ APIや構成は頻繁に変わる予定です。
 仕組みを、小さい単位で実装し、観察・記録・比較・可視化することです。
 例えば
 
-- ScalarとSIM
+- ScalarとSIMD
 - Rust/C++/Assembly
 - C ABIとFFI
 - Debug / Releaseビルド
