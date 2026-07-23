@@ -1,0 +1,14 @@
+[package]
+name = "whitebase-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+whitebase-interface = {
+    path = "../whitebase-interface"
+}
+
+whitebase-backend-bridge = {
+    path = "../whitebase-backend-bridge"
+}

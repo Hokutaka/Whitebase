@@ -1,0 +1,46 @@
+flowchart TB
+    subgraph Frontends["Frontend"]
+        Tauri["Tauri WebView"]
+        Browser["Browser"]
+    end
+
+    subgraph ApplicationBoundaries["Application Boundary"]
+        TauriCommand["Tauri Command<br/>invoke()"]
+        HttpServer["whitebase-server<br/>HTTP + JSON"]
+    end
+
+    Runner["whitebase-runner<br/>ウォームアップ・計測・結果比較"]
+
+    Core["whitebase-core<br/>Backend選択・統一計算API"]
+
+    Bridge["whitebase-backend-bridge<br/>各実装を共通Interfaceへ接続"]
+
+    subgraph Backends["Backend Implementations"]
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD"]
+
+        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
+
+        AssemblyAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
+    end
+
+    subgraph NativeLibraries["Native Libraries"]
+        CppLibrary["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
+
+        AssemblyLibrary["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
+    end
+
+    Tauri -->|"invoke()"| TauriCommand
+    Browser -->|"fetch()"| HttpServer
+
+    TauriCommand --> Runner
+    HttpServer --> Runner
+
+    Runner --> Core
+    Core --> Bridge
+
+    Bridge --> RustBackend
+    Bridge --> CppAdapter
+    Bridge --> AssemblyAdapter
+
+    CppAdapter --> CppLibrary
+    AssemblyAdapter --> AssemblyLibrary

@@ -1,0 +1,13 @@
+[package]
+name = "whitebase-backend-bridge"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+whitebase-interface = { path = "../whitebase-interface" }
+whitebase-rust-backend = {
+    path = "../whitebase-rust-backend"
+}
+whitebase-cpp-adapter = { path = "../whitebase-cpp-adapter" }
+whitebase-asm-adapter = { path = "../whitebase-asm-adapter" }

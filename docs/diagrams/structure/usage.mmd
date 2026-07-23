@@ -1,0 +1,27 @@
+flowchart TB
+    Applications["上位アプリケーション<br/>Web・Desktop・CLI・その他"]
+
+    Interfaces["API・バインディング層<br/>Rust API / WebAssembly / C ABI / Tauri commands"]
+
+    Core["whitebase-core<br/>計算処理・参照実装"]
+
+    Results["計算・測定結果<br/>数値・配列・統計データ"]
+
+    RustViz["Rust Visualization<br/>Plotters・独自描画"]
+
+    WebViz["Web Visualization<br/>SVG・Canvas"]
+
+    StaticOutput["静的出力<br/>SVG・PNG・レポート"]
+
+    Python["Python Tools<br/>追加分析・検証"]
+
+    Applications <--> Interfaces
+    Interfaces <--> Core
+
+    Core --> Results
+
+    Results --> RustViz
+    RustViz --> StaticOutput
+    RustViz --> WebViz
+
+    Results -. 任意の追加分析 .-> Python

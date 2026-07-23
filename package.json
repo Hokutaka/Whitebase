@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "diagram:architecture": "mmdc -i docs/diagrams/structure/architecture.mmd -o docs/diagrams/structure/architecture.svg",
+    "diagram:module": "mmdc -i docs/diagrams/structure/module.mmd -o docs/diagrams/structure/module.svg",
+    "diagram:usage": "mmdc -i docs/diagrams/structure/usage.mmd -o docs/diagrams/structure/usage.svg",
+    "diagram": "npm run diagram:architecture && npm run diagram:module && npm run diagram:usage"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.16.0"
+  }
+}
+
+

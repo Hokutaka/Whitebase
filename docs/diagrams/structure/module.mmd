@@ -1,0 +1,112 @@
+flowchart TB
+    subgraph Apps["Applications"]
+        direction LR
+        Web["whitebase-app<br/>Web UI"]
+        TauriApp["whitebase-app<br/>Tauri Application"]
+        Server["whitebase-server<br/>ローカルHTTP API"]
+        CppClient["Whitebase.CppClient<br/>C ABIスモークテスト"]
+        AssemblyClient["Whitebase.AssemblyClient<br/>Assemblyスモークテスト"]
+        External["External Applications<br/>C#・その他"]
+    end
+
+    subgraph Consumers["Bindings / Entry Points"]
+        direction LR
+        Wasm["whitebase-wasm<br/>WebAssembly境界"]
+        TauriCommands["src-tauri<br/>Tauri commands"]
+        CApi["whitebase-c-api<br/>C ABI境界"]
+    end
+
+    Interface["whitebase-interface<br/>trait・共通型・エラー・能力情報"]
+
+    Runner["whitebase-runner<br/>ウォームアップ・計測・結果比較"]
+
+    Core["whitebase-core<br/>Backend選択・統一計算API"]
+
+    Bridge["whitebase-backend-bridge<br/>各実装を共通Interfaceへ接続"]
+
+    subgraph Backends["Backend implementations"]
+        direction LR
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD"]
+        CppAdapter["whitebase-cpp-adapter<br/>Rust / C++ FFI"]
+        AsmAdapter["whitebase-asm-adapter<br/>Rust / Assembly FFI"]
+    end
+
+    subgraph Native["Native libraries"]
+        direction LR
+        CppLib["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
+        AsmLib["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
+    end
+
+    subgraph Analysis["Analysis / Output"]
+        direction LR
+        Visualization["whitebase-visualization<br/>表・グラフ・描画"]
+        OutputModule["whitebase-output<br/>CSV・JSON出力"]
+        Artifacts["出力データ<br/>CSV・JSON・測定結果"]
+        Python["Python tools<br/>追加分析・可視化"]
+    end
+
+    subgraph Tools["Development tools"]
+        direction LR
+        Scripts["scripts<br/>ビルド・テスト・運用"]
+
+        subgraph Operation["Operation / Control Panel"]
+            direction LR
+            ControlPanel["whitebase-control-panel<br/>GUI操作パネル"]
+            WhitebaseWindows["whitebase-windows<br/>Win32 API・プロセス制御"]
+        end
+    end
+
+    subgraph Documents["Documentation"]
+        direction LR
+        Docs["docs<br/>設計・実験記録"]
+    end
+
+    Web -. browser-only .-> Wasm
+    Web -. HTTP .-> Server
+    TauriApp --> TauriCommands
+    Server --> Runner
+
+    CppClient --> CApi
+    External --> CApi
+    AssemblyClient --> AsmLib
+
+    Wasm -. current .-> RustBackend
+    CApi -. current .-> RustBackend
+
+    TauriCommands --> Runner
+    Runner --> Core
+    Core --> Bridge
+    Core -. uses .-> Interface
+    Bridge -. implements .-> Interface
+
+    Bridge --> RustBackend
+    Bridge --> CppAdapter
+    Bridge --> AsmAdapter
+
+    CppAdapter --> CppLib
+    AsmAdapter --> AsmLib
+
+    Visualization -. planned .-> Interface
+    OutputModule -. planned .-> Interface
+    OutputModule -. generates .-> Artifacts
+    Python -. reads / analyzes .-> Artifacts
+
+    Scripts -. build / test .-> Runner
+    Scripts -. build / test .-> Core
+    Scripts -. build / test .-> Backends
+    Scripts -. smoke test .-> CppClient
+    Scripts -. smoke test .-> AssemblyClient
+    Scripts -. run .-> Server
+
+    ControlPanel -. operation / check .-> Scripts
+    ControlPanel -->|Win32 interop / process control| WhitebaseWindows
+
+    Docs -. documents .-> Apps
+    Docs -. documents .-> Consumers
+    Docs -. documents .-> Runner
+    Docs -. documents .-> Core
+    Docs -. documents .-> Backends
+    Docs -. documents .-> Tools
+
+    classDef planned stroke-dasharray: 6 4
+    class Visualization,OutputModule,Artifacts,Python planned

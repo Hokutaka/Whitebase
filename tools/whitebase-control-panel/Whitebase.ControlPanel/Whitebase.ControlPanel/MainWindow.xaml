@@ -1,0 +1,305 @@
+﻿<Window x:Class="Whitebase.ControlPanel.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Whitebase Control Panel"
+        Width="1100"
+        Height="720"
+        MinWidth="900"
+        MinHeight="560"
+        Closing="Window_Closing">
+
+    <Window.Resources>
+        <Style x:Key="OperationButtonStyle"
+       TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- リポジトリ情報 -->
+        <Border Grid.Row="0"
+                Padding="12"
+                Margin="0,0,0,12"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                CornerRadius="4">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Margin="0,0,12,0"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="Repository" />
+
+                <TextBox x:Name="RepositoryPathTextBox"
+                         Grid.Column="1"
+                         Padding="6"
+                         IsReadOnly="True" />
+            </Grid>
+        </Border>
+
+        <!-- 操作領域 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <!-- コマンド一覧 -->
+            <Border Grid.Column="0"
+                    Padding="12"
+                    BorderBrush="Gray"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                   Margin="0,0,0,12"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="OPERATIONS" />
+
+                    <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+
+                        <StackPanel x:Name="OperationsPanel"
+                        Margin="0,0,8,0">
+
+                            <TextBlock Margin="0,0,0,6"
+                                   FontWeight="SemiBold"
+                                   Text="Preparation" />
+
+                            <Button Content="SETUP"
+                                Tag="setup"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <TextBlock Margin="0,8,0,6"
+                                   FontWeight="SemiBold"
+                                   Text="Validation" />
+
+                            <Button Content="TEST"
+                                Tag="test"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="FORMAT"
+                                Tag="fmt"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="LINT"
+                                Tag="lint"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="CHECK"
+                                Tag="check"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="CPP CHECK"
+                                Tag="cpp-check"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="CPP BACKEND CHECK"
+                                Tag="cpp-backend-check"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="CPP ADAPTER CHECK"
+                                Tag="cpp-adapter-check"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="ASM CHECK"
+                                Tag="asm-check"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+
+                            <Button Content="WASM-CHECK"
+                                Tag="wasm-check"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <TextBlock Margin="0,0,0,6"
+                                   FontWeight="SemiBold"
+                                   Text="Documentation" />
+
+                            <Button Content="TREE"
+                                Tag="tree"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="DIAGRAM"
+                                Tag="diagram"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <TextBlock Margin="0,8,0,6"
+                                   FontWeight="SemiBold"
+                                   Text="Development" />
+
+                            <Button Content="TAURI DEV"
+                                Tag="dev"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="WEB DEV"
+                                Tag="web-dev"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <TextBlock Margin="0,8,0,6"
+                                   FontWeight="SemiBold"
+                                   Text="Build" />
+
+                            <Button Content="WEB BUILD"
+                                Tag="web-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content= "C API BUILD"
+                                Tag="c-api-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="CPP BUILD"
+                                Tag="cpp-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="CPP BACKEND BUILD"
+                                Tag="cpp-backend-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="ASM BUILD"
+                                Tag="asm-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="WASM BUILD"
+                                Tag="wasm-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <Button Content="TAURI BUILD"
+                                Tag="tauri-build"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+
+                            <TextBlock Margin="0,8,0,6"
+                                   FontWeight="SemiBold"
+                                   Text="Maintenance" />
+
+                            <Button Content="CLEAN"
+                                Tag="clean"
+                                Style="{StaticResource OperationButtonStyle}"
+                                Click="OperationButton_Click" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- ログ -->
+            <Border Grid.Column="2"
+                    Padding="12"
+                    BorderBrush="Gray"
+                    BorderThickness="1"
+                    CornerRadius="4">
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Margin="0,0,0,12"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Text="OUTPUT" />
+
+                    <TextBox x:Name="OutputTextBox"
+                             Grid.Row="1"
+                             Padding="8"
+                             FontFamily="Consolas"
+                             FontSize="13"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             IsReadOnly="True"
+                             TextWrapping="NoWrap"
+                             VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Auto" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ステータス -->
+        <Border Grid.Row="2"
+                Margin="0,12,0,0"
+                Padding="10"
+                BorderBrush="Gray"
+                BorderThickness="1"
+                CornerRadius="4">
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="StopButton"
+                        Grid.Column="0"
+                        Width="100"
+                        Height="32"
+                        Margin="0,0,16,0"
+                        Content="STOP"
+                        IsEnabled="False"
+                        Click="StopButton_Click" />
+
+                <TextBlock x:Name="StatusTextBlock"
+                           Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Text="Status: Idle" />
+
+                <TextBlock x:Name="ExitCodeTextBlock"
+                           Grid.Column="2"
+                           Margin="16,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="Exit: -" />
+
+                <TextBlock x:Name="ElapsedTextBlock"
+                           Grid.Column="3"
+                           Margin="16,0,0,0"
+                           VerticalAlignment="Center"
+                           Text="Elapsed: 00:00:00.000" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

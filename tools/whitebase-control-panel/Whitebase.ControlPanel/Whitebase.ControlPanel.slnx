@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../../Whitebase.Windows/Whitebase.Windows.csproj" Id="ca8d25a0-e928-45cf-8260-a6b9995b2643" />
+  <Project Path="Whitebase.ControlPanel/Whitebase.ControlPanel.csproj" />
+</Solution>

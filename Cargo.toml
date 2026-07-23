@@ -1,0 +1,15 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/whitebase-rust-backend",
+    "crates/whitebase-wasm",
+    "crates/whitebase-c-api",
+    "crates/whitebase-cpp-adapter",
+    "crates/whitebase-interface",
+    "crates/whitebase-backend-bridge",
+    "crates/whitebase-asm-adapter",
+    "crates/whitebase-core", 
+    "crates/whitebase-runner", 
+    "apps/whitebase-app/src-tauri",
+    "apps/whitebase-server"
+]

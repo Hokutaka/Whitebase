@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrated-check:
+    name: Windows integrated check
+    runs-on: windows-2025
+    timeout-minutes: 45
+
+    permissions:
+      contents: read
+      pages: read
+
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/whitebase-app/package-lock.json
+
+      - name: Show environment
+        shell: pwsh
+        run: |
+          rustc --version
+          cargo --version
+          node --version
+          npm --version
+          dotnet --info
+
+      - name: Setup Whitebase
+        shell: cmd
+        run: scripts\ops.bat setup
+
+      - name: Run integrated check
+        shell: cmd
+        run: scripts\ops.bat check
+
+      - name: Configure GitHub Pages
+        id: pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+
+      - name: Build GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: cmd
+        env:
+          WHITEBASE_WEB_BASE: "${{ steps.pages.outputs.base_path }}/"
+        run: scripts\ops.bat web-build
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/whitebase-app/dist
+
+  deploy-pages:
+    name: Deploy GitHub Pages
+    needs: integrated-check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

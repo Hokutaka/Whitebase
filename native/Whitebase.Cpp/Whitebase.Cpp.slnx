@@ -1,0 +1,11 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Whitebase.Assembly/Whitebase.Assembly.vcxproj" Id="963dde39-e1ff-4e0f-aaae-318c1266cc09" />
+  <Project Path="Whitebase.AssemblyClient/Whitebase.AssemblyClient.vcxproj" Id="b8b12cd0-11fb-4da4-8b87-b5261d7aaf83" />
+  <Project Path="Whitebase.CppBackend/Whitebase.CppBackend.vcxproj" Id="096b9f6c-b1ac-45c6-b17e-9f04aeefb25e" />
+  <Project Path="Whitebase.CppBackendClient/Whitebase.CppBackendClient.vcxproj" Id="f3077b4c-a536-4162-9cb6-5a1de1f7dc40" />
+  <Project Path="Whitebase.CppClient/Whitebase.CppClient.vcxproj" Id="e76fcdfb-403a-4c89-bbb4-7e8b74acbe8f" />
+</Solution>
