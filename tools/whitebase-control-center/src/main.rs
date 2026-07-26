@@ -195,6 +195,14 @@ impl eframe::App for ControlCenterApp {
                 if ui.add_enabled(!self.running, button).clicked() {
                     self.start_task(task);
                 }
+            });
+
+            ui.horizontal_wrapped(|ui| {
+                ui.label(format!("Status: {}", self.status));
+
+                if self.running {
+                    ui.spinner();
+                }
 
                 let stop_button = egui::Button::new("Stop");
 
@@ -206,11 +214,7 @@ impl eframe::App for ControlCenterApp {
                 }
             });
 
-            ui.label(format!("Status: {}", self.status));
-
             if self.running {
-                ui.spinner();
-
                 // ワーカースレッドから届いたログを定期的に受け取るため、
                 // 実行中は画面を再描画する。
                 ui.ctx().request_repaint_after(Duration::from_millis(100));
