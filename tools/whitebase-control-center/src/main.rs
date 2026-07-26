@@ -23,6 +23,41 @@ fn main() -> eframe::Result {
     )
 }
 
+#[derive(Clone, Copy)]
+enum Task {
+    CheckControlCenter,
+}
+
+impl Task {
+    fn label(self) -> &'static str {
+        match self {
+            Self::CheckControlCenter => "Check Control Center",
+        }
+    }
+
+    fn running_message(self) -> &'static str {
+        match self {
+            Self::CheckControlCenter => "Checking Control Center...",
+        }
+    }
+
+    fn success_message(self) -> &'static str {
+        match self {
+            Self::CheckControlCenter => "Check completed successfully",
+        }
+    }
+
+    fn command(self) -> Command {
+        match self {
+            Self::CheckControlCenter => {
+                let mut command = Command::new("cargo");
+                command.args(["check", "-p", "whitebase-control-center"]);
+                command
+            }
+        }
+    }
+}
+
 enum WorkerEvent {
     Log(String),
     Finished { success: bool, message: String },
@@ -62,10 +97,11 @@ impl eframe::App for ControlCenterApp {
 
             ui.add_space(12.0);
 
-            let button = egui::Button::new("Check Control Center");
+            let task = Task::CheckControlCenter;
+            let button = egui::Button::new(task.label());
 
             if ui.add_enabled(!self.running, button).clicked() {
-                self.start_check();
+                self.start_task(task);
             }
 
             ui.label(format!("Status: {}", self.status));
@@ -98,17 +134,18 @@ impl eframe::App for ControlCenterApp {
 }
 
 impl ControlCenterApp {
-    fn start_check(&mut self) {
+    fn start_task(&mut self, task: Task) {
         let (sender, receiver) = mpsc::channel();
 
-        self.status = "Checking...".to_owned();
+        self.status = task.running_message().to_owned();
         self.log.clear();
         self.running = true;
         self.event_receiver = Some(receiver);
 
         thread::spawn(move || {
-            let mut child = match Command::new("cargo")
-                .args(["check", "-p", "whitebase-control-center"])
+            let mut command = task.command();
+
+            let mut child = match command
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()
@@ -187,11 +224,11 @@ impl ControlCenterApp {
             let event = match exit_status {
                 Ok(status) if status.success() => WorkerEvent::Finished {
                     success: true,
-                    message: "Check completed successfully".to_owned(),
+                    message: task.success_message().to_owned(),
                 },
                 Ok(status) => WorkerEvent::Finished {
                     success: false,
-                    message: format!("Check failed with {status}"),
+                    message: format!("{} failed with {status}", task.label()),
                 },
                 Err(error) => WorkerEvent::Finished {
                     success: false,
