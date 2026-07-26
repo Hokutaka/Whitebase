@@ -5,7 +5,7 @@ fn main() {
     let target = env::var("TARGET").expect("TARGET must be provided by Cargo");
 
     if target != "x86_64-pc-windows-msvc" {
-        println!("cargo:warning=whitebase-cpp-adapter is unavailable for target {target}");
+        println!("cargo:warning=whitebase-asm-adapter is unavailable for target {target}");
         return;
     }
 
