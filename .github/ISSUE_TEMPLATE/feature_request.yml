@@ -1,0 +1,85 @@
+﻿name: Feature request
+description: Whitebaseへの新機能や改善案を提案します
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提案ありがとうございます。
+        解決したい問題と、期待する使い方を中心に記載してください。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 解決したい問題
+      description: 現在どんな不便や課題がありますか。
+      placeholder: 例：Control Centerからサーバーの待受状態を確認できない
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 提案する機能
+      description: どのような機能や改善を希望しますか。
+      placeholder: 例：サーバーが待受を開始したらStatusをReadyへ変更する
+    validations:
+      required: true
+
+  - type: textarea
+    id: usage
+    attributes:
+      label: 想定する使い方
+      description: 誰が、どんな場面で、どのように使う機能ですか。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 代替案
+      description: 現在の回避方法や、別の実現方法があれば記載してください。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 対象領域
+      options:
+        - Whitebase Core
+        - Control Center
+        - Desktop App
+        - Web App
+        - Server
+        - Adapters
+        - CI・開発環境
+        - ドキュメント
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: 関連するOS
+      multiple: true
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - OS非依存
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 補足情報
+      description: モックアップ、スクリーンショット、参考資料などがあれば記載してください。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 確認事項
+      options:
+        - label: 同じ内容のIssueがないことを確認しました
+          required: true
+        - label: この提案が解決したい問題を記載しました
+          required: true
