@@ -40,6 +40,7 @@ enum Task {
     CheckClippy,
     CheckWorkspace,
     BuildWorkspace,
+    BuildControlCenterRelease,
     TestWorkspace,
     RunServer,
 }
@@ -52,6 +53,7 @@ impl Task {
             Self::CheckClippy => "Check Clippy",
             Self::CheckWorkspace => "Check Workspace",
             Self::BuildWorkspace => "Build Workspace",
+            Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
             Self::RunServer => "Run Server",
         }
@@ -62,6 +64,7 @@ impl Task {
             Self::CheckControlCenter => "Checking Control Center...",
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
+            Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
             Self::CheckFormat => "Checking Format...",
             Self::CheckClippy => "Checking  with Clippy...",
@@ -74,6 +77,9 @@ impl Task {
             Self::CheckControlCenter => "Control Center check completed successfully",
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
+            Self::BuildControlCenterRelease => {
+                "Control Center Release build completed successfully"
+            }
             Self::TestWorkspace => "Workspace tests completed successfully",
             Self::CheckFormat => "Format check completed successfully",
             Self::CheckClippy => "Clippy check completed successfully",
@@ -106,6 +112,9 @@ impl Task {
             }
             Self::RunServer => {
                 command.args(["run", "-p", "whitebase-server"]);
+            }
+            Self::BuildControlCenterRelease => {
+                command.args(["build", "-p", "whitebase-control-center", "--release"]);
             }
         }
 
@@ -179,11 +188,12 @@ impl eframe::App for ControlCenterApp {
             ui.label(egui::RichText::new("Build").strong());
 
             ui.horizontal_wrapped(|ui| {
-                let task = Task::BuildWorkspace;
-                let button = egui::Button::new(task.label());
+                for task in [Task::BuildWorkspace, Task::BuildControlCenterRelease] {
+                    let button = egui::Button::new(task.label());
 
-                if ui.add_enabled(!is_running, button).clicked() {
-                    self.start_task(task);
+                    if ui.add_enabled(!is_running, button).clicked() {
+                        self.start_task(task);
+                    }
                 }
             });
 
