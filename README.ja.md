@@ -41,11 +41,6 @@ TauriではIPC、通常のブラウザではHTTP APIを通して、
 ![利用構成図](docs/diagrams/structure/usage.svg)
 
 
-## セットアップ
-
-- [セットアップ履歴](docs/setup.md)
-
-
 ## 運用ツール
 
 ### Whitebase Control Center
