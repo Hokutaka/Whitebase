@@ -160,6 +160,14 @@ impl eframe::App for ControlCenterApp {
 
             ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
 
+            let build_profile = if cfg!(debug_assertions) {
+                "Debug"
+            } else {
+                "Release"
+            };
+
+            ui.label(format!("Build: {build_profile}"));
+
             ui.label(format!(
                 "Platform: {} / {}",
                 std::env::consts::OS,
