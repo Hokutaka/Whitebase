@@ -123,6 +123,7 @@ struct ControlCenterApp {
     status: String,
     log: String,
     running: bool,
+    active_task: Option<Task>,
     event_receiver: Option<Receiver<WorkerEvent>>,
     stop_sender: Option<mpsc::Sender<()>>,
 }
@@ -133,6 +134,7 @@ impl Default for ControlCenterApp {
             status: "Idle".to_owned(),
             log: "No output yet.".to_owned(),
             running: false,
+            active_task: None,
             event_receiver: None,
             stop_sender: None,
         }
@@ -200,6 +202,10 @@ impl eframe::App for ControlCenterApp {
             ui.horizontal_wrapped(|ui| {
                 ui.label(format!("Status: {}", self.status));
 
+                if let Some(task) = self.active_task {
+                    ui.label(format!("Task: {}", task.label()));
+                }
+
                 if self.running {
                     ui.spinner();
                 }
@@ -262,6 +268,7 @@ impl ControlCenterApp {
         self.status = task.running_message().to_owned();
         self.log = format!("Running task: {}\n", task.label());
         self.running = true;
+        self.active_task = Some(task);
         self.event_receiver = Some(receiver);
         self.stop_sender = Some(stop_sender);
 
@@ -443,6 +450,7 @@ impl ControlCenterApp {
                     Ok(WorkerEvent::Finished { success, message }) => {
                         self.status = message;
                         self.running = false;
+                        self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
 
@@ -456,6 +464,7 @@ impl ControlCenterApp {
                     Ok(WorkerEvent::Stopped { message }) => {
                         self.status = message;
                         self.running = false;
+                        self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
                         self.log.push_str("\nTask stopped by user.\n");
@@ -467,6 +476,7 @@ impl ControlCenterApp {
                     Err(TryRecvError::Disconnected) => {
                         self.status = "Worker disconnected unexpectedly".to_owned();
                         self.running = false;
+                        self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
                         break;
