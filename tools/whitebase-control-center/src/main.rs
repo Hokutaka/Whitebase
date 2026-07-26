@@ -36,20 +36,22 @@ fn main() -> eframe::Result {
 #[derive(Clone, Copy)]
 enum Task {
     CheckControlCenter,
+    CheckFormat,
+    CheckClippy,
     CheckWorkspace,
     BuildWorkspace,
     TestWorkspace,
-    CheckFormat,
 }
 
 impl Task {
     fn label(self) -> &'static str {
         match self {
             Self::CheckControlCenter => "Check Control Center",
+            Self::CheckFormat => "Check Format",
+            Self::CheckClippy => "Check Clippy",
             Self::CheckWorkspace => "Check Workspace",
             Self::BuildWorkspace => "Build Workspace",
             Self::TestWorkspace => "Test Workspace",
-            Self::CheckFormat => "Check Format",
         }
     }
 
@@ -60,6 +62,7 @@ impl Task {
             Self::BuildWorkspace => "Building Workspace...",
             Self::TestWorkspace => "Testing Workspace...",
             Self::CheckFormat => "Checking Format...",
+            Self::CheckClippy => "Checking  with Clippy...",
         }
     }
 
@@ -70,6 +73,7 @@ impl Task {
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::TestWorkspace => "Workspace tests completed successfully",
             Self::CheckFormat => "Format check completed successfully",
+            Self::CheckClippy => "Clippy check completed successfully",
         }
     }
 
@@ -92,6 +96,9 @@ impl Task {
             }
             Self::CheckFormat => {
                 command.args(["fmt", "--check"]);
+            }
+            Self::CheckClippy => {
+                command.args(["clippy", "--workspace", "--all-targets"]);
             }
         }
 
@@ -148,6 +155,7 @@ impl eframe::App for ControlCenterApp {
                     Task::BuildWorkspace,
                     Task::TestWorkspace,
                     Task::CheckFormat,
+                    Task::CheckClippy,
                 ] {
                     let button = egui::Button::new(task.label());
 
