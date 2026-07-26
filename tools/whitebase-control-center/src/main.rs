@@ -1,5 +1,6 @@
 use std::{
     io::{BufRead, BufReader},
+    path::PathBuf,
     process::{Command, Stdio},
     sync::mpsc::{self, Receiver, TryRecvError},
     thread,
@@ -7,6 +8,15 @@ use std::{
 };
 
 use eframe::egui;
+
+fn repository_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Control Center must be inside tools")
+        .parent()
+        .expect("tools must be inside the repository")
+        .to_path_buf()
+}
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -27,6 +37,7 @@ fn main() -> eframe::Result {
 enum Task {
     CheckControlCenter,
     CheckWorkspace,
+    BuildWorkspace,
 }
 
 impl Task {
@@ -34,6 +45,7 @@ impl Task {
         match self {
             Self::CheckControlCenter => "Check Control Center",
             Self::CheckWorkspace => "Check Workspace",
+            Self::BuildWorkspace => "Build Workspace",
         }
     }
 
@@ -41,6 +53,7 @@ impl Task {
         match self {
             Self::CheckControlCenter => "Checking Control Center...",
             Self::CheckWorkspace => "Checking Workspace...",
+            Self::BuildWorkspace => "Building Workspace...",
         }
     }
 
@@ -48,11 +61,13 @@ impl Task {
         match self {
             Self::CheckControlCenter => "Control Center check completed successfully",
             Self::CheckWorkspace => "Workspace check completed successfully",
+            Self::BuildWorkspace => "Workspace build completed successfully",
         }
     }
 
     fn command(self) -> Command {
         let mut command = Command::new("cargo");
+        command.current_dir(repository_root());
 
         match self {
             Self::CheckControlCenter => {
@@ -60,6 +75,9 @@ impl Task {
             }
             Self::CheckWorkspace => {
                 command.args(["check", "--workspace"]);
+            }
+            Self::BuildWorkspace => {
+                command.args(["build", "--workspace"]);
             }
         }
 
@@ -107,7 +125,11 @@ impl eframe::App for ControlCenterApp {
             ui.add_space(12.0);
 
             ui.horizontal(|ui| {
-                for task in [Task::CheckControlCenter, Task::CheckWorkspace] {
+                for task in [
+                    Task::CheckControlCenter,
+                    Task::CheckWorkspace,
+                    Task::BuildWorkspace,
+                ] {
                     let button = egui::Button::new(task.label());
 
                     if ui.add_enabled(!self.running, button).clicked() {
