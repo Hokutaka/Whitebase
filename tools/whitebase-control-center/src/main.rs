@@ -155,21 +155,45 @@ impl eframe::App for ControlCenterApp {
 
             ui.add_space(12.0);
 
+            ui.label(egui::RichText::new("Checks").strong());
+
             ui.horizontal_wrapped(|ui| {
                 for task in [
                     Task::CheckControlCenter,
                     Task::CheckFormat,
                     Task::CheckClippy,
                     Task::CheckWorkspace,
-                    Task::BuildWorkspace,
                     Task::TestWorkspace,
-                    Task::RunServer,
                 ] {
                     let button = egui::Button::new(task.label());
 
                     if ui.add_enabled(!self.running, button).clicked() {
                         self.start_task(task);
                     }
+                }
+            });
+
+            ui.add_space(8.0);
+            ui.label(egui::RichText::new("Build").strong());
+
+            ui.horizontal_wrapped(|ui| {
+                let task = Task::BuildWorkspace;
+                let button = egui::Button::new(task.label());
+
+                if ui.add_enabled(!self.running, button).clicked() {
+                    self.start_task(task);
+                }
+            });
+
+            ui.add_space(8.0);
+            ui.label(egui::RichText::new("Run").strong());
+
+            ui.horizontal_wrapped(|ui| {
+                let task = Task::RunServer;
+                let button = egui::Button::new(task.label());
+
+                if ui.add_enabled(!self.running, button).clicked() {
+                    self.start_task(task);
                 }
 
                 let stop_button = egui::Button::new("Stop");
