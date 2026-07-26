@@ -130,6 +130,10 @@ impl eframe::App for ControlCenterApp {
             ui.separator();
             ui.heading("Log");
 
+            if ui.button("Copy Log").clicked() {
+                ui.ctx().copy_text(self.log.clone());
+            }
+
             let log_height = ui.available_height();
 
             egui::ScrollArea::both()
