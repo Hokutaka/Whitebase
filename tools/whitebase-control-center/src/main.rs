@@ -1,5 +1,6 @@
 use std::{
-    process::Command,
+    io::{BufRead, BufReader},
+    process::{Command, Stdio},
     sync::mpsc::{self, Receiver, TryRecvError},
     thread,
     time::Duration,
@@ -22,16 +23,16 @@ fn main() -> eframe::Result {
     )
 }
 
-struct CheckResult {
-    status: String,
-    log: String,
+enum WorkerEvent {
+    Log(String),
+    Finished { success: bool, message: String },
 }
 
 struct ControlCenterApp {
     status: String,
     log: String,
     running: bool,
-    result_receiver: Option<Receiver<CheckResult>>,
+    event_receiver: Option<Receiver<WorkerEvent>>,
 }
 
 impl Default for ControlCenterApp {
@@ -40,14 +41,14 @@ impl Default for ControlCenterApp {
             status: "Idle".to_owned(),
             log: "No output yet.".to_owned(),
             running: false,
-            result_receiver: None,
+            event_receiver: None,
         }
     }
 }
 
 impl eframe::App for ControlCenterApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        self.receive_result();
+        self.receive_events();
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Whitebase Control Center");
@@ -71,6 +72,9 @@ impl eframe::App for ControlCenterApp {
 
             if self.running {
                 ui.spinner();
+
+                // ワーカースレッドから届いたログを定期的に受け取るため、
+                // 実行中は画面を再描画する。
                 ui.ctx().request_repaint_after(Duration::from_millis(100));
             }
 
@@ -98,64 +102,141 @@ impl ControlCenterApp {
         let (sender, receiver) = mpsc::channel();
 
         self.status = "Checking...".to_owned();
-        self.log = "Running cargo check...\n".to_owned();
+        self.log.clear();
         self.running = true;
-        self.result_receiver = Some(receiver);
+        self.event_receiver = Some(receiver);
 
         thread::spawn(move || {
-            let result = Command::new("cargo")
+            let mut child = match Command::new("cargo")
                 .args(["check", "-p", "whitebase-control-center"])
-                .output();
-
-            let check_result = match result {
-                Ok(output) => {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-
-                    let mut log = String::new();
-
-                    if !stdout.is_empty() {
-                        log.push_str(&stdout);
-                    }
-
-                    if !stderr.is_empty() {
-                        log.push_str(&stderr);
-                    }
-
-                    let status = if output.status.success() {
-                        "Check completed successfully".to_owned()
-                    } else {
-                        format!("Check failed with {}", output.status)
-                    };
-
-                    CheckResult { status, log }
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+            {
+                Ok(child) => child,
+                Err(error) => {
+                    let _ = sender.send(WorkerEvent::Finished {
+                        success: false,
+                        message: format!("Failed to start Cargo: {error}"),
+                    });
+                    return;
                 }
-                Err(error) => CheckResult {
-                    status: "Failed to start Cargo".to_owned(),
-                    log: error.to_string(),
+            };
+
+            let stdout = child.stdout.take();
+            let stderr = child.stderr.take();
+
+            let stdout_thread = stdout.map(|stdout| {
+                let sender = sender.clone();
+
+                thread::spawn(move || {
+                    let reader = BufReader::new(stdout);
+
+                    for line in reader.lines() {
+                        match line {
+                            Ok(line) => {
+                                if sender.send(WorkerEvent::Log(line)).is_err() {
+                                    break;
+                                }
+                            }
+                            Err(error) => {
+                                let _ = sender.send(WorkerEvent::Log(format!(
+                                    "Failed to read stdout: {error}"
+                                )));
+                                break;
+                            }
+                        }
+                    }
+                })
+            });
+
+            let stderr_thread = stderr.map(|stderr| {
+                let sender = sender.clone();
+
+                thread::spawn(move || {
+                    let reader = BufReader::new(stderr);
+
+                    for line in reader.lines() {
+                        match line {
+                            Ok(line) => {
+                                if sender.send(WorkerEvent::Log(line)).is_err() {
+                                    break;
+                                }
+                            }
+                            Err(error) => {
+                                let _ = sender.send(WorkerEvent::Log(format!(
+                                    "Failed to read stderr: {error}"
+                                )));
+                                break;
+                            }
+                        }
+                    }
+                })
+            });
+
+            let exit_status = child.wait();
+
+            if let Some(thread) = stdout_thread {
+                let _ = thread.join();
+            }
+
+            if let Some(thread) = stderr_thread {
+                let _ = thread.join();
+            }
+
+            let event = match exit_status {
+                Ok(status) if status.success() => WorkerEvent::Finished {
+                    success: true,
+                    message: "Check completed successfully".to_owned(),
+                },
+                Ok(status) => WorkerEvent::Finished {
+                    success: false,
+                    message: format!("Check failed with {status}"),
+                },
+                Err(error) => WorkerEvent::Finished {
+                    success: false,
+                    message: format!("Failed while waiting for Cargo: {error}"),
                 },
             };
 
-            let _ = sender.send(check_result);
+            let _ = sender.send(event);
         });
     }
 
-    fn receive_result(&mut self) {
-        let result = self.result_receiver.as_ref().map(Receiver::try_recv);
+    fn receive_events(&mut self) {
+        let mut clear_receiver = false;
 
-        match result {
-            Some(Ok(result)) => {
-                self.status = result.status;
-                self.log = result.log;
-                self.running = false;
-                self.result_receiver = None;
+        if let Some(receiver) = self.event_receiver.as_ref() {
+            loop {
+                match receiver.try_recv() {
+                    Ok(WorkerEvent::Log(line)) => {
+                        self.log.push_str(&line);
+                        self.log.push('\n');
+                    }
+                    Ok(WorkerEvent::Finished { success, message }) => {
+                        self.status = message;
+                        self.running = false;
+                        clear_receiver = true;
+
+                        if !success {
+                            self.log.push_str("\nProcess finished with an error.\n");
+                        }
+
+                        break;
+                    }
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => {
+                        self.status = "Worker disconnected unexpectedly".to_owned();
+                        self.running = false;
+                        clear_receiver = true;
+                        break;
+                    }
+                }
             }
-            Some(Err(TryRecvError::Disconnected)) => {
-                self.status = "Worker disconnected unexpectedly".to_owned();
-                self.running = false;
-                self.result_receiver = None;
-            }
-            Some(Err(TryRecvError::Empty)) | None => {}
+        }
+
+        if clear_receiver {
+            self.event_receiver = None;
         }
     }
 }
