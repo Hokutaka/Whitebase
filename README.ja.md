@@ -17,15 +17,6 @@ APIや構成は頻繁に変わる予定です。
 - WebAssembly
 - デスクトップUIとブラウザUI
 
-## 予定
-
-1. Tauri Visualizationへの接続
-2. Python Tools置き場の作成
-3. `0.1+0.2`追加をして、機能追加フローを作成
-
-やれればどっかにデモ。
-
-
 ## アーキテクチャ
 TauriではIPC、通常のブラウザではHTTP APIを通して、  
 同じRunnerとCoreを利用します。
