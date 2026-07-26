@@ -26,35 +26,44 @@ fn main() -> eframe::Result {
 #[derive(Clone, Copy)]
 enum Task {
     CheckControlCenter,
+    CheckWorkspace,
 }
 
 impl Task {
     fn label(self) -> &'static str {
         match self {
             Self::CheckControlCenter => "Check Control Center",
+            Self::CheckWorkspace => "Check Workspace",
         }
     }
 
     fn running_message(self) -> &'static str {
         match self {
             Self::CheckControlCenter => "Checking Control Center...",
+            Self::CheckWorkspace => "Checking Workspace...",
         }
     }
 
     fn success_message(self) -> &'static str {
         match self {
-            Self::CheckControlCenter => "Check completed successfully",
+            Self::CheckControlCenter => "Control Center check completed successfully",
+            Self::CheckWorkspace => "Workspace check completed successfully",
         }
     }
 
     fn command(self) -> Command {
+        let mut command = Command::new("cargo");
+
         match self {
             Self::CheckControlCenter => {
-                let mut command = Command::new("cargo");
                 command.args(["check", "-p", "whitebase-control-center"]);
-                command
+            }
+            Self::CheckWorkspace => {
+                command.args(["check", "--workspace"]);
             }
         }
+
+        command
     }
 }
 
@@ -97,12 +106,15 @@ impl eframe::App for ControlCenterApp {
 
             ui.add_space(12.0);
 
-            let task = Task::CheckControlCenter;
-            let button = egui::Button::new(task.label());
+            ui.horizontal(|ui| {
+                for task in [Task::CheckControlCenter, Task::CheckWorkspace] {
+                    let button = egui::Button::new(task.label());
 
-            if ui.add_enabled(!self.running, button).clicked() {
-                self.start_task(task);
-            }
+                    if ui.add_enabled(!self.running, button).clicked() {
+                        self.start_task(task);
+                    }
+                }
+            });
 
             ui.label(format!("Status: {}", self.status));
 
