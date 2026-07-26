@@ -83,7 +83,7 @@ impl Task {
             Self::TestWorkspace => "Workspace tests completed successfully",
             Self::CheckFormat => "Format check completed successfully",
             Self::CheckClippy => "Clippy check completed successfully",
-            Self::RunServer => "Whitebase Server existed successfully",
+            Self::RunServer => "Whitebase Server exited successfully",
         }
     }
 
