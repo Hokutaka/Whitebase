@@ -158,6 +158,8 @@ impl eframe::App for ControlCenterApp {
             ui.heading("Whitebase Control Center");
             ui.separator();
 
+            ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
+
             ui.label(format!(
                 "Platform: {} / {}",
                 std::env::consts::OS,
