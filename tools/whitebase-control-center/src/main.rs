@@ -4,7 +4,7 @@ use std::{
     process::{Command, Stdio},
     sync::mpsc::{self, Receiver, TryRecvError},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use eframe::egui;
@@ -192,6 +192,7 @@ impl ControlCenterApp {
         self.event_receiver = Some(receiver);
 
         thread::spawn(move || {
+            let started_at = Instant::now();
             let mut command = task.command();
 
             let mut child = match command
@@ -270,18 +271,23 @@ impl ControlCenterApp {
                 let _ = thread.join();
             }
 
+            let elapsed = started_at.elapsed();
+
             let event = match exit_status {
                 Ok(status) if status.success() => WorkerEvent::Finished {
                     success: true,
-                    message: task.success_message().to_owned(),
+                    message: format!("{} ({:.2?})", task.success_message(), elapsed),
                 },
                 Ok(status) => WorkerEvent::Finished {
                     success: false,
-                    message: format!("{} failed with {status}", task.label()),
+                    message: format!("{} failed with {} ({:.2?})", task.label(), status, elapsed),
                 },
                 Err(error) => WorkerEvent::Finished {
                     success: false,
-                    message: format!("Failed while waiting for Cargo: {error}"),
+                    message: format!(
+                        "Failed while waiting for Cargo: {} ({:.2?})",
+                        error, elapsed
+                    ),
                 },
             };
 
