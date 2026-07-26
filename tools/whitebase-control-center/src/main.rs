@@ -130,15 +130,20 @@ impl eframe::App for ControlCenterApp {
             ui.separator();
             ui.heading("Log");
 
-            egui::ScrollArea::vertical()
+            let log_height = ui.available_height();
+
+            egui::ScrollArea::both()
+                .id_salt("control-center-log")
                 .stick_to_bottom(true)
+                .auto_shrink([false, false])
+                .max_height(log_height)
                 .show(ui, |ui| {
                     ui.add(
-                        egui::TextEdit::multiline(&mut self.log)
-                            .font(egui::TextStyle::Monospace)
-                            .desired_width(f32::INFINITY)
-                            .desired_rows(12)
-                            .interactive(false),
+                        egui::Label::new(
+                            egui::RichText::new(&self.log).text_style(egui::TextStyle::Monospace),
+                        )
+                        .selectable(true)
+                        .extend(),
                     );
                 });
         });
