@@ -122,7 +122,6 @@ enum WorkerEvent {
 struct ControlCenterApp {
     status: String,
     log: String,
-    running: bool,
     active_task: Option<Task>,
     event_receiver: Option<Receiver<WorkerEvent>>,
     stop_sender: Option<mpsc::Sender<()>>,
@@ -133,7 +132,6 @@ impl Default for ControlCenterApp {
         Self {
             status: "Idle".to_owned(),
             log: "No output yet.".to_owned(),
-            running: false,
             active_task: None,
             event_receiver: None,
             stop_sender: None,
@@ -144,6 +142,8 @@ impl Default for ControlCenterApp {
 impl eframe::App for ControlCenterApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.receive_events();
+
+        let is_running = self.active_task.is_some();
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Whitebase Control Center");
@@ -169,7 +169,7 @@ impl eframe::App for ControlCenterApp {
                 ] {
                     let button = egui::Button::new(task.label());
 
-                    if ui.add_enabled(!self.running, button).clicked() {
+                    if ui.add_enabled(!is_running, button).clicked() {
                         self.start_task(task);
                     }
                 }
@@ -182,7 +182,7 @@ impl eframe::App for ControlCenterApp {
                 let task = Task::BuildWorkspace;
                 let button = egui::Button::new(task.label());
 
-                if ui.add_enabled(!self.running, button).clicked() {
+                if ui.add_enabled(!is_running, button).clicked() {
                     self.start_task(task);
                 }
             });
@@ -194,7 +194,7 @@ impl eframe::App for ControlCenterApp {
                 let task = Task::RunServer;
                 let button = egui::Button::new(task.label());
 
-                if ui.add_enabled(!self.running, button).clicked() {
+                if ui.add_enabled(!is_running, button).clicked() {
                     self.start_task(task);
                 }
             });
@@ -206,21 +206,21 @@ impl eframe::App for ControlCenterApp {
                     ui.label(format!("Task: {}", task.label()));
                 }
 
-                if self.running {
+                if is_running {
                     ui.spinner();
                 }
 
                 let stop_button = egui::Button::new("Stop");
 
                 if ui
-                    .add_enabled(self.running && self.stop_sender.is_some(), stop_button)
+                    .add_enabled(is_running && self.stop_sender.is_some(), stop_button)
                     .clicked()
                 {
                     self.request_stop();
                 }
             });
 
-            if self.running {
+            if is_running {
                 // ワーカースレッドから届いたログを定期的に受け取るため、
                 // 実行中は画面を再描画する。
                 ui.ctx().request_repaint_after(Duration::from_millis(100));
@@ -267,7 +267,6 @@ impl ControlCenterApp {
 
         self.status = task.running_message().to_owned();
         self.log = format!("Running task: {}\n", task.label());
-        self.running = true;
         self.active_task = Some(task);
         self.event_receiver = Some(receiver);
         self.stop_sender = Some(stop_sender);
@@ -449,7 +448,6 @@ impl ControlCenterApp {
 
                     Ok(WorkerEvent::Finished { success, message }) => {
                         self.status = message;
-                        self.running = false;
                         self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
@@ -463,7 +461,6 @@ impl ControlCenterApp {
 
                     Ok(WorkerEvent::Stopped { message }) => {
                         self.status = message;
-                        self.running = false;
                         self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
@@ -475,7 +472,6 @@ impl ControlCenterApp {
 
                     Err(TryRecvError::Disconnected) => {
                         self.status = "Worker disconnected unexpectedly".to_owned();
-                        self.running = false;
                         self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
