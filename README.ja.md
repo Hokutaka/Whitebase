@@ -75,7 +75,7 @@ Windows専用の`Whitebase Control Panel`とは別に、OSをまたいだ共通�
 
 
 
-### WIndows用開発用コマンド
+### Windows用開発用コマンド
 
 Windows環境では、開発・テスト・ビルド用の操作を
 `scripts/ops.bat`から実行できます。
