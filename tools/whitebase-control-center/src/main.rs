@@ -38,6 +38,7 @@ enum Task {
     CheckControlCenter,
     CheckWorkspace,
     BuildWorkspace,
+    TestWorkspace,
 }
 
 impl Task {
@@ -46,6 +47,7 @@ impl Task {
             Self::CheckControlCenter => "Check Control Center",
             Self::CheckWorkspace => "Check Workspace",
             Self::BuildWorkspace => "Build Workspace",
+            Self::TestWorkspace => "Test Workspace",
         }
     }
 
@@ -54,6 +56,7 @@ impl Task {
             Self::CheckControlCenter => "Checking Control Center...",
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
+            Self::TestWorkspace => "Testing Workspace...",
         }
     }
 
@@ -62,6 +65,7 @@ impl Task {
             Self::CheckControlCenter => "Control Center check completed successfully",
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
+            Self::TestWorkspace => "Workspace tests completed successfully",
         }
     }
 
@@ -78,6 +82,9 @@ impl Task {
             }
             Self::BuildWorkspace => {
                 command.args(["build", "--workspace"]);
+            }
+            Self::TestWorkspace => {
+                command.args(["test", "--workspace"]);
             }
         }
 
@@ -129,6 +136,7 @@ impl eframe::App for ControlCenterApp {
                     Task::CheckControlCenter,
                     Task::CheckWorkspace,
                     Task::BuildWorkspace,
+                    Task::TestWorkspace,
                 ] {
                     let button = egui::Button::new(task.label());
 
