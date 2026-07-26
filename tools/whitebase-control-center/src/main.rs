@@ -39,6 +39,7 @@ enum Task {
     CheckWorkspace,
     BuildWorkspace,
     TestWorkspace,
+    CheckFormat,
 }
 
 impl Task {
@@ -48,6 +49,7 @@ impl Task {
             Self::CheckWorkspace => "Check Workspace",
             Self::BuildWorkspace => "Build Workspace",
             Self::TestWorkspace => "Test Workspace",
+            Self::CheckFormat => "Check Format",
         }
     }
 
@@ -57,6 +59,7 @@ impl Task {
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
             Self::TestWorkspace => "Testing Workspace...",
+            Self::CheckFormat => "Checking Format...",
         }
     }
 
@@ -66,6 +69,7 @@ impl Task {
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::TestWorkspace => "Workspace tests completed successfully",
+            Self::CheckFormat => "Format check completed successfully",
         }
     }
 
@@ -85,6 +89,9 @@ impl Task {
             }
             Self::TestWorkspace => {
                 command.args(["test", "--workspace"]);
+            }
+            Self::CheckFormat => {
+                command.args(["fmt", "--check"]);
             }
         }
 
@@ -140,6 +147,7 @@ impl eframe::App for ControlCenterApp {
                     Task::CheckWorkspace,
                     Task::BuildWorkspace,
                     Task::TestWorkspace,
+                    Task::CheckFormat,
                 ] {
                     let button = egui::Button::new(task.label());
 
@@ -208,12 +216,13 @@ impl ControlCenterApp {
         let (stop_sender, stop_receiver) = mpsc::channel();
 
         self.status = task.running_message().to_owned();
-        self.log.clear();
+        self.log = format!("Running task: {}\n", task.label());
         self.running = true;
         self.event_receiver = Some(receiver);
         self.stop_sender = Some(stop_sender);
 
         thread::spawn(move || {
+            // ここから下は既存処理
             let started_at = Instant::now();
             let mut command = task.command();
 
