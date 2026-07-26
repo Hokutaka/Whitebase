@@ -41,6 +41,7 @@ enum Task {
     CheckWorkspace,
     BuildWorkspace,
     TestWorkspace,
+    RunServer,
 }
 
 impl Task {
@@ -52,6 +53,7 @@ impl Task {
             Self::CheckWorkspace => "Check Workspace",
             Self::BuildWorkspace => "Build Workspace",
             Self::TestWorkspace => "Test Workspace",
+            Self::RunServer => "Run Server",
         }
     }
 
@@ -63,6 +65,7 @@ impl Task {
             Self::TestWorkspace => "Testing Workspace...",
             Self::CheckFormat => "Checking Format...",
             Self::CheckClippy => "Checking  with Clippy...",
+            Self::RunServer => "Running Whitebase Server...",
         }
     }
 
@@ -74,6 +77,7 @@ impl Task {
             Self::TestWorkspace => "Workspace tests completed successfully",
             Self::CheckFormat => "Format check completed successfully",
             Self::CheckClippy => "Clippy check completed successfully",
+            Self::RunServer => "Whitebase Server existed successfully",
         }
     }
 
@@ -99,6 +103,9 @@ impl Task {
             }
             Self::CheckClippy => {
                 command.args(["clippy", "--workspace", "--all-targets"]);
+            }
+            Self::RunServer => {
+                command.args(["run", "-p", "whitebase-server"]);
             }
         }
 
@@ -148,14 +155,15 @@ impl eframe::App for ControlCenterApp {
 
             ui.add_space(12.0);
 
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 for task in [
                     Task::CheckControlCenter,
+                    Task::CheckFormat,
+                    Task::CheckClippy,
                     Task::CheckWorkspace,
                     Task::BuildWorkspace,
                     Task::TestWorkspace,
-                    Task::CheckFormat,
-                    Task::CheckClippy,
+                    Task::RunServer,
                 ] {
                     let button = egui::Button::new(task.label());
 
