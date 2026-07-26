@@ -1,3 +1,5 @@
+#![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+
 use whitebase_asm_adapter::{add_f32_avx, add_f32_scalar, is_avx_available};
 
 #[test]

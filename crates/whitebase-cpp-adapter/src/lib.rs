@@ -1,5 +1,7 @@
 //! C++計算バックエンドをRustから利用するためのアダプターです。
 
+#![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+
 use whitebase_rust_backend::ArrayLengthError;
 
 unsafe extern "C" {

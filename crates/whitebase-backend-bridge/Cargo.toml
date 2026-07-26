@@ -9,5 +9,7 @@ whitebase-interface = { path = "../whitebase-interface" }
 whitebase-rust-backend = {
     path = "../whitebase-rust-backend"
 }
+
+[target.x86_64-pc-windows-msvc.dependencies]
 whitebase-cpp-adapter = { path = "../whitebase-cpp-adapter" }
 whitebase-asm-adapter = { path = "../whitebase-asm-adapter" }
