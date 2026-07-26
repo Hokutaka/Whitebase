@@ -130,9 +130,15 @@ impl eframe::App for ControlCenterApp {
             ui.separator();
             ui.heading("Log");
 
-            if ui.button("Copy Log").clicked() {
-                ui.ctx().copy_text(self.log.clone());
-            }
+            ui.horizontal(|ui| {
+                if ui.button("Copy Log").clicked() {
+                    ui.ctx().copy_text(self.log.clone());
+                }
+
+                if ui.button("Clear Log").clicked() {
+                    self.log.clear();
+                }
+            });
 
             let log_height = ui.available_height();
 
