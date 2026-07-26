@@ -95,6 +95,7 @@ impl Task {
 enum WorkerEvent {
     Log(String),
     Finished { success: bool, message: String },
+    Stopped { message: String },
 }
 
 struct ControlCenterApp {
@@ -102,6 +103,7 @@ struct ControlCenterApp {
     log: String,
     running: bool,
     event_receiver: Option<Receiver<WorkerEvent>>,
+    stop_sender: Option<mpsc::Sender<()>>,
 }
 
 impl Default for ControlCenterApp {
@@ -111,6 +113,7 @@ impl Default for ControlCenterApp {
             log: "No output yet.".to_owned(),
             running: false,
             event_receiver: None,
+            stop_sender: None,
         }
     }
 }
@@ -143,6 +146,15 @@ impl eframe::App for ControlCenterApp {
                     if ui.add_enabled(!self.running, button).clicked() {
                         self.start_task(task);
                     }
+                }
+
+                let stop_button = egui::Button::new("Stop");
+
+                if ui
+                    .add_enabled(self.running && self.stop_sender.is_some(), stop_button)
+                    .clicked()
+                {
+                    self.request_stop();
                 }
             });
 
@@ -193,11 +205,13 @@ impl eframe::App for ControlCenterApp {
 impl ControlCenterApp {
     fn start_task(&mut self, task: Task) {
         let (sender, receiver) = mpsc::channel();
+        let (stop_sender, stop_receiver) = mpsc::channel();
 
         self.status = task.running_message().to_owned();
         self.log.clear();
         self.running = true;
         self.event_receiver = Some(receiver);
+        self.stop_sender = Some(stop_sender);
 
         thread::spawn(move || {
             let started_at = Instant::now();
@@ -269,7 +283,54 @@ impl ControlCenterApp {
                 })
             });
 
-            let exit_status = child.wait();
+            let exit_status = loop {
+                match stop_receiver.try_recv() {
+                    Ok(()) => {
+                        let kill_result = child.kill();
+                        let wait_result = child.wait();
+                        let elapsed = started_at.elapsed();
+
+                        let message = match (kill_result, wait_result) {
+                            (Ok(()), Ok(_)) => {
+                                format!("{} stopped ({elapsed:.2?})", task.label())
+                            }
+                            (Err(error), _) => {
+                                format!(
+                                    "Failed to stop {}: {} ({elapsed:.2?})",
+                                    task.label(),
+                                    error
+                                )
+                            }
+                            (Ok(()), Err(error)) => {
+                                format!(
+                                    "{} stopped, but waiting failed: {} ({elapsed:.2?})",
+                                    task.label(),
+                                    error
+                                )
+                            }
+                        };
+
+                        let _ = sender.send(WorkerEvent::Stopped { message });
+                        return;
+                    }
+
+                    Err(TryRecvError::Disconnected) => {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        return;
+                    }
+
+                    Err(TryRecvError::Empty) => {}
+                }
+
+                match child.try_wait() {
+                    Ok(Some(status)) => break Ok(status),
+                    Ok(None) => {
+                        thread::sleep(Duration::from_millis(50));
+                    }
+                    Err(error) => break Err(error),
+                }
+            };
 
             if let Some(thread) = stdout_thread {
                 let _ = thread.join();
@@ -284,18 +345,17 @@ impl ControlCenterApp {
             let event = match exit_status {
                 Ok(status) if status.success() => WorkerEvent::Finished {
                     success: true,
-                    message: format!("{} ({:.2?})", task.success_message(), elapsed),
+                    message: format!("{} ({elapsed:.2?})", task.success_message()),
                 },
+
                 Ok(status) => WorkerEvent::Finished {
                     success: false,
-                    message: format!("{} failed with {} ({:.2?})", task.label(), status, elapsed),
+                    message: format!("{} failed with {} ({elapsed:.2?})", task.label(), status),
                 },
+
                 Err(error) => WorkerEvent::Finished {
                     success: false,
-                    message: format!(
-                        "Failed while waiting for Cargo: {} ({:.2?})",
-                        error, elapsed
-                    ),
+                    message: format!("Failed while waiting for Cargo: {} ({elapsed:.2?})", error),
                 },
             };
 
@@ -303,8 +363,21 @@ impl ControlCenterApp {
         });
     }
 
+    fn request_stop(&mut self) {
+        let Some(sender) = self.stop_sender.take() else {
+            return;
+        };
+
+        self.status = "Stopping...".to_owned();
+
+        if sender.send(()).is_err() {
+            self.status = "Failed to send stop request".to_owned();
+        }
+    }
+
     fn receive_events(&mut self) {
         let mut clear_receiver = false;
+        let mut clear_stop_sender = false;
 
         if let Some(receiver) = self.event_receiver.as_ref() {
             loop {
@@ -313,10 +386,12 @@ impl ControlCenterApp {
                         self.log.push_str(&line);
                         self.log.push('\n');
                     }
+
                     Ok(WorkerEvent::Finished { success, message }) => {
                         self.status = message;
                         self.running = false;
                         clear_receiver = true;
+                        clear_stop_sender = true;
 
                         if !success {
                             self.log.push_str("\nProcess finished with an error.\n");
@@ -324,11 +399,23 @@ impl ControlCenterApp {
 
                         break;
                     }
+
+                    Ok(WorkerEvent::Stopped { message }) => {
+                        self.status = message;
+                        self.running = false;
+                        clear_receiver = true;
+                        clear_stop_sender = true;
+                        self.log.push_str("\nTask stopped by user.\n");
+                        break;
+                    }
+
                     Err(TryRecvError::Empty) => break,
+
                     Err(TryRecvError::Disconnected) => {
                         self.status = "Worker disconnected unexpectedly".to_owned();
                         self.running = false;
                         clear_receiver = true;
+                        clear_stop_sender = true;
                         break;
                     }
                 }
@@ -337,6 +424,10 @@ impl ControlCenterApp {
 
         if clear_receiver {
             self.event_receiver = None;
+        }
+
+        if clear_stop_sender {
+            self.stop_sender = None;
         }
     }
 }
