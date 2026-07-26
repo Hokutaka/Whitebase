@@ -11,5 +11,5 @@ members = [
     "crates/whitebase-core", 
     "crates/whitebase-runner", 
     "apps/whitebase-app/src-tauri",
-    "apps/whitebase-server"
-, "tools/whitebase-control-center"]
+    "apps/whitebase-server",
+     "tools/whitebase-control-center"]
