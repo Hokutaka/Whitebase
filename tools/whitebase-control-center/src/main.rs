@@ -124,6 +124,7 @@ impl Task {
 
 enum WorkerEvent {
     Log(String),
+    Ready { message: String },
     Finished { success: bool, message: String },
     Stopped { message: String },
 }
@@ -323,7 +324,20 @@ impl ControlCenterApp {
                     for line in reader.lines() {
                         match line {
                             Ok(line) => {
+                                let server_is_ready = matches!(task, Task::RunServer)
+                                    && line.contains("[Whitebase Server] Listening on ");
+
                                 if sender.send(WorkerEvent::Log(line)).is_err() {
+                                    break;
+                                }
+
+                                if server_is_ready
+                                    && sender
+                                        .send(WorkerEvent::Ready {
+                                            message: "Whitebase Server is ready".to_owned(),
+                                        })
+                                        .is_err()
+                                {
                                     break;
                                 }
                             }
@@ -464,6 +478,9 @@ impl ControlCenterApp {
                     Ok(WorkerEvent::Log(line)) => {
                         self.log.push_str(&line);
                         self.log.push('\n');
+                    }
+                    Ok(WorkerEvent::Ready { message }) => {
+                        self.status = message;
                     }
 
                     Ok(WorkerEvent::Finished { success, message }) => {
