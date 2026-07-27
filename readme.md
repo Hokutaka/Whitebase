@@ -1,5 +1,7 @@
-[![CI](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml/badge.svg)](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml)
+[![CI](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml)
+[![CodeQL](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql)
 
+学習・実験用リポジトリです。
 # Whitebase
 
 いろいろ作って試す場所です。
