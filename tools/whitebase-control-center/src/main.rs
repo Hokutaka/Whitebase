@@ -40,6 +40,7 @@ enum Task {
     CheckClippy,
     CheckWorkspace,
     BuildWorkspace,
+    BuildFrontend,
     BuildControlCenterRelease,
     TestWorkspace,
     RunServer,
@@ -75,6 +76,7 @@ impl Task {
             Self::CheckClippy => "Check Clippy",
             Self::CheckWorkspace => "Check Workspace",
             Self::BuildWorkspace => "Build Workspace",
+            Self::BuildFrontend => "Build Frontend",
             Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
             Self::RunServer => "Run Server",
@@ -86,6 +88,7 @@ impl Task {
             Self::CheckControlCenter => "Checking Control Center...",
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
+            Self::BuildFrontend => "Building Frontend...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
             Self::CheckFormat => "Checking Format...",
@@ -99,6 +102,7 @@ impl Task {
             Self::CheckControlCenter => "Control Center check completed successfully",
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
+            Self::BuildFrontend => "Frontend build completed successfully",
             Self::BuildControlCenterRelease => {
                 "Control Center Release build completed successfully"
             }
@@ -137,6 +141,10 @@ impl Task {
             Self::BuildWorkspace => CommandSpec {
                 program: "cargo",
                 args: &["build", "--workspace"],
+            },
+            Self::BuildFrontend => CommandSpec {
+                program: if cfg!(windows) { "npm.cmd" } else { "npm" },
+                args: &["--prefix", "apps/whitebase-app", "run", "build"],
             },
             Self::BuildControlCenterRelease => CommandSpec {
                 program: "cargo",
@@ -240,7 +248,11 @@ impl eframe::App for ControlCenterApp {
             ui.label(egui::RichText::new("Build").strong());
 
             ui.horizontal_wrapped(|ui| {
-                for task in [Task::BuildWorkspace, Task::BuildControlCenterRelease] {
+                for task in [
+                    Task::BuildWorkspace,
+                    Task::BuildFrontend,
+                    Task::BuildControlCenterRelease,
+                ] {
                     let button = egui::Button::new(task.label());
 
                     if ui.add_enabled(!is_running, button).clicked() {
@@ -377,6 +389,7 @@ impl ControlCenterApp {
                                 if sender.send(WorkerEvent::Log(line)).is_err() {
                                     break;
                                 }
+
                                 if let Some(message) = ready_message
                                     && sender
                                         .send(WorkerEvent::Ready {
@@ -604,6 +617,18 @@ mod tests {
                 "-D",
                 "warnings",
             ]
+        );
+    }
+
+    #[test]
+    fn frontend_build_uses_the_platform_npm_launcher() {
+        let spec = Task::BuildFrontend.command_spec();
+        let expected_program = if cfg!(windows) { "npm.cmd" } else { "npm" };
+
+        assert_eq!(spec.program, expected_program);
+        assert_eq!(
+            spec.args,
+            &["--prefix", "apps/whitebase-app", "run", "build"]
         );
     }
 
