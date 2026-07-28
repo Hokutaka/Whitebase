@@ -69,6 +69,7 @@ enum Task {
     BuildFrontend,
     BuildWasm,
     BuildCApi,
+    BuildCppClient,
     BuildControlCenterRelease,
     TestWorkspace,
     RunServer,
@@ -108,6 +109,7 @@ impl Task {
             Self::BuildFrontend => "Build Frontend",
             Self::BuildWasm => "Build Wasm",
             Self::BuildCApi => "Build C API",
+            Self::BuildCppClient => "Build C++ Client",
             Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
             Self::RunServer => "Run Server",
@@ -122,6 +124,7 @@ impl Task {
             Self::BuildFrontend => "Building Frontend...",
             Self::BuildWasm => "Building Wasm...",
             Self::BuildCApi => "Building C API...",
+            Self::BuildCppClient => "Building C++ Client...",
             Self::CheckWasm => "Checking Wasm...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
@@ -139,6 +142,7 @@ impl Task {
             Self::BuildFrontend => "Frontend build completed successfully",
             Self::BuildWasm => "Wasm build completed successfully",
             Self::BuildCApi => "C API build completed successfully",
+            Self::BuildCppClient => "C++ Client build completed successfully",
             Self::CheckWasm => "Wasm check completed successfully",
             Self::BuildControlCenterRelease => {
                 "Control Center Release build completed successfully"
@@ -147,14 +151,6 @@ impl Task {
             Self::CheckFormat => "Format check completed successfully",
             Self::CheckClippy => "Clippy check completed successfully",
             Self::RunServer => "Whitebase Server exited successfully",
-        }
-    }
-
-    fn working_directory(self) -> PathBuf {
-        match self {
-            Self::BuildWasm => repository_root().join("crates").join("whitebase-wasm"),
-
-            _ => repository_root(),
         }
     }
 
@@ -216,9 +212,13 @@ impl Task {
                 program: "cargo",
                 args: &["build", "-p", "whitebase-c-api"],
             },
+            Self::BuildCppClient => CommandSpec {
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "cpp-build"],
+            },
             Self::BuildControlCenterRelease => CommandSpec {
-                program: "cargo",
-                args: &["build", "-p", "whitebase-control-center", "--release"],
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "cpp-build"],
             },
             Self::TestWorkspace => CommandSpec {
                 program: "cargo",
@@ -237,6 +237,21 @@ impl Task {
                 Some("Whitebase Server is ready")
             }
             _ => None,
+        }
+    }
+
+    fn working_directory(self) -> PathBuf {
+        match self {
+            Self::BuildWasm => repository_root().join("crates").join("whitebase-wasm"),
+
+            _ => repository_root(),
+        }
+    }
+
+    fn is_supported(self) -> bool {
+        match self {
+            Self::BuildCppClient => cfg!(target_os = "windows"),
+            _ => true,
         }
     }
 }
@@ -324,11 +339,14 @@ impl eframe::App for ControlCenterApp {
                     Task::BuildFrontend,
                     Task::BuildWasm,
                     Task::BuildCApi,
+                    Task::BuildCppClient,
                     Task::BuildControlCenterRelease,
                 ] {
                     let button = egui::Button::new(task.label());
 
-                    if ui.add_enabled(!is_running, button).clicked() {
+                    let is_enabled = !is_running && task.is_supported();
+
+                    if ui.add_enabled(is_enabled, button).clicked() {
                         self.start_task(task);
                     }
                 }
@@ -793,6 +811,22 @@ mod tests {
         assert_eq!(
             working_directory,
             repository_root().join("crates").join("whitebase-wasm")
+        );
+    }
+
+    #[test]
+    fn cpp_client_build_uses_ops_script() {
+        let spec = Task::BuildCppClient.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "cpp-build"]);
+    }
+
+    #[test]
+    fn cpp_client_support_matches_platform() {
+        assert_eq!(
+            Task::BuildCppClient.is_supported(),
+            cfg!(target_os = "windows")
         );
     }
 }
