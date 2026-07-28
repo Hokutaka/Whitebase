@@ -54,7 +54,15 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Whitebase Control Center",
         options,
-        Box::new(|_creation_context| Ok(Box::new(ControlCenterApp::default()))),
+        Box::new(|creation_context| {
+            egui_system_fonts::add_with_region(
+                &creation_context.egui_ctx,
+                egui_system_fonts::FontRegion::Japanese,
+                egui_system_fonts::FontStyle::Sans,
+            );
+
+            Ok(Box::new(ControlCenterApp::default()))
+        }),
     )
 }
 

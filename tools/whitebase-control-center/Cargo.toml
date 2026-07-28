@@ -10,3 +10,4 @@ eframe = { version = "0.35", default-features = false, features = [
     "wayland",
     "x11",
 ] }
+egui-system-fonts = "0.35"
