@@ -64,6 +64,7 @@ enum Task {
     CheckFormat,
     CheckClippy,
     CheckWorkspace,
+    CheckWasm,
     BuildWorkspace,
     BuildFrontend,
     BuildControlCenterRelease,
@@ -100,6 +101,7 @@ impl Task {
             Self::CheckFormat => "Check Format",
             Self::CheckClippy => "Check Clippy",
             Self::CheckWorkspace => "Check Workspace",
+            Self::CheckWasm => "Check Wasm",
             Self::BuildWorkspace => "Build Workspace",
             Self::BuildFrontend => "Build Frontend",
             Self::BuildControlCenterRelease => "Build Control Center Release",
@@ -114,6 +116,7 @@ impl Task {
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
             Self::BuildFrontend => "Building Frontend...",
+            Self::CheckWasm => "Checking Wasm...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
             Self::CheckFormat => "Checking Format...",
@@ -128,6 +131,7 @@ impl Task {
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
+            Self::CheckWasm => "Wasm check completed successfully",
             Self::BuildControlCenterRelease => {
                 "Control Center Release build completed successfully"
             }
@@ -162,6 +166,16 @@ impl Task {
             Self::CheckWorkspace => CommandSpec {
                 program: "cargo",
                 args: &["check", "--workspace"],
+            },
+            Self::CheckWasm => CommandSpec {
+                program: "cargo",
+                args: &[
+                    "check",
+                    "-p",
+                    "whitebase-wasm",
+                    "--target",
+                    "wasm32-unknown-unknown",
+                ],
             },
             Self::BuildWorkspace => CommandSpec {
                 program: "cargo",
@@ -259,6 +273,7 @@ impl eframe::App for ControlCenterApp {
                     Task::CheckFormat,
                     Task::CheckClippy,
                     Task::CheckWorkspace,
+                    Task::CheckWasm,
                     Task::TestWorkspace,
                 ] {
                     let button = egui::Button::new(task.label());
@@ -693,5 +708,22 @@ mod tests {
         let output = strip_ansi_escape_sequences(input);
 
         assert_eq!(output, input);
+    }
+
+    #[test]
+    fn wasm_check_uses_wasm_target() {
+        let spec = Task::CheckWasm.command_spec();
+
+        assert_eq!(spec.program, "cargo");
+        assert_eq!(
+            spec.args,
+            [
+                "check",
+                "-p",
+                "whitebase-wasm",
+                "--target",
+                "wasm32-unknown-unknown",
+            ]
+        );
     }
 }
