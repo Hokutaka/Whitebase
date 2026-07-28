@@ -67,6 +67,7 @@ enum Task {
     CheckWasm,
     BuildWorkspace,
     BuildFrontend,
+    BuildCApi,
     BuildControlCenterRelease,
     TestWorkspace,
     RunServer,
@@ -104,6 +105,7 @@ impl Task {
             Self::CheckWasm => "Check Wasm",
             Self::BuildWorkspace => "Build Workspace",
             Self::BuildFrontend => "Build Frontend",
+            Self::BuildCApi => "Build C API",
             Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
             Self::RunServer => "Run Server",
@@ -116,6 +118,7 @@ impl Task {
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
             Self::BuildFrontend => "Building Frontend...",
+            Self::BuildCApi => "Building C API...",
             Self::CheckWasm => "Checking Wasm...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
@@ -131,6 +134,7 @@ impl Task {
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
+            Self::BuildCApi => "C API build completed successfully",
             Self::CheckWasm => "Wasm check completed successfully",
             Self::BuildControlCenterRelease => {
                 "Control Center Release build completed successfully"
@@ -184,6 +188,10 @@ impl Task {
             Self::BuildFrontend => CommandSpec {
                 program: if cfg!(windows) { "npm.cmd" } else { "npm" },
                 args: &["--prefix", "apps/whitebase-app", "run", "build"],
+            },
+            Self::BuildCApi => CommandSpec {
+                program: "cargo",
+                args: &["build", "-p", "whitebase-c-api"],
             },
             Self::BuildControlCenterRelease => CommandSpec {
                 program: "cargo",
@@ -291,6 +299,7 @@ impl eframe::App for ControlCenterApp {
                 for task in [
                     Task::BuildWorkspace,
                     Task::BuildFrontend,
+                    Task::BuildCApi,
                     Task::BuildControlCenterRelease,
                 ] {
                     let button = egui::Button::new(task.label());
@@ -725,5 +734,13 @@ mod tests {
                 "wasm32-unknown-unknown",
             ]
         );
+    }
+
+    #[test]
+    fn c_api_build_uses_c_api_package() {
+        let spec = Task::BuildCApi.command_spec();
+
+        assert_eq!(spec.program, "cargo");
+        assert_eq!(spec.args, ["build", "-p", "whitebase-c-api"]);
     }
 }
