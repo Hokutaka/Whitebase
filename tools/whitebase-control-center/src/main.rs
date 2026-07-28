@@ -1,6 +1,6 @@
 use std::{
     io::{BufRead, BufReader},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::mpsc::{self, Receiver, TryRecvError},
     thread,
@@ -67,6 +67,7 @@ enum Task {
     CheckWasm,
     BuildWorkspace,
     BuildFrontend,
+    BuildWasm,
     BuildCApi,
     BuildControlCenterRelease,
     TestWorkspace,
@@ -80,10 +81,10 @@ struct CommandSpec {
 }
 
 impl CommandSpec {
-    fn into_command(self) -> Command {
+    fn into_command(self, working_directory: &Path) -> Command {
         let mut command = Command::new(self.program);
         command.args(self.args);
-        command.current_dir(repository_root());
+        command.current_dir(working_directory);
         command
     }
 
@@ -105,6 +106,7 @@ impl Task {
             Self::CheckWasm => "Check Wasm",
             Self::BuildWorkspace => "Build Workspace",
             Self::BuildFrontend => "Build Frontend",
+            Self::BuildWasm => "Build Wasm",
             Self::BuildCApi => "Build C API",
             Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
@@ -118,6 +120,7 @@ impl Task {
             Self::CheckWorkspace => "Checking Workspace...",
             Self::BuildWorkspace => "Building Workspace...",
             Self::BuildFrontend => "Building Frontend...",
+            Self::BuildWasm => "Building Wasm...",
             Self::BuildCApi => "Building C API...",
             Self::CheckWasm => "Checking Wasm...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
@@ -134,6 +137,7 @@ impl Task {
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
+            Self::BuildWasm => "Wasm build completed successfully",
             Self::BuildCApi => "C API build completed successfully",
             Self::CheckWasm => "Wasm check completed successfully",
             Self::BuildControlCenterRelease => {
@@ -143,6 +147,14 @@ impl Task {
             Self::CheckFormat => "Format check completed successfully",
             Self::CheckClippy => "Clippy check completed successfully",
             Self::RunServer => "Whitebase Server exited successfully",
+        }
+    }
+
+    fn working_directory(self) -> PathBuf {
+        match self {
+            Self::BuildWasm => repository_root().join("crates").join("whitebase-wasm"),
+
+            _ => repository_root(),
         }
     }
 
@@ -188,6 +200,17 @@ impl Task {
             Self::BuildFrontend => CommandSpec {
                 program: if cfg!(windows) { "npm.cmd" } else { "npm" },
                 args: &["--prefix", "apps/whitebase-app", "run", "build"],
+            },
+            Self::BuildWasm => CommandSpec {
+                program: "wasm-pack",
+                args: &[
+                    "build",
+                    "--target",
+                    "web",
+                    "--dev",
+                    "--out-dir",
+                    "../../apps/whitebase-app/src/wasm",
+                ],
             },
             Self::BuildCApi => CommandSpec {
                 program: "cargo",
@@ -299,6 +322,7 @@ impl eframe::App for ControlCenterApp {
                 for task in [
                     Task::BuildWorkspace,
                     Task::BuildFrontend,
+                    Task::BuildWasm,
                     Task::BuildCApi,
                     Task::BuildControlCenterRelease,
                 ] {
@@ -389,7 +413,7 @@ impl ControlCenterApp {
         let (stop_sender, stop_receiver) = mpsc::channel();
 
         let command_spec = task.command_spec();
-        let working_directory = repository_root();
+        let working_directory = task.working_directory();
 
         self.status = task.running_message().to_owned();
         self.log = format!(
@@ -404,7 +428,7 @@ impl ControlCenterApp {
 
         thread::spawn(move || {
             let started_at = Instant::now();
-            let mut command = command_spec.into_command();
+            let mut command = command_spec.into_command(&working_directory);
 
             let mut child = match command
                 .stdout(Stdio::piped())
@@ -742,5 +766,33 @@ mod tests {
 
         assert_eq!(spec.program, "cargo");
         assert_eq!(spec.args, ["build", "-p", "whitebase-c-api"]);
+    }
+
+    #[test]
+    fn wasm_build_uses_wasm_pack() {
+        let spec = Task::BuildWasm.command_spec();
+
+        assert_eq!(spec.program, "wasm-pack");
+        assert_eq!(
+            spec.args,
+            [
+                "build",
+                "--target",
+                "web",
+                "--dev",
+                "--out-dir",
+                "../../apps/whitebase-app/src/wasm",
+            ]
+        );
+    }
+
+    #[test]
+    fn wasm_build_runs_inside_wasm_crate() {
+        let working_directory = Task::BuildWasm.working_directory();
+
+        assert_eq!(
+            working_directory,
+            repository_root().join("crates").join("whitebase-wasm")
+        );
     }
 }
