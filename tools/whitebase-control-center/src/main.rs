@@ -225,8 +225,8 @@ impl Task {
                 args: &["/C", "scripts\\ops.bat", "cpp-build"],
             },
             Self::BuildControlCenterRelease => CommandSpec {
-                program: "cmd.exe",
-                args: &["/C", "scripts\\ops.bat", "cpp-build"],
+                program: "cargo",
+                args: &["build", "--release", "-p", "whitebase-control-center"],
             },
             Self::TestWorkspace => CommandSpec {
                 program: "cargo",
@@ -257,10 +257,7 @@ impl Task {
     }
 
     fn is_supported(self) -> bool {
-        match self {
-            Self::BuildCppClient => cfg!(target_os = "windows"),
-            _ => true,
-        }
+        !matches!(self, Self::BuildCppClient) || cfg!(target_os = "windows")
     }
 }
 
