@@ -18,6 +18,31 @@ fn repository_root() -> PathBuf {
         .to_path_buf()
 }
 
+fn strip_ansi_escape_sequences(input: &str) -> String {
+    let mut output = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+
+    while let Some(character) = chars.next() {
+        if character != '\u{1b}' {
+            output.push(character);
+            continue;
+        }
+
+        if !matches!(chars.peek(), Some(&'[')) {
+            continue;
+        }
+
+        chars.next();
+
+        for code_character in chars.by_ref() {
+            if ('@'..='~').contains(&code_character) {
+                break;
+            }
+        }
+    }
+    output
+}
+
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -538,7 +563,9 @@ impl ControlCenterApp {
             loop {
                 match receiver.try_recv() {
                     Ok(WorkerEvent::Log(line)) => {
-                        self.log.push_str(&line);
+                        let clean_line = strip_ansi_escape_sequences(&line);
+
+                        self.log.push_str(&clean_line);
                         self.log.push('\n');
                     }
                     Ok(WorkerEvent::Ready { message }) => {
@@ -648,5 +675,23 @@ mod tests {
             Some("Whitebase Server is ready")
         );
         assert_eq!(Task::CheckWorkspace.ready_message(line), None);
+    }
+
+    #[test]
+    fn ansi_escape_sequences_are_removed_from_log_lines() {
+        let input = "\x1b[36mvite v6.4.3 \x1b[32mbuilding for production...\x1b[39m";
+
+        let output = strip_ansi_escape_sequences(input);
+
+        assert_eq!(output, "vite v6.4.3 building for production...");
+    }
+
+    #[test]
+    fn plain_log_lines_are_not_changed() {
+        let input = "6 modules transformed.";
+
+        let output = strip_ansi_escape_sequences(input);
+
+        assert_eq!(output, input);
     }
 }
