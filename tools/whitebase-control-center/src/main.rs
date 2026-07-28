@@ -377,16 +377,14 @@ impl ControlCenterApp {
                                 if sender.send(WorkerEvent::Log(line)).is_err() {
                                     break;
                                 }
-
-                                if let Some(message) = ready_message {
-                                    if sender
+                                if let Some(message) = ready_message
+                                    && sender
                                         .send(WorkerEvent::Ready {
                                             message: message.to_owned(),
                                         })
                                         .is_err()
-                                    {
-                                        break;
-                                    }
+                                {
+                                    break;
                                 }
                             }
                             Err(error) => {
