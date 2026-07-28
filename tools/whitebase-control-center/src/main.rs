@@ -45,6 +45,28 @@ enum Task {
     RunServer,
 }
 
+#[derive(Clone, Copy)]
+struct CommandSpec {
+    program: &'static str,
+    args: &'static [&'static str],
+}
+
+impl CommandSpec {
+    fn into_command(self) -> Command {
+        let mut command = Command::new(self.program);
+        command.args(self.args);
+        command.current_dir(repository_root());
+        command
+    }
+
+    fn display(self) -> String {
+        std::iter::once(self.program)
+            .chain(self.args.iter().copied())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
 impl Task {
     fn label(self) -> &'static str {
         match self {
@@ -67,7 +89,7 @@ impl Task {
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
             Self::CheckFormat => "Checking Format...",
-            Self::CheckClippy => "Checking  with Clippy...",
+            Self::CheckClippy => "Checking with Clippy...",
             Self::RunServer => "Running Whitebase Server...",
         }
     }
@@ -87,38 +109,57 @@ impl Task {
         }
     }
 
-    fn command(self) -> Command {
-        let mut command = Command::new("cargo");
-        command.current_dir(repository_root());
-
+    fn command_spec(self) -> CommandSpec {
         match self {
-            Self::CheckControlCenter => {
-                command.args(["check", "-p", "whitebase-control-center"]);
-            }
-            Self::CheckWorkspace => {
-                command.args(["check", "--workspace"]);
-            }
-            Self::BuildWorkspace => {
-                command.args(["build", "--workspace"]);
-            }
-            Self::TestWorkspace => {
-                command.args(["test", "--workspace"]);
-            }
-            Self::CheckFormat => {
-                command.args(["fmt", "--check"]);
-            }
-            Self::CheckClippy => {
-                command.args(["clippy", "--workspace", "--all-targets"]);
-            }
-            Self::RunServer => {
-                command.args(["run", "-p", "whitebase-server"]);
-            }
-            Self::BuildControlCenterRelease => {
-                command.args(["build", "-p", "whitebase-control-center", "--release"]);
-            }
+            Self::CheckControlCenter => CommandSpec {
+                program: "cargo",
+                args: &["check", "-p", "whitebase-control-center"],
+            },
+            Self::CheckFormat => CommandSpec {
+                program: "cargo",
+                args: &["fmt", "--all", "--", "--check"],
+            },
+            Self::CheckClippy => CommandSpec {
+                program: "cargo",
+                args: &[
+                    "clippy",
+                    "--workspace",
+                    "--all-targets",
+                    "--",
+                    "-D",
+                    "warnings",
+                ],
+            },
+            Self::CheckWorkspace => CommandSpec {
+                program: "cargo",
+                args: &["check", "--workspace"],
+            },
+            Self::BuildWorkspace => CommandSpec {
+                program: "cargo",
+                args: &["build", "--workspace"],
+            },
+            Self::BuildControlCenterRelease => CommandSpec {
+                program: "cargo",
+                args: &["build", "-p", "whitebase-control-center", "--release"],
+            },
+            Self::TestWorkspace => CommandSpec {
+                program: "cargo",
+                args: &["test", "--workspace"],
+            },
+            Self::RunServer => CommandSpec {
+                program: "cargo",
+                args: &["run", "-p", "whitebase-server"],
+            },
         }
+    }
 
-        command
+    fn ready_message(self, line: &str) -> Option<&'static str> {
+        match self {
+            Self::RunServer if line.contains("[Whitebase Server] Listening on ") => {
+                Some("Whitebase Server is ready")
+            }
+            _ => None,
+        }
     }
 }
 
@@ -286,16 +327,23 @@ impl ControlCenterApp {
         let (sender, receiver) = mpsc::channel();
         let (stop_sender, stop_receiver) = mpsc::channel();
 
+        let command_spec = task.command_spec();
+        let working_directory = repository_root();
+
         self.status = task.running_message().to_owned();
-        self.log = format!("Running task: {}\n", task.label());
+        self.log = format!(
+            "Running task: {}\nCommand: {}\nWorking directory: {}\n",
+            task.label(),
+            command_spec.display(),
+            working_directory.display()
+        );
         self.active_task = Some(task);
         self.event_receiver = Some(receiver);
         self.stop_sender = Some(stop_sender);
 
         thread::spawn(move || {
-            // ここから下は既存処理
             let started_at = Instant::now();
-            let mut command = task.command();
+            let mut command = command_spec.into_command();
 
             let mut child = match command
                 .stdout(Stdio::piped())
@@ -306,7 +354,7 @@ impl ControlCenterApp {
                 Err(error) => {
                     let _ = sender.send(WorkerEvent::Finished {
                         success: false,
-                        message: format!("Failed to start Cargo: {error}"),
+                        message: format!("Failed to start command: {error}"),
                     });
                     return;
                 }
@@ -324,21 +372,21 @@ impl ControlCenterApp {
                     for line in reader.lines() {
                         match line {
                             Ok(line) => {
-                                let server_is_ready = matches!(task, Task::RunServer)
-                                    && line.contains("[Whitebase Server] Listening on ");
+                                let ready_message = task.ready_message(&line);
 
                                 if sender.send(WorkerEvent::Log(line)).is_err() {
                                     break;
                                 }
 
-                                if server_is_ready
-                                    && sender
+                                if let Some(message) = ready_message {
+                                    if sender
                                         .send(WorkerEvent::Ready {
-                                            message: "Whitebase Server is ready".to_owned(),
+                                            message: message.to_owned(),
                                         })
                                         .is_err()
-                                {
-                                    break;
+                                    {
+                                        break;
+                                    }
                                 }
                             }
                             Err(error) => {
@@ -448,7 +496,10 @@ impl ControlCenterApp {
 
                 Err(error) => WorkerEvent::Finished {
                     success: false,
-                    message: format!("Failed while waiting for Cargo: {} ({elapsed:.2?})", error),
+                    message: format!(
+                        "Failed while waiting for command: {} ({elapsed:.2?})",
+                        error
+                    ),
                 },
             };
 
@@ -525,5 +576,54 @@ impl ControlCenterApp {
         if clear_stop_sender {
             self.stop_sender = None;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_command_checks_all_workspace_packages() {
+        let spec = Task::CheckFormat.command_spec();
+
+        assert_eq!(spec.program, "cargo");
+        assert_eq!(spec.args, &["fmt", "--all", "--", "--check"]);
+    }
+
+    #[test]
+    fn clippy_command_treats_warnings_as_errors() {
+        let spec = Task::CheckClippy.command_spec();
+
+        assert_eq!(spec.program, "cargo");
+        assert_eq!(
+            spec.args,
+            &[
+                "clippy",
+                "--workspace",
+                "--all-targets",
+                "--",
+                "-D",
+                "warnings",
+            ]
+        );
+    }
+
+    #[test]
+    fn command_display_is_copyable_from_the_log() {
+        let spec = Task::CheckWorkspace.command_spec();
+
+        assert_eq!(spec.display(), "cargo check --workspace");
+    }
+
+    #[test]
+    fn only_the_server_task_reports_server_readiness() {
+        let line = "[Whitebase Server] Listening on http://127.0.0.1:1430";
+
+        assert_eq!(
+            Task::RunServer.ready_message(line),
+            Some("Whitebase Server is ready")
+        );
+        assert_eq!(Task::CheckWorkspace.ready_message(line), None);
     }
 }
