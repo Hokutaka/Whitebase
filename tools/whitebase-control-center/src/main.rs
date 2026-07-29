@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -66,22 +67,54 @@ fn main() -> eframe::Result {
     )
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Task {
     CheckControlCenter,
     CheckFormat,
     CheckClippy,
     CheckWorkspace,
     CheckWasm,
+    CheckCppClient,
+    CheckCppBackend,
+    CheckCppAdapter,
+    CheckAssembly,
     BuildWorkspace,
     BuildFrontend,
     BuildWasm,
     BuildCApi,
     BuildCppClient,
+    BuildAssemblyClient,
     BuildControlCenterRelease,
     TestWorkspace,
     RunServer,
 }
+
+const CHECK_ALL_TASKS: &[Task] = &[
+    Task::CheckFormat,
+    // RustのAdapterを検査する前に、Windowsのネイティブライブラリを準備する。
+    // 非対応OSではTaskSequence::check_all()がこれらを除外する。
+    Task::CheckCppBackend,
+    Task::CheckAssembly,
+    Task::CheckClippy,
+    Task::TestWorkspace,
+    Task::CheckWasm,
+    Task::BuildFrontend,
+    Task::CheckCppClient,
+    Task::CheckCppAdapter,
+];
+
+const BUILD_ALL_TASKS: &[Task] = &[
+    // Build欄の個別タスクをすべて順番に実行する。
+    // WindowsではWorkspace内のAdapterをリンクする前にネイティブ成果物を準備する。
+    Task::BuildCApi,
+    Task::BuildCppClient,
+    Task::BuildAssemblyClient,
+    Task::BuildWorkspace,
+    Task::BuildWasm,
+    // Wasm生成物を含んだ状態でFrontendを組み立てる。
+    Task::BuildFrontend,
+    Task::BuildControlCenterRelease,
+];
 
 #[derive(Clone, Copy)]
 struct CommandSpec {
@@ -113,11 +146,16 @@ impl Task {
             Self::CheckClippy => "Check Clippy",
             Self::CheckWorkspace => "Check Workspace",
             Self::CheckWasm => "Check Wasm",
+            Self::CheckCppClient => "Check C++ Client",
+            Self::CheckCppBackend => "Check C++ Backend",
+            Self::CheckCppAdapter => "Check C++ Adapter",
+            Self::CheckAssembly => "Check Assembly",
             Self::BuildWorkspace => "Build Workspace",
             Self::BuildFrontend => "Build Frontend",
             Self::BuildWasm => "Build Wasm",
             Self::BuildCApi => "Build C API",
             Self::BuildCppClient => "Build C++ Client",
+            Self::BuildAssemblyClient => "Build Assembly Client",
             Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
             Self::RunServer => "Run Server",
@@ -127,17 +165,22 @@ impl Task {
     fn running_message(self) -> &'static str {
         match self {
             Self::CheckControlCenter => "Checking Control Center...",
+            Self::CheckFormat => "Checking Format...",
+            Self::CheckClippy => "Checking with Clippy...",
             Self::CheckWorkspace => "Checking Workspace...",
+            Self::CheckWasm => "Checking Wasm...",
+            Self::CheckCppClient => "Checking C++ Client...",
+            Self::CheckCppBackend => "Checking C++ Backend...",
+            Self::CheckCppAdapter => "Checking C++ Adapter...",
+            Self::CheckAssembly => "Checking Assembly...",
             Self::BuildWorkspace => "Building Workspace...",
             Self::BuildFrontend => "Building Frontend...",
             Self::BuildWasm => "Building Wasm...",
             Self::BuildCApi => "Building C API...",
             Self::BuildCppClient => "Building C++ Client...",
-            Self::CheckWasm => "Checking Wasm...",
+            Self::BuildAssemblyClient => "Building Assembly Client...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
-            Self::CheckFormat => "Checking Format...",
-            Self::CheckClippy => "Checking with Clippy...",
             Self::RunServer => "Running Whitebase Server...",
         }
     }
@@ -145,19 +188,24 @@ impl Task {
     fn success_message(self) -> &'static str {
         match self {
             Self::CheckControlCenter => "Control Center check completed successfully",
+            Self::CheckFormat => "Format check completed successfully",
+            Self::CheckClippy => "Clippy check completed successfully",
             Self::CheckWorkspace => "Workspace check completed successfully",
+            Self::CheckWasm => "Wasm check completed successfully",
+            Self::CheckCppClient => "C++ Client check completed successfully",
+            Self::CheckCppBackend => "C++ Backend check completed successfully",
+            Self::CheckCppAdapter => "C++ Adapter check completed successfully",
+            Self::CheckAssembly => "Assembly check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
             Self::BuildWasm => "Wasm build completed successfully",
             Self::BuildCApi => "C API build completed successfully",
             Self::BuildCppClient => "C++ Client build completed successfully",
-            Self::CheckWasm => "Wasm check completed successfully",
+            Self::BuildAssemblyClient => "Assembly Client build completed successfully",
             Self::BuildControlCenterRelease => {
                 "Control Center Release build completed successfully"
             }
             Self::TestWorkspace => "Workspace tests completed successfully",
-            Self::CheckFormat => "Format check completed successfully",
-            Self::CheckClippy => "Clippy check completed successfully",
             Self::RunServer => "Whitebase Server exited successfully",
         }
     }
@@ -197,9 +245,29 @@ impl Task {
                     "wasm32-unknown-unknown",
                 ],
             },
+            Self::CheckCppClient => CommandSpec {
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "cpp-check"],
+            },
+            Self::CheckCppBackend => CommandSpec {
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "cpp-backend-check"],
+            },
+            Self::CheckAssembly => CommandSpec {
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "asm-check"],
+            },
             Self::BuildWorkspace => CommandSpec {
                 program: "cargo",
-                args: &["build", "--workspace"],
+                // 実行中のControl Center本体はWindowsがロックするため、
+                // Workspaceの他パッケージを先にビルドする。
+                // Control Centerは専用のReleaseタスクで別にビルドする。
+                args: &[
+                    "build",
+                    "--workspace",
+                    "--exclude",
+                    "whitebase-control-center",
+                ],
             },
             Self::BuildFrontend => CommandSpec {
                 program: if cfg!(windows) { "npm.cmd" } else { "npm" },
@@ -223,6 +291,14 @@ impl Task {
             Self::BuildCppClient => CommandSpec {
                 program: "cmd.exe",
                 args: &["/C", "scripts\\ops.bat", "cpp-build"],
+            },
+            Self::BuildAssemblyClient => CommandSpec {
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "asm-build"],
+            },
+            Self::CheckCppAdapter => CommandSpec {
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "cpp-adapter-check"],
             },
             Self::BuildControlCenterRelease => CommandSpec {
                 program: "cargo",
@@ -257,7 +333,67 @@ impl Task {
     }
 
     fn is_supported(self) -> bool {
-        !matches!(self, Self::BuildCppClient) || cfg!(target_os = "windows")
+        if matches!(
+            self,
+            Self::CheckCppClient
+                | Self::CheckCppAdapter
+                | Self::CheckCppBackend
+                | Self::CheckAssembly
+                | Self::BuildCppClient
+                | Self::BuildAssemblyClient
+        ) {
+            return cfg!(target_os = "windows");
+        }
+
+        if matches!(self, Self::BuildControlCenterRelease) {
+            // Windowsでは実行中のexeを上書きできない。
+            // Debug版からRelease版を作る場合だけ安全に実行できる。
+            return !cfg!(target_os = "windows") || cfg!(debug_assertions);
+        }
+
+        true
+    }
+}
+
+struct TaskSequence {
+    label: &'static str,
+    success_message: &'static str,
+    pending_tasks: VecDeque<Task>,
+}
+
+impl TaskSequence {
+    fn from_supported_tasks(
+        label: &'static str,
+        success_message: &'static str,
+        tasks: &[Task],
+    ) -> Self {
+        let pending_tasks = tasks
+            .iter()
+            .copied()
+            .filter(|task| task.is_supported())
+            .collect();
+
+        Self {
+            label,
+            success_message,
+            pending_tasks,
+        }
+    }
+
+    fn check_all() -> Self {
+        Self::from_supported_tasks(
+            "Check All",
+            "Whitebase check completed successfully",
+            CHECK_ALL_TASKS,
+        )
+    }
+
+    fn build_all() -> Self {
+        Self::from_supported_tasks(
+            "Build All",
+            "Whitebase build completed successfully",
+            BUILD_ALL_TASKS,
+        )
     }
 }
 
@@ -272,6 +408,7 @@ struct ControlCenterApp {
     status: String,
     log: String,
     active_task: Option<Task>,
+    active_sequence: Option<TaskSequence>,
     event_receiver: Option<Receiver<WorkerEvent>>,
     stop_sender: Option<mpsc::Sender<()>>,
 }
@@ -282,6 +419,7 @@ impl Default for ControlCenterApp {
             status: "Idle".to_owned(),
             log: "No output yet.".to_owned(),
             active_task: None,
+            active_sequence: None,
             event_receiver: None,
             stop_sender: None,
         }
@@ -292,7 +430,7 @@ impl eframe::App for ControlCenterApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.receive_events();
 
-        let is_running = self.active_task.is_some();
+        let is_running = self.active_task.is_some() || self.active_sequence.is_some();
 
         egui::CentralPanel::default().show(ui, |ui| {
             ui.heading("Whitebase Control Center");
@@ -319,17 +457,28 @@ impl eframe::App for ControlCenterApp {
             ui.label(egui::RichText::new("Checks").strong());
 
             ui.horizontal_wrapped(|ui| {
+                let check_all_button = egui::Button::new("Check All");
+
+                if ui.add_enabled(!is_running, check_all_button).clicked() {
+                    self.start_check_all();
+                }
                 for task in [
                     Task::CheckControlCenter,
                     Task::CheckFormat,
                     Task::CheckClippy,
                     Task::CheckWorkspace,
                     Task::CheckWasm,
+                    Task::CheckCppClient,
+                    Task::CheckCppBackend,
+                    Task::CheckCppAdapter,
+                    Task::CheckAssembly,
                     Task::TestWorkspace,
                 ] {
                     let button = egui::Button::new(task.label());
 
-                    if ui.add_enabled(!is_running, button).clicked() {
+                    let is_enabled = !is_running && task.is_supported();
+
+                    if ui.add_enabled(is_enabled, button).clicked() {
                         self.start_task(task);
                     }
                 }
@@ -339,12 +488,19 @@ impl eframe::App for ControlCenterApp {
             ui.label(egui::RichText::new("Build").strong());
 
             ui.horizontal_wrapped(|ui| {
+                let build_all_button = egui::Button::new("Build All");
+
+                if ui.add_enabled(!is_running, build_all_button).clicked() {
+                    self.start_build_all();
+                }
+
                 for task in [
                     Task::BuildWorkspace,
                     Task::BuildFrontend,
                     Task::BuildWasm,
                     Task::BuildCApi,
                     Task::BuildCppClient,
+                    Task::BuildAssemblyClient,
                     Task::BuildControlCenterRelease,
                 ] {
                     let button = egui::Button::new(task.label());
@@ -432,6 +588,33 @@ impl eframe::App for ControlCenterApp {
 
 impl ControlCenterApp {
     fn start_task(&mut self, task: Task) {
+        self.active_sequence = None;
+        self.start_task_internal(task, true);
+    }
+
+    fn start_check_all(&mut self) {
+        self.start_sequence(TaskSequence::check_all());
+    }
+
+    fn start_build_all(&mut self) {
+        self.start_sequence(TaskSequence::build_all());
+    }
+
+    fn start_sequence(&mut self, mut sequence: TaskSequence) {
+        let next_task = sequence.pending_tasks.pop_front();
+
+        self.status = format!("Running {}...", sequence.label);
+        self.log = format!("Running sequence: {}\n", sequence.label);
+        self.active_sequence = Some(sequence);
+
+        if let Some(task) = next_task {
+            self.start_task_internal(task, false);
+        } else if let Some(sequence) = self.active_sequence.take() {
+            self.status = sequence.success_message.to_owned();
+        }
+    }
+
+    fn start_task_internal(&mut self, task: Task, replace_log: bool) {
         let (sender, receiver) = mpsc::channel();
         let (stop_sender, stop_receiver) = mpsc::channel();
 
@@ -439,12 +622,28 @@ impl ControlCenterApp {
         let working_directory = task.working_directory();
 
         self.status = task.running_message().to_owned();
-        self.log = format!(
+
+        let task_header = format!(
             "Running task: {}\nCommand: {}\nWorking directory: {}\n",
             task.label(),
             command_spec.display(),
             working_directory.display()
         );
+
+        if replace_log {
+            self.log = task_header;
+        } else {
+            if !self.log.is_empty() && !self.log.ends_with('\n') {
+                self.log.push('\n');
+            }
+
+            if !self.log.is_empty() {
+                self.log.push('\n');
+            }
+
+            self.log.push_str(&task_header);
+        }
+
         self.active_task = Some(task);
         self.event_receiver = Some(receiver);
         self.stop_sender = Some(stop_sender);
@@ -629,6 +828,8 @@ impl ControlCenterApp {
     fn receive_events(&mut self) {
         let mut clear_receiver = false;
         let mut clear_stop_sender = false;
+        let mut next_sequence_task = None;
+        let mut completed_sequence_message = None;
 
         if let Some(receiver) = self.event_receiver.as_ref() {
             loop {
@@ -644,12 +845,29 @@ impl ControlCenterApp {
                     }
 
                     Ok(WorkerEvent::Finished { success, message }) => {
-                        self.status = message;
                         self.active_task = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
 
-                        if !success {
+                        if success {
+                            if let Some(sequence) = self.active_sequence.as_mut() {
+                                self.log.push('\n');
+                                self.log.push_str(&message);
+                                self.log.push('\n');
+
+                                match sequence.pending_tasks.pop_front() {
+                                    Some(task) => next_sequence_task = Some(task),
+                                    None => {
+                                        completed_sequence_message =
+                                            Some(sequence.success_message.to_owned());
+                                    }
+                                }
+                            } else {
+                                self.status = message;
+                            }
+                        } else {
+                            self.status = message;
+                            self.active_sequence = None;
                             self.log.push_str("\nProcess finished with an error.\n");
                         }
 
@@ -659,6 +877,7 @@ impl ControlCenterApp {
                     Ok(WorkerEvent::Stopped { message }) => {
                         self.status = message;
                         self.active_task = None;
+                        self.active_sequence = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
                         self.log.push_str("\nTask stopped by user.\n");
@@ -670,6 +889,7 @@ impl ControlCenterApp {
                     Err(TryRecvError::Disconnected) => {
                         self.status = "Worker disconnected unexpectedly".to_owned();
                         self.active_task = None;
+                        self.active_sequence = None;
                         clear_receiver = true;
                         clear_stop_sender = true;
                         break;
@@ -684,6 +904,18 @@ impl ControlCenterApp {
 
         if clear_stop_sender {
             self.stop_sender = None;
+        }
+
+        if let Some(message) = completed_sequence_message {
+            self.log.push('\n');
+            self.log.push_str(&message);
+            self.log.push('\n');
+            self.status = message;
+            self.active_sequence = None;
+        }
+
+        if let Some(task) = next_sequence_task {
+            self.start_task_internal(task, false);
         }
     }
 }
@@ -792,6 +1024,29 @@ mod tests {
     }
 
     #[test]
+    fn workspace_build_excludes_the_running_control_center() {
+        let spec = Task::BuildWorkspace.command_spec();
+
+        assert_eq!(spec.program, "cargo");
+        assert_eq!(
+            spec.args,
+            [
+                "build",
+                "--workspace",
+                "--exclude",
+                "whitebase-control-center",
+            ]
+        );
+    }
+
+    #[test]
+    fn control_center_release_build_is_safe_for_the_current_platform_and_profile() {
+        let expected = !cfg!(target_os = "windows") || cfg!(debug_assertions);
+
+        assert_eq!(Task::BuildControlCenterRelease.is_supported(), expected);
+    }
+
+    #[test]
     fn wasm_build_uses_wasm_pack() {
         let spec = Task::BuildWasm.command_spec();
 
@@ -833,5 +1088,91 @@ mod tests {
             Task::BuildCppClient.is_supported(),
             cfg!(target_os = "windows")
         );
+    }
+
+    #[test]
+    fn cpp_client_check_uses_ops_script() {
+        let spec = Task::CheckCppClient.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "cpp-check"]);
+    }
+
+    #[test]
+    fn cpp_client_tasks_support_matches_platform() {
+        let expected = cfg!(target_os = "windows");
+
+        assert_eq!(Task::CheckCppClient.is_supported(), expected);
+        assert_eq!(Task::CheckCppAdapter.is_supported(), expected);
+        assert_eq!(Task::CheckAssembly.is_supported(), expected);
+        assert_eq!(Task::CheckCppBackend.is_supported(), expected);
+        assert_eq!(Task::BuildCppClient.is_supported(), expected);
+        assert_eq!(Task::BuildAssemblyClient.is_supported(), expected);
+    }
+
+    #[test]
+    fn cpp_backend_check_uses_ops_script() {
+        let spec = Task::CheckCppBackend.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "cpp-backend-check"]);
+    }
+
+    #[test]
+    fn cpp_adapter_check_uses_ops_script() {
+        let spec = Task::CheckCppAdapter.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "cpp-adapter-check"]);
+    }
+
+    #[test]
+    fn assembly_check_uses_ops_script() {
+        let spec = Task::CheckAssembly.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "asm-check"]);
+    }
+
+    #[test]
+    fn assembly_client_build_uses_ops_script() {
+        let spec = Task::BuildAssemblyClient.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "asm-build"]);
+    }
+
+    #[test]
+    fn check_all_sequence_contains_expected_supported_tasks() {
+        let sequence = TaskSequence::check_all();
+        let expected = CHECK_ALL_TASKS
+            .iter()
+            .copied()
+            .filter(|task| task.is_supported())
+            .collect::<VecDeque<_>>();
+
+        assert_eq!(sequence.label, "Check All");
+        assert_eq!(
+            sequence.success_message,
+            "Whitebase check completed successfully"
+        );
+        assert_eq!(sequence.pending_tasks, expected);
+    }
+
+    #[test]
+    fn build_all_sequence_contains_expected_supported_tasks() {
+        let sequence = TaskSequence::build_all();
+        let expected = BUILD_ALL_TASKS
+            .iter()
+            .copied()
+            .filter(|task| task.is_supported())
+            .collect::<VecDeque<_>>();
+
+        assert_eq!(sequence.label, "Build All");
+        assert_eq!(
+            sequence.success_message,
+            "Whitebase build completed successfully"
+        );
+        assert_eq!(sequence.pending_tasks, expected);
     }
 }
