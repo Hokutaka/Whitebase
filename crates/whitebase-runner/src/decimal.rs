@@ -39,14 +39,12 @@ impl ExactDecimal {
         let mut exponent_marker = None;
 
         for (index, character) in unsigned.char_indices() {
-            if matches!(character, 'e' | 'E') {
-                if exponent_marker.replace(index).is_some() {
-                    return Err(invalid_input(
-                        name,
-                        input,
-                        "value must contain at most one exponent marker",
-                    ));
-                }
+            if matches!(character, 'e' | 'E') && exponent_marker.replace(index).is_some() {
+                return Err(invalid_input(
+                    name,
+                    input,
+                    "multiple exponent markers are not supported",
+                ));
             }
         }
 
