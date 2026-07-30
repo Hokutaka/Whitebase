@@ -1,8 +1,6 @@
 #![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
 
-use whitebase_asm_adapter::{
-    add_f32_avx, add_f32_scalar, add_f64_scalar, is_avx_available,
-};
+use whitebase_asm_adapter::{add_f32_avx, add_f32_scalar, add_f64_scalar, is_avx_available};
 
 #[test]
 fn assembly_scalar_f64_smoke_test() {
