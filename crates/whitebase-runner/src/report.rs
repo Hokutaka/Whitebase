@@ -95,6 +95,47 @@ pub struct AddScalarF64Report {
     pub result: F64Value,
 }
 
+/// 1バックエンド分の`f64`スカラー加算観測結果です。
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScalarF64BackendObservation {
+    /// 実行したバックエンド。
+    pub backend: BackendKind,
+
+    /// バックエンドが返した値とビット表現。
+    pub result: F64Value,
+
+    /// 正確な10進加算結果を`f64`へ丸めた参照値とビット一致したかどうか。
+    pub matches_reference_bits: bool,
+}
+
+/// 対応する全バックエンドを横断した`f64`スカラー加算観測レポートです。
+#[derive(Debug, Clone, PartialEq)]
+pub struct ScalarF64ObservationReport {
+    /// ユーザーが入力した左辺の10進文字列。
+    pub lhs_input: String,
+
+    /// ユーザーが入力した右辺の10進文字列。
+    pub rhs_input: String,
+
+    /// 左辺を`f64`へ変換した値とビット表現。
+    pub lhs: F64Value,
+
+    /// 右辺を`f64`へ変換した値とビット表現。
+    pub rhs: F64Value,
+
+    /// 入力文字列を10進数として正確に加算した結果。
+    pub decimal_reference: String,
+
+    /// 正確な10進加算結果を最も近い`f64`へ丸めた参照値。
+    pub reference: F64Value,
+
+    /// 各バックエンドの実行結果。
+    pub results: Vec<ScalarF64BackendObservation>,
+
+    /// 全バックエンドの結果ビットが一致したかどうか。
+    pub all_backends_match: bool,
+}
+
 /// `f32`配列加算の計測・比較レポートです。
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddF32Report {

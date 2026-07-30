@@ -6,7 +6,8 @@ use whitebase_core::{BackendKind, ComputeError, Whitebase};
 
 use crate::{
     AddF32Report, AddScalarF64Report, BackendRunResult, BackendRunStatus, ComparisonSummary,
-    F64Value, RunnerConfig, RunnerError, TimingSummary,
+    F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation, ScalarF64ObservationReport,
+    TimingSummary, decimal::ExactDecimal,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -38,6 +39,67 @@ impl Runner {
             lhs: F64Value::new(lhs),
             rhs: F64Value::new(rhs),
             result: F64Value::new(result),
+        })
+    }
+
+    /// 入力文字列を10進数として正確に加算しつつ、
+    /// 対応する全スカラーバックエンドの`f64`結果を横断して観測します。
+    pub fn observe_add_scalar_f64(
+        &self,
+        lhs_input: &str,
+        rhs_input: &str,
+    ) -> Result<ScalarF64ObservationReport, RunnerError> {
+        let lhs_decimal = ExactDecimal::parse("lhs", lhs_input)?;
+        let rhs_decimal = ExactDecimal::parse("rhs", rhs_input)?;
+
+        let lhs = parse_finite_f64("lhs", lhs_input)?;
+        let rhs = parse_finite_f64("rhs", rhs_input)?;
+
+        let decimal_reference = lhs_decimal.add(&rhs_decimal).to_canonical_string();
+        let reference_value = decimal_reference.parse::<f64>().map_err(|_| {
+            RunnerError::ScalarF64ReferenceOutOfRange {
+                value: decimal_reference.clone(),
+            }
+        })?;
+
+        if !reference_value.is_finite() {
+            return Err(RunnerError::ScalarF64ReferenceOutOfRange {
+                value: decimal_reference,
+            });
+        }
+
+        let reference = F64Value::new(reference_value);
+        let mut results = Vec::new();
+
+        for backend in scalar_f64_backends() {
+            let info = self.whitebase.backend_info(backend)?;
+
+            if !info.available {
+                continue;
+            }
+
+            let report = self.run_add_scalar_f64(backend, lhs, rhs)?;
+
+            results.push(ScalarF64BackendObservation {
+                backend,
+                matches_reference_bits: report.result.bits == reference.bits,
+                result: report.result,
+            });
+        }
+
+        let first_result_bits = results.first().map(|result| result.result.bits);
+        let all_backends_match = first_result_bits
+            .is_some_and(|bits| results.iter().all(|result| result.result.bits == bits));
+
+        Ok(ScalarF64ObservationReport {
+            lhs_input: lhs_input.trim().to_owned(),
+            rhs_input: rhs_input.trim().to_owned(),
+            lhs: F64Value::new(lhs),
+            rhs: F64Value::new(rhs),
+            decimal_reference,
+            reference,
+            results,
+            all_backends_match,
         })
     }
 
@@ -173,6 +235,35 @@ impl Default for Runner {
     }
 }
 
+fn scalar_f64_backends() -> [BackendKind; 3] {
+    [
+        BackendKind::RustScalar,
+        BackendKind::CppScalar,
+        BackendKind::AssemblyScalar,
+    ]
+}
+
+fn parse_finite_f64(name: &'static str, input: &str) -> Result<f64, RunnerError> {
+    let value = input
+        .trim()
+        .parse::<f64>()
+        .map_err(|_| RunnerError::InvalidScalarF64Input {
+            name,
+            value: input.to_owned(),
+            reason: "value must be parseable as f64".to_owned(),
+        })?;
+
+    if !value.is_finite() {
+        return Err(RunnerError::InvalidScalarF64Input {
+            name,
+            value: input.to_owned(),
+            reason: "value must be finite".to_owned(),
+        });
+    }
+
+    Ok(value)
+}
+
 fn validate_config(config: &RunnerConfig) -> Result<(), RunnerError> {
     if config.backends.is_empty() {
         return Err(RunnerError::NoBackends);
@@ -289,5 +380,32 @@ mod tests {
         assert!(!comparison.matches_reference);
         assert_eq!(comparison.mismatch_count, 1);
         assert_eq!(comparison.maximum_absolute_error, 0.5);
+    }
+
+    #[test]
+    fn observes_exact_decimal_reference_for_point_one_plus_point_two() {
+        let report = Runner::new()
+            .observe_add_scalar_f64("0.1", "0.2")
+            .expect("scalar f64 observation must succeed");
+
+        assert_eq!(report.decimal_reference, "0.3");
+        assert_eq!(report.reference.bits, 0x3fd3_3333_3333_3333);
+        assert!(!report.results.is_empty());
+        assert!(report.all_backends_match);
+        assert!(report.results.iter().all(|result| {
+            result.result.bits == 0x3fd3_3333_3333_3334 && !result.matches_reference_bits
+        }));
+    }
+
+    #[test]
+    fn scalar_observation_rejects_non_finite_inputs() {
+        let error = Runner::new()
+            .observe_add_scalar_f64("NaN", "0.2")
+            .expect_err("NaN must be rejected");
+
+        assert!(matches!(
+            error,
+            RunnerError::InvalidScalarF64Input { name: "lhs", .. }
+        ));
     }
 }

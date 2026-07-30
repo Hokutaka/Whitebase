@@ -13,7 +13,10 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
-use whitebase_runner::{AddF32Report, BackendRunResult, BackendRunStatus, Runner, RunnerConfig};
+use whitebase_runner::{
+    AddF32Report, BackendRunResult, BackendRunStatus, F64Value, Runner, RunnerConfig, RunnerError,
+    ScalarF64BackendObservation, ScalarF64ObservationReport,
+};
 
 const SERVER_ADDRESS: &str = "127.0.0.1:1430";
 const MAX_INPUT_LENGTH: usize = 10_000_000;
@@ -34,6 +37,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let application = Router::new()
         .route("/api/health", get(health))
+        .route(
+            "/api/observations/add-scalar-f64",
+            post(observe_add_scalar_f64),
+        )
         .route("/api/benchmarks/add-f32", post(run_add_f32_benchmark))
         .layer(cors);
 
@@ -54,6 +61,44 @@ async fn health() -> Json<HealthResponse> {
         status: "ok",
         service: "whitebase-server",
     })
+}
+
+async fn observe_add_scalar_f64(
+    Json(request): Json<ScalarF64Request>,
+) -> Result<Json<ScalarF64ObservationDto>, ApiError> {
+    let task = tokio::task::spawn_blocking(move || execute_scalar_f64_observation(request));
+
+    let result = task.await.map_err(|error| {
+        ApiError::internal(
+            "scalar_f64_observation_task_failed",
+            format!("scalar f64 observation task failed: {error}"),
+        )
+    })?;
+
+    Ok(Json(result?))
+}
+
+fn execute_scalar_f64_observation(
+    request: ScalarF64Request,
+) -> Result<ScalarF64ObservationDto, ApiError> {
+    Runner::new()
+        .observe_add_scalar_f64(&request.lhs, &request.rhs)
+        .map(Into::into)
+        .map_err(map_scalar_f64_error)
+}
+
+fn map_scalar_f64_error(error: RunnerError) -> ApiError {
+    let is_bad_request = matches!(
+        &error,
+        RunnerError::InvalidScalarF64Input { .. }
+            | RunnerError::ScalarF64ReferenceOutOfRange { .. }
+    );
+
+    if is_bad_request {
+        ApiError::bad_request("invalid_scalar_f64_request", error.to_string())
+    } else {
+        ApiError::internal("scalar_f64_observation_failed", error.to_string())
+    }
 }
 
 async fn run_add_f32_benchmark(
@@ -156,6 +201,77 @@ fn create_rhs(length: usize) -> Vec<f32> {
             value * 0.5 + 1.0
         })
         .collect()
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScalarF64Request {
+    lhs: String,
+    rhs: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScalarF64ObservationDto {
+    lhs_input: String,
+    rhs_input: String,
+    lhs: F64ValueDto,
+    rhs: F64ValueDto,
+    decimal_reference: String,
+    reference: F64ValueDto,
+    results: Vec<ScalarF64BackendResultDto>,
+    all_backends_match: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScalarF64BackendResultDto {
+    backend: String,
+    result: F64ValueDto,
+    matches_reference_bits: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct F64ValueDto {
+    value: f64,
+    decimal: String,
+    bits: String,
+}
+
+impl From<ScalarF64ObservationReport> for ScalarF64ObservationDto {
+    fn from(report: ScalarF64ObservationReport) -> Self {
+        Self {
+            lhs_input: report.lhs_input,
+            rhs_input: report.rhs_input,
+            lhs: report.lhs.into(),
+            rhs: report.rhs.into(),
+            decimal_reference: report.decimal_reference,
+            reference: report.reference.into(),
+            results: report.results.into_iter().map(Into::into).collect(),
+            all_backends_match: report.all_backends_match,
+        }
+    }
+}
+
+impl From<ScalarF64BackendObservation> for ScalarF64BackendResultDto {
+    fn from(result: ScalarF64BackendObservation) -> Self {
+        Self {
+            backend: result.backend.display_name().to_owned(),
+            result: result.result.into(),
+            matches_reference_bits: result.matches_reference_bits,
+        }
+    }
+}
+
+impl From<F64Value> for F64ValueDto {
+    fn from(value: F64Value) -> Self {
+        Self {
+            value: value.value,
+            decimal: format!("{:.17}", value.value),
+            bits: format!("0x{:016x}", value.bits),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -333,4 +449,34 @@ impl IntoResponse for ApiError {
 struct ApiErrorBody {
     code: &'static str,
     message: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scalar_f64_observation_generates_decimal_reference() {
+        let report = execute_scalar_f64_observation(ScalarF64Request {
+            lhs: "0.1".to_owned(),
+            rhs: "0.2".to_owned(),
+        })
+        .expect("observation must succeed");
+
+        assert_eq!(report.decimal_reference, "0.3");
+        assert_eq!(report.reference.decimal, "0.29999999999999999");
+        assert_eq!(report.reference.bits, "0x3fd3333333333333");
+    }
+
+    #[test]
+    fn scalar_f64_observation_maps_invalid_input_to_bad_request() {
+        let error = execute_scalar_f64_observation(ScalarF64Request {
+            lhs: "not-a-number".to_owned(),
+            rhs: "0.2".to_owned(),
+        })
+        .expect_err("invalid decimal must fail");
+
+        assert_eq!(error.status, StatusCode::BAD_REQUEST);
+        assert_eq!(error.code, "invalid_scalar_f64_request");
+    }
 }

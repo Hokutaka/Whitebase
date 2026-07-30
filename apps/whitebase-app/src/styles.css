@@ -1,7 +1,7 @@
 :root {
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
   color: #ecf3ff;
   background:
     radial-gradient(circle at top left, #172640, transparent 42%),
@@ -69,7 +69,7 @@ h2 {
 }
 
 .subtitle {
-  max-width: 700px;
+  max-width: 760px;
   margin-bottom: 0;
   color: #91a0b7;
   line-height: 1.7;
@@ -95,6 +95,7 @@ h2 {
   box-shadow: 0 0 14px #59e391;
 }
 
+.observation-panel,
 .control-panel,
 .results-panel,
 .metric {
@@ -104,16 +105,50 @@ h2 {
   backdrop-filter: blur(16px);
 }
 
-.control-panel {
-  padding: 18px;
+.observation-panel,
+.control-panel,
+.results-panel {
   border-radius: 18px;
 }
 
+.observation-panel {
+  padding: 22px;
+}
+
+.control-panel {
+  margin-top: 14px;
+  padding: 22px;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.compact-heading {
+  margin-bottom: 16px;
+}
+
+.error-message {
+  margin: 0;
+  color: #ff7b8a;
+}
+
+.observation-form,
 #benchmark-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
   gap: 14px;
   align-items: end;
+}
+
+.observation-form {
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+}
+
+#benchmark-form {
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
 }
 
 label {
@@ -138,6 +173,7 @@ input {
   outline: none;
   color: #f7fbff;
   background: #09111d;
+  font-variant-numeric: tabular-nums;
 }
 
 input:focus {
@@ -145,6 +181,7 @@ input:focus {
   box-shadow: 0 0 0 3px #70a7ff20;
 }
 
+#observe-button,
 #run-button {
   height: 44px;
   padding: 0 22px;
@@ -156,13 +193,47 @@ input:focus {
   letter-spacing: 0.06em;
 }
 
+#observe-button:hover:not(:disabled),
 #run-button:hover:not(:disabled) {
   filter: brightness(1.08);
 }
 
+#observe-button:disabled,
 #run-button:disabled {
   cursor: wait;
   opacity: 0.6;
+}
+
+.observation-summary {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.observation-summary > div {
+  padding: 14px 16px;
+  border: 1px solid #223047;
+  border-radius: 12px;
+  background: #09111d99;
+}
+
+.observation-summary span {
+  display: block;
+  margin-bottom: 7px;
+  color: #79889f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.observation-summary strong {
+  font-size: 15px;
+}
+
+.observation-table-wrapper {
+  margin-top: 14px;
 }
 
 .summary {
@@ -194,19 +265,6 @@ input:focus {
 .results-panel {
   margin-top: 14px;
   padding: 22px;
-  border-radius: 18px;
-}
-
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 18px;
-}
-
-.error-message {
-  margin: 0;
-  color: #ff7b8a;
 }
 
 .table-wrapper {
@@ -252,9 +310,22 @@ tbody tr:hover {
   background: #142036;
 }
 
+.expected-row {
+  background: #0a111c;
+}
+
 .backend-name {
   color: #f5f8ff;
   font-weight: 750;
+}
+
+.monospace {
+  font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.bits {
+  color: #a9c9ff;
 }
 
 .speedup {
@@ -275,6 +346,11 @@ tbody tr:hover {
 .badge-ok {
   color: #75e9a5;
   background: #1b6c4036;
+}
+
+.badge-warn {
+  color: #ffd27a;
+  background: #8a641f3d;
 }
 
 .badge-error {
@@ -299,10 +375,12 @@ tbody tr:hover {
 }
 
 @media (max-width: 1050px) {
+  .observation-form,
   #benchmark-form {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  #observe-button,
   #run-button {
     grid-column: 1 / -1;
   }
