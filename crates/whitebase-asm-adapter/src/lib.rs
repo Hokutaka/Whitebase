@@ -12,6 +12,8 @@ unsafe extern "C" {
         length: usize,
     );
 
+    fn whitebase_asm_add_f64_scalar(lhs: f64, rhs: f64) -> f64;
+
     fn whitebase_asm_add_f32_avx(lhs: *const f32, rhs: *const f32, output: *mut f32, length: usize);
 }
 
@@ -31,6 +33,14 @@ pub fn add_f32_scalar(
     }
 
     Ok(())
+}
+
+/// Assembly Scalarバックエンドで2つの`f64`値を加算します。
+#[must_use]
+pub fn add_f64_scalar(lhs: f64, rhs: f64) -> f64 {
+    // SAFETY:
+    // 値渡しの`f64`を受け取り、値渡しの`f64`を返すC ABI関数です。
+    unsafe { whitebase_asm_add_f64_scalar(lhs, rhs) }
 }
 
 /// 現在のCPUとOSでAVXを利用できるか返します。
@@ -70,6 +80,13 @@ fn validate_lengths(lhs: &[f32], rhs: &[f32], output: &[f32]) -> Result<(), Arra
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn adds_f64_scalars_with_ieee_754_rounding() {
+        let result = add_f64_scalar(0.1, 0.2);
+
+        assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+    }
 
     #[test]
     fn rejects_different_lengths() {

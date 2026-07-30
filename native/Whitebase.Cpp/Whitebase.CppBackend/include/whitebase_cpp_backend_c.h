@@ -13,6 +13,8 @@ void whitebase_cpp_add_f32_scalar(
     size_t length
 );
 
+double whitebase_cpp_add_f64_scalar(double lhs, double rhs);
+
 int whitebase_cpp_is_avx_available(void);
 
 int whitebase_cpp_add_f32_avx(

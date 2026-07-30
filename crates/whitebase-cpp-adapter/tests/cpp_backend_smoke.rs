@@ -1,6 +1,6 @@
 #![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
 
-use whitebase_cpp_adapter::{add_f32_avx, add_f32_scalar, is_avx_available};
+use whitebase_cpp_adapter::{add_f32_avx, add_f32_scalar, add_f64_scalar, is_avx_available};
 
 #[test]
 fn cpp_backend_f32_array_smoke_test() {
@@ -26,4 +26,12 @@ fn cpp_backend_f32_array_smoke_test() {
         assert_eq!(avx_output, expected);
         assert_eq!(avx_output, scalar_output);
     }
+}
+
+#[test]
+fn cpp_backend_f64_scalar_smoke_test() {
+    let result = add_f64_scalar(0.1, 0.2);
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+    assert_eq!(0.3_f64.to_bits(), 0x3fd3_3333_3333_3333);
 }

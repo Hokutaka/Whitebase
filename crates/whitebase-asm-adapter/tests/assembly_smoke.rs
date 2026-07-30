@@ -1,6 +1,15 @@
 #![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
 
-use whitebase_asm_adapter::{add_f32_avx, add_f32_scalar, is_avx_available};
+use whitebase_asm_adapter::{
+    add_f32_avx, add_f32_scalar, add_f64_scalar, is_avx_available,
+};
+
+#[test]
+fn assembly_scalar_f64_smoke_test() {
+    let result = add_f64_scalar(0.1, 0.2);
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
 
 #[test]
 fn assembly_f32_array_smoke_test() {

@@ -12,6 +12,9 @@ namespace whitebase::cpp_backend
     ) noexcept;
 
     [[nodiscard]]
+    double add_f64_scalar(double lhs, double rhs) noexcept;
+
+    [[nodiscard]]
     bool is_avx_available() noexcept;
 
     [[nodiscard]]

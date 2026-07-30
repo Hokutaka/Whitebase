@@ -8,6 +8,8 @@ extern "C" {
 
 int whitebase_asm_add(int left, int right);
 
+double whitebase_asm_add_f64_scalar(double lhs, double rhs);
+
 void whitebase_asm_add_f32_scalar(
     const float* lhs,
     const float* rhs,

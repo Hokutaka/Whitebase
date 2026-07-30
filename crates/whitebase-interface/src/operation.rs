@@ -3,4 +3,7 @@
 pub enum OperationKind {
     /// 2つの`f32`配列を要素ごとに加算します。
     AddF32,
+
+    /// 2つの`f64`スカラー値を加算します。
+    AddScalarF64,
 }

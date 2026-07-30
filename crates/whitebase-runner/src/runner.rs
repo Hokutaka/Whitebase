@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 use whitebase_core::{BackendKind, ComputeError, Whitebase};
 
 use crate::{
-    AddF32Report, BackendRunResult, BackendRunStatus, ComparisonSummary, RunnerConfig, RunnerError,
-    TimingSummary,
+    AddF32Report, AddScalarF64Report, BackendRunResult, BackendRunStatus, ComparisonSummary,
+    F64Value, RunnerConfig, RunnerError, TimingSummary,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -21,6 +21,24 @@ impl Runner {
         Self {
             whitebase: Whitebase::new(),
         }
+    }
+
+    /// 指定されたバックエンドで`f64`スカラー加算を実行し、
+    /// 入力と結果のビット表現を返します。
+    pub fn run_add_scalar_f64(
+        &self,
+        backend: BackendKind,
+        lhs: f64,
+        rhs: f64,
+    ) -> Result<AddScalarF64Report, RunnerError> {
+        let result = self.whitebase.add_scalar_f64(backend, lhs, rhs)?;
+
+        Ok(AddScalarF64Report {
+            backend,
+            lhs: F64Value::new(lhs),
+            rhs: F64Value::new(rhs),
+            result: F64Value::new(result),
+        })
     }
 
     /// 指定されたバックエンドで`f32`配列加算を実行し、

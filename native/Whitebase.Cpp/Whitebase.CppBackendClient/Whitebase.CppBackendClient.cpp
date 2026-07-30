@@ -1,4 +1,6 @@
 ﻿#include <array>
+#include <bit>
+#include <cstdint>
 #include <iostream>
 
 #include "whitebase_cpp_backend.h"
@@ -38,6 +40,16 @@ int main()
     }
 
     std::cout << "C++ Scalar f32 array add passed.\n";
+
+    const double f64_result = whitebase::cpp_backend::add_f64_scalar(0.1, 0.2);
+
+    if (std::bit_cast<std::uint64_t>(f64_result) != 0x3fd3333333333334ULL)
+    {
+        std::cerr << "C++ Scalar f64 add failed.\n";
+        return 1;
+    }
+
+    std::cout << "C++ Scalar f64 add passed.\n";
 
     std::array<float, length> avx_output{};
 
