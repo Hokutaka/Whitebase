@@ -1,4 +1,4 @@
-use crate::{BackendCapabilities, ComputeError};
+use crate::{BackendCapabilities, ComputeError, OperationKind};
 
 /// Whitebaseで利用できる計算バックエンドの種類です。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,4 +53,12 @@ pub trait ComputeBackend: Send + Sync {
 
     /// 2つの`f32`配列を要素ごとに加算します。
     fn add_f32(&self, lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), ComputeError>;
+
+    /// 2つの`f64`スカラー値を加算します。
+    fn add_scalar_f64(&self, _lhs: f64, _rhs: f64) -> Result<f64, ComputeError> {
+        Err(ComputeError::OperationUnsupported {
+            backend: self.kind(),
+            operation: OperationKind::AddScalarF64,
+        })
+    }
 }

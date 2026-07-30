@@ -12,7 +12,7 @@ impl ComputeBackend for CppScalarBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::scalar_add_f32()
+        BackendCapabilities::scalar_add_f32().with_add_scalar_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -24,6 +24,10 @@ impl ComputeBackend for CppScalarBackend {
 
         whitebase_cpp_adapter::add_f32_scalar(lhs, rhs, output)
             .map_err(|error| backend_failure(self.kind(), error))
+    }
+
+    fn add_scalar_f64(&self, lhs: f64, rhs: f64) -> Result<f64, ComputeError> {
+        Ok(whitebase_cpp_adapter::add_f64_scalar(lhs, rhs))
     }
 }
 

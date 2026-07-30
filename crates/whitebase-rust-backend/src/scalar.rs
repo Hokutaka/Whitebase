@@ -20,6 +20,12 @@ pub fn add_f32(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), Array
     Ok(())
 }
 
+/// 2つの`f64`スカラー値を加算します。
+#[must_use]
+pub fn add_f64(lhs: f64, rhs: f64) -> f64 {
+    lhs + rhs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

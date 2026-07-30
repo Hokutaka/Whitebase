@@ -14,4 +14,9 @@ namespace whitebase::cpp_backend
             output[index] = lhs[index] + rhs[index];
         }
     }
+
+    double add_f64_scalar(const double lhs, const double rhs) noexcept
+    {
+        return lhs + rhs;
+    }
 }

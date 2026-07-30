@@ -58,6 +58,43 @@ pub struct BackendRunResult {
     pub status: BackendRunStatus,
 }
 
+/// `f64`値と、そのIEEE 754ビット表現です。
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct F64Value {
+    /// 観測した`f64`値。
+    pub value: f64,
+
+    /// `f64::to_bits`で取得したビット表現。
+    pub bits: u64,
+}
+
+impl F64Value {
+    /// 値とビット表現をまとめて生成します。
+    #[must_use]
+    pub fn new(value: f64) -> Self {
+        Self {
+            value,
+            bits: value.to_bits(),
+        }
+    }
+}
+
+/// `f64`スカラー加算の観測レポートです。
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AddScalarF64Report {
+    /// 実行したバックエンド。
+    pub backend: BackendKind,
+
+    /// 左辺の値とビット表現。
+    pub lhs: F64Value,
+
+    /// 右辺の値とビット表現。
+    pub rhs: F64Value,
+
+    /// 加算結果とビット表現。
+    pub result: F64Value,
+}
+
 /// `f32`配列加算の計測・比較レポートです。
 #[derive(Debug, Clone, PartialEq)]
 pub struct AddF32Report {

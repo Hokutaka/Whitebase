@@ -92,6 +92,28 @@ impl Whitebase {
         backend.add_f32(lhs, rhs, output)
     }
 
+    /// 指定されたバックエンドで`f64`スカラー値を加算します。
+    pub fn add_scalar_f64(
+        &self,
+        kind: BackendKind,
+        lhs: f64,
+        rhs: f64,
+    ) -> Result<f64, ComputeError> {
+        let backend = self.find_backend(kind)?;
+
+        if !backend.capabilities().supports(OperationKind::AddScalarF64) {
+            return Err(ComputeError::OperationUnsupported {
+                backend: kind,
+                operation: OperationKind::AddScalarF64,
+            });
+        }
+        if !backend.is_available() {
+            return Err(ComputeError::BackendUnavailable { backend: kind });
+        }
+
+        backend.add_scalar_f64(lhs, rhs)
+    }
+
     fn find_backend(&self, kind: BackendKind) -> Result<&dyn ComputeBackend, ComputeError> {
         self.backends
             .iter()

@@ -1,4 +1,6 @@
 #include <array>
+#include <bit>
+#include <cstdint>
 #include <iostream>
 
 #include "whitebase_asm.h"
@@ -20,6 +22,18 @@ int main()
         std::cerr << "Unexpected integer add result.\n";
         return 1;
     }
+
+    const double scalar_f64_result =
+        whitebase_asm_add_f64_scalar(0.1, 0.2);
+
+    if (std::bit_cast<std::uint64_t>(scalar_f64_result) !=
+        0x3fd3333333333334ULL)
+    {
+        std::cerr << "Unexpected scalar f64 add result.\n";
+        return 1;
+    }
+
+    std::cout << "Scalar f64 add passed.\n";
 
     constexpr std::size_t length = 10;
 

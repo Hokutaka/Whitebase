@@ -149,6 +149,7 @@
     </MASM>
     <MASM Include="src\whitebase_asm_add_f32_avx.asm" />
     <MASM Include="src\whitebase_asm_add_f32_scalar.asm" />
+    <MASM Include="src\whitebase_asm_add_f64_scalar.asm" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\whitebase_asm.h" />

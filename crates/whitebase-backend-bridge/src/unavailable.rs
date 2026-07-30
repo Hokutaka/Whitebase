@@ -37,7 +37,7 @@ macro_rules! define_unavailable_backend {
 define_unavailable_backend!(
     CppScalarBackend,
     BackendKind::CppScalar,
-    BackendCapabilities::scalar_add_f32()
+    BackendCapabilities::scalar_add_f32().with_add_scalar_f64()
 );
 
 define_unavailable_backend!(

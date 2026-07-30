@@ -18,6 +18,11 @@ extern "C"
         );
     }
 
+    double whitebase_cpp_add_f64_scalar(const double lhs, const double rhs)
+    {
+        return whitebase::cpp_backend::add_f64_scalar(lhs, rhs);
+    }
+
     int whitebase_cpp_is_avx_available(void)
     {
         return whitebase::cpp_backend::is_avx_available()

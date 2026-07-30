@@ -10,6 +10,7 @@ mod runner;
 pub use config::RunnerConfig;
 pub use error::RunnerError;
 pub use report::{
-    AddF32Report, BackendRunResult, BackendRunStatus, ComparisonSummary, TimingSummary,
+    AddF32Report, AddScalarF64Report, BackendRunResult, BackendRunStatus, ComparisonSummary,
+    F64Value, TimingSummary,
 };
 pub use runner::Runner;
