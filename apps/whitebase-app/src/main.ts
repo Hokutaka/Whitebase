@@ -1,9 +1,34 @@
-﻿import {
-  invoke,
-  isTauri,
-} from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 
 import "./styles.css";
+
+interface ScalarF64Request {
+  lhs: string;
+  rhs: string;
+}
+
+interface F64Value {
+  value: number;
+  decimal: string;
+  bits: string;
+}
+
+interface ScalarF64BackendResult {
+  backend: string;
+  result: F64Value;
+  matchesReferenceBits: boolean;
+}
+
+interface ScalarF64Observation {
+  lhsInput: string;
+  rhsInput: string;
+  lhs: F64Value;
+  rhs: F64Value;
+  decimalReference: string;
+  reference: F64Value;
+  results: ScalarF64BackendResult[];
+  allBackendsMatch: boolean;
+}
 
 interface BenchmarkRequest {
   inputLength: number;
@@ -42,15 +67,11 @@ interface ApiError {
   message: string;
 }
 
-function requireElement<T extends Element>(
-  selector: string,
-): T {
+function requireElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
 
   if (!element) {
-    throw new Error(
-      `required element was not found: ${selector}`,
-    );
+    throw new Error(`required element was not found: ${selector}`);
   }
 
   return element;
@@ -65,9 +86,9 @@ app.innerHTML = `
     <header class="hero">
       <div>
         <p class="eyebrow">WHITEBASE COMPUTE LAB</p>
-        <h1>Backend Benchmark</h1>
+        <h1>Backend Observation</h1>
         <p class="subtitle">
-          Rust、C++、AssemblyのScalar / SIMD実装を計測・比較します。
+          Rust、C++、Assemblyの演算結果を、値とIEEE 754ビット表現まで横断して観測します。
         </p>
       </div>
 
@@ -77,7 +98,77 @@ app.innerHTML = `
       </div>
     </header>
 
+    <section class="observation-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">F64 SCALAR</p>
+          <h2>Addition observation</h2>
+        </div>
+
+        <p id="observation-error" class="error-message"></p>
+      </div>
+
+      <form id="scalar-f64-form" class="observation-form">
+        <label>
+          <span>Left-hand side</span>
+          <input id="scalar-lhs" type="text" inputmode="decimal" value="0.1" required />
+        </label>
+
+        <label>
+          <span>Right-hand side</span>
+          <input id="scalar-rhs" type="text" inputmode="decimal" value="0.2" required />
+        </label>
+
+        <button id="observe-button" type="submit">OBSERVE</button>
+      </form>
+
+      <div id="observation-summary" class="observation-summary" hidden>
+        <div>
+          <span>Expression</span>
+          <strong id="observation-expression" class="monospace">-</strong>
+        </div>
+
+        <div>
+          <span>Exact decimal reference</span>
+          <strong id="observation-decimal-reference" class="monospace">-</strong>
+        </div>
+
+        <div>
+          <span>Backend agreement</span>
+          <strong id="observation-agreement">-</strong>
+        </div>
+      </div>
+
+      <div class="table-wrapper observation-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Backend</th>
+              <th>Decimal value</th>
+              <th>IEEE 754 bits</th>
+              <th>vs decimal reference</th>
+            </tr>
+          </thead>
+
+          <tbody id="observation-results-body">
+            <tr class="empty-row">
+              <td colspan="4">Observe 0.1 + 0.2 to display results.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="control-panel">
+      <div class="section-heading compact-heading">
+        <div>
+          <p class="eyebrow">F32 ARRAY</p>
+          <h2>Backend benchmark</h2>
+        </div>
+
+        <p id="error-message" class="error-message"></p>
+      </div>
+
       <form id="benchmark-form">
         <label>
           <span>Input length</span>
@@ -115,9 +206,7 @@ app.innerHTML = `
           />
         </label>
 
-        <button id="run-button" type="submit">
-          RUN BENCHMARK
-        </button>
+        <button id="run-button" type="submit">RUN BENCHMARK</button>
       </form>
     </section>
 
@@ -146,11 +235,9 @@ app.innerHTML = `
     <section class="results-panel">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">RESULTS</p>
+          <p class="eyebrow">BENCHMARK RESULTS</p>
           <h2>Backend comparison</h2>
         </div>
-
-        <p id="error-message" class="error-message"></p>
       </div>
 
       <div class="table-wrapper">
@@ -169,9 +256,7 @@ app.innerHTML = `
 
           <tbody id="results-body">
             <tr class="empty-row">
-              <td colspan="7">
-                Run the benchmark to display results.
-              </td>
+              <td colspan="7">Run the benchmark to display results.</td>
             </tr>
           </tbody>
         </table>
@@ -180,71 +265,126 @@ app.innerHTML = `
   </main>
 `;
 
-const form =
-  requireElement<HTMLFormElement>("#benchmark-form");
+const observationForm = requireElement<HTMLFormElement>("#scalar-f64-form");
+const observeButton = requireElement<HTMLButtonElement>("#observe-button");
+const observationError = requireElement<HTMLParagraphElement>("#observation-error");
+const observationSummary = requireElement<HTMLElement>("#observation-summary");
+const observationResultsBody = requireElement<HTMLTableSectionElement>(
+  "#observation-results-body",
+);
 
-const runButton =
-  requireElement<HTMLButtonElement>("#run-button");
+const benchmarkForm = requireElement<HTMLFormElement>("#benchmark-form");
+const runButton = requireElement<HTMLButtonElement>("#run-button");
+const statusElement = requireElement<HTMLSpanElement>("#application-status");
+const errorElement = requireElement<HTMLParagraphElement>("#error-message");
+const resultsBody = requireElement<HTMLTableSectionElement>("#results-body");
+const summary = requireElement<HTMLElement>("#summary");
 
-const statusElement =
-  requireElement<HTMLSpanElement>("#application-status");
+observationForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
 
-const errorElement =
-  requireElement<HTMLParagraphElement>("#error-message");
+  const request: ScalarF64Request = {
+    lhs: readDecimalText("scalar-lhs"),
+    rhs: readDecimalText("scalar-rhs"),
+  };
 
-const resultsBody =
-  requireElement<HTMLTableSectionElement>("#results-body");
+  setBusy(true, "observation");
+  observationError.textContent = "";
 
-const summary =
-  requireElement<HTMLElement>("#summary");
+  try {
+    const report = await executeScalarF64Observation(request);
 
-form.addEventListener("submit", async (event) => {
+    renderScalarF64Observation(report);
+    statusElement.textContent = "Completed";
+  } catch (error) {
+    observationError.textContent = errorMessage(error);
+    statusElement.textContent = "Failed";
+  } finally {
+    setBusy(false, "observation");
+  }
+});
+
+benchmarkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const request: BenchmarkRequest = {
     inputLength: readNumber("input-length"),
     warmupIterations: readNumber("warmup-iterations"),
-    measuredIterations: readNumber(
-      "measured-iterations",
-    ),
+    measuredIterations: readNumber("measured-iterations"),
   };
 
-  setRunning(true);
+  setBusy(true, "benchmark");
   errorElement.textContent = "";
 
   try {
     const report = await executeBenchmark(request);
 
-    renderReport(report);
+    renderBenchmarkReport(report);
     statusElement.textContent = "Completed";
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
-    errorElement.textContent = message;
+    errorElement.textContent = errorMessage(error);
     statusElement.textContent = "Failed";
   } finally {
-    setRunning(false);
+    setBusy(false, "benchmark");
   }
 });
 
-function renderReport(report: BenchmarkReport): void {
+function renderScalarF64Observation(report: ScalarF64Observation): void {
+  const resultRows = report.results
+    .map((backendResult) => {
+      const matchesReference = backendResult.matchesReferenceBits;
+
+      return `
+        <tr>
+          <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+          <td class="monospace">${escapeHtml(backendResult.result.decimal)}</td>
+          <td class="monospace bits">${escapeHtml(backendResult.result.bits)}</td>
+          <td>
+            <span class="badge ${matchesReference ? "badge-ok" : "badge-warn"}">
+              ${matchesReference ? "BIT MATCH" : "DIFFERENT"}
+            </span>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  observationResultsBody.innerHTML = `
+    ${resultRows}
+    <tr class="expected-row">
+      <td class="backend-name">Decimal reference</td>
+      <td class="monospace">${escapeHtml(report.reference.decimal)}</td>
+      <td class="monospace bits">${escapeHtml(report.reference.bits)}</td>
+      <td><span class="badge badge-muted">REFERENCE</span></td>
+    </tr>
+  `;
+
+  setText(
+    "observation-expression",
+    `${report.lhsInput} + ${report.rhsInput}`,
+  );
+
+  const agreement = report.allBackendsMatch
+    ? "All backend bits match"
+    : "Backend mismatch detected";
+
+  setText("observation-decimal-reference", report.decimalReference);
+  setText("observation-agreement", agreement);
+  observationSummary.hidden = false;
+}
+
+function renderBenchmarkReport(report: BenchmarkReport): void {
   const completed = report.results.filter(
     (
       result,
     ): result is BackendResult & {
       meanNanoseconds: number;
-    } =>
-      result.status === "completed" &&
-      result.meanNanoseconds !== null,
+    } => result.status === "completed" && result.meanNanoseconds !== null,
   );
 
   const baseline =
-    completed.find(
-      (result) => result.backend === "Rust Scalar",
-    )?.meanNanoseconds ??
+    completed.find((result) => result.backend === "Rust Scalar")
+      ?.meanNanoseconds ??
     completed[0]?.meanNanoseconds ??
     null;
 
@@ -255,10 +395,7 @@ function renderReport(report: BenchmarkReport): void {
       return result;
     }
 
-    return result.meanNanoseconds <
-      current.meanNanoseconds
-      ? result
-      : current;
+    return result.meanNanoseconds < current.meanNanoseconds ? result : current;
   }, null);
 
   resultsBody.innerHTML = report.results
@@ -266,12 +403,8 @@ function renderReport(report: BenchmarkReport): void {
       if (result.status === "unavailable") {
         return `
           <tr>
-            <td class="backend-name">${result.backend}</td>
-            <td>
-              <span class="badge badge-muted">
-                UNAVAILABLE
-              </span>
-            </td>
+            <td class="backend-name">${escapeHtml(result.backend)}</td>
+            <td><span class="badge badge-muted">UNAVAILABLE</span></td>
             <td colspan="5">—</td>
           </tr>
         `;
@@ -280,12 +413,8 @@ function renderReport(report: BenchmarkReport): void {
       if (result.status === "failed") {
         return `
           <tr>
-            <td class="backend-name">${result.backend}</td>
-            <td>
-              <span class="badge badge-error">
-                FAILED
-              </span>
-            </td>
+            <td class="backend-name">${escapeHtml(result.backend)}</td>
+            <td><span class="badge badge-error">FAILED</span></td>
             <td colspan="5" class="failure">
               ${escapeHtml(result.error ?? "Unknown error")}
             </td>
@@ -294,20 +423,16 @@ function renderReport(report: BenchmarkReport): void {
       }
 
       const speedup =
-        baseline !== null &&
-        result.meanNanoseconds !== null
+        baseline !== null && result.meanNanoseconds !== null
           ? baseline / result.meanNanoseconds
           : null;
 
-      const matches =
-        result.matchesReference === true;
+      const matches = result.matchesReference === true;
 
       return `
         <tr>
-          <td class="backend-name">${result.backend}</td>
-          <td>
-            <span class="badge badge-ok">COMPLETED</span>
-          </td>
+          <td class="backend-name">${escapeHtml(result.backend)}</td>
+          <td><span class="badge badge-ok">COMPLETED</span></td>
           <td>${formatDuration(result.meanNanoseconds)}</td>
           <td>${formatDuration(result.minimumNanoseconds)}</td>
           <td>${formatDuration(result.maximumNanoseconds)}</td>
@@ -315,9 +440,7 @@ function renderReport(report: BenchmarkReport): void {
             ${speedup === null ? "—" : `${speedup.toFixed(2)}x`}
           </td>
           <td>
-            <span class="badge ${
-              matches ? "badge-ok" : "badge-error"
-            }">
+            <span class="badge ${matches ? "badge-ok" : "badge-error"}">
               ${matches ? "MATCH" : "MISMATCH"}
             </span>
           </td>
@@ -326,59 +449,54 @@ function renderReport(report: BenchmarkReport): void {
     })
     .join("");
 
-  setText(
-    "summary-elements",
-    report.inputLength.toLocaleString(),
-  );
-
-  setText(
-    "summary-reference",
-    report.referenceBackend,
-  );
-
-  setText(
-    "summary-iterations",
-    report.measuredIterations.toLocaleString(),
-  );
-
+  setText("summary-elements", report.inputLength.toLocaleString());
+  setText("summary-reference", report.referenceBackend);
+  setText("summary-iterations", report.measuredIterations.toLocaleString());
   setText(
     "summary-fastest",
     fastest
-      ? `${fastest.backend} / ${formatDuration(
-          fastest.meanNanoseconds,
-        )}`
+      ? `${fastest.backend} / ${formatDuration(fastest.meanNanoseconds)}`
       : "—",
   );
 
   summary.hidden = false;
 }
 
-function setRunning(running: boolean): void {
+function setBusy(
+  running: boolean,
+  activeTask: "observation" | "benchmark",
+): void {
+  observeButton.disabled = running;
   runButton.disabled = running;
-  runButton.textContent = running
-    ? "RUNNING..."
-    : "RUN BENCHMARK";
 
-  statusElement.textContent = running
-    ? "Running"
-    : statusElement.textContent;
+  observeButton.textContent =
+    running && activeTask === "observation" ? "OBSERVING..." : "OBSERVE";
+
+  runButton.textContent =
+    running && activeTask === "benchmark" ? "RUNNING..." : "RUN BENCHMARK";
+
+  if (running) {
+    statusElement.textContent = "Running";
+  }
 }
 
 function readNumber(id: string): number {
-  const input =
-    document.querySelector<HTMLInputElement>(`#${id}`);
-
-  if (!input) {
-    throw new Error(`input was not found: ${id}`);
-  }
-
+  const input = requireElement<HTMLInputElement>(`#${id}`);
   return Number(input.value);
 }
 
-function setText(
-  id: string,
-  value: string,
-): void {
+function readDecimalText(id: string): string {
+  const input = requireElement<HTMLInputElement>(`#${id}`);
+  const value = input.value.trim();
+
+  if (value.length === 0) {
+    throw new Error(`${id} must not be empty`);
+  }
+
+  return value;
+}
+
+function setText(id: string, value: string): void {
   const element = document.getElementById(id);
 
   if (!element) {
@@ -388,9 +506,7 @@ function setText(
   element.textContent = value;
 }
 
-function formatDuration(
-  nanoseconds: number | null,
-): string {
+function formatDuration(nanoseconds: number | null): string {
   if (nanoseconds === null) {
     return "—";
   }
@@ -412,34 +528,32 @@ function escapeHtml(value: string): string {
   return element.innerHTML;
 }
 
-async function executeBenchmark(
-  request: BenchmarkRequest,
-): Promise<BenchmarkReport> {
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function executeScalarF64Observation(
+  request: ScalarF64Request,
+): Promise<ScalarF64Observation> {
   if (runningInTauri) {
-    return invoke<BenchmarkReport>(
-      "run_add_f32_benchmark",
-      { request },
-    );
+    return invoke<ScalarF64Observation>("observe_add_scalar_f64", { request });
   }
 
   let response: Response;
 
   try {
-    response = await fetch(
-      `${API_BASE_URL}/api/benchmarks/add-f32`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(request),
+    response = await fetch(`${API_BASE_URL}/api/observations/add-scalar-f64`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify(request),
+    });
   } catch {
     throw new Error(
-      "Whitebase Serverに接続できません。"
-      + " cargo run -p whitebase-server"
-      + " を起動してください。",
+      "Whitebase Serverに接続できません。" +
+        " cargo run -p whitebase-server" +
+        " を起動してください。",
     );
   }
 
@@ -448,22 +562,53 @@ async function executeBenchmark(
 
     throw new Error(
       error?.message ??
-        `benchmark server returned HTTP ${
-          response.status
-        }`,
+        `scalar f64 observation server returned HTTP ${response.status}`,
     );
   }
 
-  return await response.json() as BenchmarkReport;
+  return (await response.json()) as ScalarF64Observation;
 }
 
-async function readApiError(
-  response: Response,
-): Promise<ApiError | null> {
+async function executeBenchmark(
+  request: BenchmarkRequest,
+): Promise<BenchmarkReport> {
+  if (runningInTauri) {
+    return invoke<BenchmarkReport>("run_add_f32_benchmark", { request });
+  }
+
+  let response: Response;
+
   try {
-    return await response.json() as ApiError;
+    response = await fetch(`${API_BASE_URL}/api/benchmarks/add-f32`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+  } catch {
+    throw new Error(
+      "Whitebase Serverに接続できません。" +
+        " cargo run -p whitebase-server" +
+        " を起動してください。",
+    );
+  }
+
+  if (!response.ok) {
+    const error = await readApiError(response);
+
+    throw new Error(
+      error?.message ?? `benchmark server returned HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as BenchmarkReport;
+}
+
+async function readApiError(response: Response): Promise<ApiError | null> {
+  try {
+    return (await response.json()) as ApiError;
   } catch {
     return null;
   }
 }
-

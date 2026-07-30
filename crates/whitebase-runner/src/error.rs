@@ -18,6 +18,16 @@ pub enum RunnerError {
     /// 参照バックエンドを現在の環境で利用できません。
     ReferenceBackendUnavailable { backend: BackendKind },
 
+    /// `f64`スカラー観測用の10進入力が不正です。
+    InvalidScalarF64Input {
+        name: &'static str,
+        value: String,
+        reason: String,
+    },
+
+    /// 正確な10進参照値を有限の`f64`へ変換できません。
+    ScalarF64ReferenceOutOfRange { value: String },
+
     /// Coreによる演算実行に失敗しました。
     Compute { error: ComputeError },
 }
@@ -46,6 +56,21 @@ impl fmt::Display for RunnerError {
                     formatter,
                     "reference backend is unavailable: {}",
                     backend.display_name()
+                )
+            }
+
+            Self::InvalidScalarF64Input {
+                name,
+                value,
+                reason,
+            } => {
+                write!(formatter, "invalid {name} value `{value}`: {reason}")
+            }
+
+            Self::ScalarF64ReferenceOutOfRange { value } => {
+                write!(
+                    formatter,
+                    "decimal reference is outside the finite f64 range: {value}"
                 )
             }
 

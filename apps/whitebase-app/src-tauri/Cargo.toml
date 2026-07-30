@@ -27,6 +27,10 @@ whitebase-rust-backend = {
     path = "../../../crates/whitebase-rust-backend"
 }
 
+whitebase-core = {
+    path = "../../../crates/whitebase-core"
+}
+
 whitebase-runner = {
     path = "../../../crates/whitebase-runner"
 }
