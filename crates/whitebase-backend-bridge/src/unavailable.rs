@@ -37,23 +37,27 @@ macro_rules! define_unavailable_backend {
 define_unavailable_backend!(
     CppScalarBackend,
     BackendKind::CppScalar,
-    BackendCapabilities::scalar_add_f32().with_add_scalar_f64()
+    BackendCapabilities::scalar_add_f32()
+        .with_add_f64(1)
+        .with_add_scalar_f64()
 );
 
 define_unavailable_backend!(
     CppAvxBackend,
     BackendKind::CppAvx,
-    BackendCapabilities::avx_add_f32()
+    BackendCapabilities::avx_add_f32().with_add_f64(4)
 );
 
 define_unavailable_backend!(
     AssemblyScalarBackend,
     BackendKind::AssemblyScalar,
     BackendCapabilities::scalar_add_f32()
+        .with_add_f64(1)
+        .with_add_scalar_f64()
 );
 
 define_unavailable_backend!(
     AssemblyAvxBackend,
     BackendKind::AssemblyAvx,
-    BackendCapabilities::avx_add_f32()
+    BackendCapabilities::avx_add_f32().with_add_f64(4)
 );

@@ -11,6 +11,13 @@ namespace whitebase::cpp_backend
         std::size_t length
     ) noexcept;
 
+    void add_f64_array_scalar(
+        const double* lhs,
+        const double* rhs,
+        double* output,
+        std::size_t length
+    ) noexcept;
+
     [[nodiscard]]
     double add_f64_scalar(double lhs, double rhs) noexcept;
 
@@ -22,6 +29,14 @@ namespace whitebase::cpp_backend
         const float* lhs,
         const float* rhs,
         float* output,
+        std::size_t length
+    ) noexcept;
+
+    [[nodiscard]]
+    bool add_f64_array_avx(
+        const double* lhs,
+        const double* rhs,
+        double* output,
         std::size_t length
     ) noexcept;
 }
