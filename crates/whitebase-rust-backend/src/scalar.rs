@@ -20,6 +20,26 @@ pub fn add_f32(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), Array
     Ok(())
 }
 
+/// 2つの`f64`配列を、要素ごとに加算します。
+///
+/// 計算結果は`output`へ書き込みます。
+///
+/// # Errors
+///
+/// `lhs`、`rhs`、`output`の長さが一致しない場合は
+/// [`ArrayLengthError`]を返します。
+pub fn add_f64_array(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(), ArrayLengthError> {
+    if lhs.len() != rhs.len() || lhs.len() != output.len() {
+        return Err(ArrayLengthError::new(lhs.len(), rhs.len(), output.len()));
+    }
+
+    for index in 0..lhs.len() {
+        output[index] = lhs[index] + rhs[index];
+    }
+
+    Ok(())
+}
+
 /// 2つの`f64`スカラー値を加算します。
 #[must_use]
 pub fn add_f64(lhs: f64, rhs: f64) -> f64 {
@@ -39,6 +59,18 @@ mod tests {
         add_f32(&lhs, &rhs, &mut output).unwrap();
 
         assert_eq!(output, [5.0, 7.0, 9.0]);
+    }
+
+    #[test]
+    fn adds_f64_arrays() {
+        let lhs = [0.1, 1.5, -4.0];
+        let rhs = [0.2, 2.5, 1.25];
+        let mut output = [0.0; 3];
+
+        add_f64_array(&lhs, &rhs, &mut output).unwrap();
+
+        assert_eq!(output[0].to_bits(), 0x3fd3_3333_3333_3334);
+        assert_eq!(output[1..], [4.0, -2.75]);
     }
 
     #[test]
@@ -72,6 +104,18 @@ mod tests {
         let result = add_f32(&lhs, &rhs, &mut output);
 
         assert_eq!(result, Err(ArrayLengthError::new(2, 1, 2)));
+    }
+
+    #[test]
+    fn rejects_different_f64_array_lengths() {
+        let lhs = [1.0, 2.0];
+        let rhs = [3.0, 4.0];
+        let mut output = [10.0];
+
+        let result = add_f64_array(&lhs, &rhs, &mut output);
+
+        assert_eq!(result, Err(ArrayLengthError::new(2, 2, 1)));
+        assert_eq!(output, [10.0]);
     }
 
     #[test]

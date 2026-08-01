@@ -12,9 +12,23 @@ unsafe extern "C" {
         length: usize,
     );
 
+    fn whitebase_asm_add_f64_array_scalar(
+        lhs: *const f64,
+        rhs: *const f64,
+        output: *mut f64,
+        length: usize,
+    );
+
     fn whitebase_asm_add_f64_scalar(lhs: f64, rhs: f64) -> f64;
 
     fn whitebase_asm_add_f32_avx(lhs: *const f32, rhs: *const f32, output: *mut f32, length: usize);
+
+    fn whitebase_asm_add_f64_array_avx(
+        lhs: *const f64,
+        rhs: *const f64,
+        output: *mut f64,
+        length: usize,
+    );
 }
 
 /// Assembly Scalarバックエンドで`f32`配列を加算します。
@@ -30,6 +44,29 @@ pub fn add_f32_scalar(
     // すべての配列長が一致することを事前に確認しています。
     unsafe {
         whitebase_asm_add_f32_scalar(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len());
+    }
+
+    Ok(())
+}
+
+/// Assembly Scalarバックエンドで`f64`配列を加算します。
+pub fn add_f64_array_scalar(
+    lhs: &[f64],
+    rhs: &[f64],
+    output: &mut [f64],
+) -> Result<(), ArrayLengthError> {
+    validate_lengths(lhs, rhs, output)?;
+
+    // SAFETY:
+    // 各ポインターは有効なスライスから取得しており、
+    // すべての配列長が一致することを事前に確認しています。
+    unsafe {
+        whitebase_asm_add_f64_array_scalar(
+            lhs.as_ptr(),
+            rhs.as_ptr(),
+            output.as_mut_ptr(),
+            lhs.len(),
+        );
     }
 
     Ok(())
@@ -69,7 +106,31 @@ pub fn add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<bool,
     Ok(true)
 }
 
-fn validate_lengths(lhs: &[f32], rhs: &[f32], output: &[f32]) -> Result<(), ArrayLengthError> {
+/// Assembly AVXバックエンドで`f64`配列を加算します。
+///
+/// AVXを利用できない環境では`false`を返し、出力を変更しません。
+pub fn add_f64_array_avx(
+    lhs: &[f64],
+    rhs: &[f64],
+    output: &mut [f64],
+) -> Result<bool, ArrayLengthError> {
+    validate_lengths(lhs, rhs, output)?;
+
+    if !is_avx_available() {
+        return Ok(false);
+    }
+
+    // SAFETY:
+    // AVXの利用可能性と配列長を確認済みです。
+    // 各ポインターは呼び出し中有効です。
+    unsafe {
+        whitebase_asm_add_f64_array_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len());
+    }
+
+    Ok(true)
+}
+
+fn validate_lengths<T>(lhs: &[T], rhs: &[T], output: &[T]) -> Result<(), ArrayLengthError> {
     if lhs.len() != rhs.len() || lhs.len() != output.len() {
         return Err(ArrayLengthError::new(lhs.len(), rhs.len(), output.len()));
     }
@@ -86,6 +147,18 @@ mod tests {
         let result = add_f64_scalar(0.1, 0.2);
 
         assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+    }
+
+    #[test]
+    fn adds_f64_arrays_with_ieee_754_rounding() {
+        let lhs = [0.1, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let rhs = [0.2, 10.0, 20.0, 30.0, 40.0, 50.0];
+        let mut output = [0.0; 6];
+
+        add_f64_array_scalar(&lhs, &rhs, &mut output).unwrap();
+
+        assert_eq!(output[0].to_bits(), 0x3fd3_3333_3333_3334);
+        assert_eq!(output[1..], [11.0, 22.0, 33.0, 44.0, 55.0]);
     }
 
     #[test]

@@ -86,5 +86,62 @@ int main()
 
     std::cout << "AVX f32 array add passed.\n";
 
+    constexpr std::size_t f64_length = 6;
+
+    const std::array<double, f64_length> f64_lhs{
+        0.1, 1.0, 2.0, 3.0, 4.0, 5.0
+    };
+
+    const std::array<double, f64_length> f64_rhs{
+        0.2, 10.0, 20.0, 30.0, 40.0, 50.0
+    };
+
+    const std::array<std::uint64_t, f64_length> f64_expected_bits{
+        0x3fd3333333333334ULL,
+        std::bit_cast<std::uint64_t>(11.0),
+        std::bit_cast<std::uint64_t>(22.0),
+        std::bit_cast<std::uint64_t>(33.0),
+        std::bit_cast<std::uint64_t>(44.0),
+        std::bit_cast<std::uint64_t>(55.0)
+    };
+
+    std::array<double, f64_length> f64_scalar_output{};
+
+    whitebase_asm_add_f64_array_scalar(
+        f64_lhs.data(),
+        f64_rhs.data(),
+        f64_scalar_output.data(),
+        f64_scalar_output.size()
+    );
+
+    for (std::size_t index = 0; index < f64_length; ++index)
+    {
+        if (std::bit_cast<std::uint64_t>(f64_scalar_output[index])
+            != f64_expected_bits[index])
+        {
+            std::cerr << "Unexpected scalar f64 array result.\n";
+            return 1;
+        }
+    }
+
+    std::cout << "Scalar f64 array add passed.\n";
+
+    std::array<double, f64_length> f64_avx_output{};
+
+    whitebase_asm_add_f64_array_avx(
+        f64_lhs.data(),
+        f64_rhs.data(),
+        f64_avx_output.data(),
+        f64_avx_output.size()
+    );
+
+    if (f64_avx_output != f64_scalar_output)
+    {
+        std::cerr << "Unexpected AVX f64 array result.\n";
+        return 1;
+    }
+
+    std::cout << "AVX f64 array add passed.\n";
+
     return 0;
 }

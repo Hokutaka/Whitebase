@@ -12,7 +12,9 @@ impl ComputeBackend for RustScalarBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::scalar_add_f32().with_add_scalar_f64()
+        BackendCapabilities::scalar_add_f32()
+            .with_add_f64(1)
+            .with_add_scalar_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -23,6 +25,13 @@ impl ComputeBackend for RustScalarBackend {
         ComputeError::validate_lengths(lhs.len(), rhs.len(), output.len())?;
 
         whitebase_rust_backend::scalar::add_f32(lhs, rhs, output)
+            .map_err(|error| backend_failure(self.kind(), error))
+    }
+
+    fn add_f64(&self, lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(), ComputeError> {
+        ComputeError::validate_lengths(lhs.len(), rhs.len(), output.len())?;
+
+        whitebase_rust_backend::scalar::add_f64_array(lhs, rhs, output)
             .map_err(|error| backend_failure(self.kind(), error))
     }
 
@@ -41,7 +50,7 @@ impl ComputeBackend for RustSimdBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::avx_add_f32()
+        BackendCapabilities::avx_add_f32().with_add_f64(4)
     }
 
     fn is_available(&self) -> bool {
@@ -58,6 +67,19 @@ impl ComputeBackend for RustSimdBackend {
         }
 
         whitebase_rust_backend::simd::add_f32(lhs, rhs, output)
+            .map_err(|error| backend_failure(self.kind(), error))
+    }
+
+    fn add_f64(&self, lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(), ComputeError> {
+        ComputeError::validate_lengths(lhs.len(), rhs.len(), output.len())?;
+
+        if !self.is_available() {
+            return Err(ComputeError::BackendUnavailable {
+                backend: self.kind(),
+            });
+        }
+
+        whitebase_rust_backend::simd::add_f64_array(lhs, rhs, output)
             .map_err(|error| backend_failure(self.kind(), error))
     }
 }

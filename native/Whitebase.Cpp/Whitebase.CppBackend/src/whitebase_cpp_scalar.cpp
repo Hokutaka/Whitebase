@@ -15,6 +15,19 @@ namespace whitebase::cpp_backend
         }
     }
 
+    void add_f64_array_scalar(
+        const double* lhs,
+        const double* rhs,
+        double* output,
+        const std::size_t length
+    ) noexcept
+    {
+        for (std::size_t index = 0; index < length; ++index)
+        {
+            output[index] = lhs[index] + rhs[index];
+        }
+    }
+
     double add_f64_scalar(const double lhs, const double rhs) noexcept
     {
         return lhs + rhs;
