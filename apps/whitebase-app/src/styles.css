@@ -148,7 +148,7 @@ h2 {
 }
 
 #benchmark-form {
-  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  grid-template-columns: minmax(150px, 0.8fr) repeat(3, minmax(150px, 1fr)) auto;
 }
 
 label {
@@ -164,7 +164,7 @@ label span {
   text-transform: uppercase;
 }
 
-input {
+input:not([type="radio"]) {
   width: 100%;
   height: 44px;
   padding: 0 13px;
@@ -176,9 +176,74 @@ input {
   font-variant-numeric: tabular-nums;
 }
 
-input:focus {
+input:not([type="radio"]):focus {
   border-color: #70a7ff;
   box-shadow: 0 0 0 3px #70a7ff20;
+}
+
+.precision-control {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.precision-control legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: #91a0b7;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.precision-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  height: 44px;
+  padding: 3px;
+  border: 1px solid #2c3a51;
+  border-radius: 10px;
+  background: #09111d;
+}
+
+.precision-option {
+  display: block;
+  cursor: pointer;
+}
+
+.precision-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.precision-option span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-radius: 7px;
+  color: #91a0b7;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
+}
+
+.precision-option input:checked + span {
+  color: #06101f;
+  background: #82b4ff;
+}
+
+.precision-option input:focus-visible + span {
+  box-shadow: 0 0 0 3px #70a7ff35;
 }
 
 #observe-button,
@@ -238,7 +303,7 @@ input:focus {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
   margin-top: 14px;
 }

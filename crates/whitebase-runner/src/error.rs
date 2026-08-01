@@ -13,7 +13,7 @@ pub enum RunnerError {
     ZeroMeasuredIterations,
 
     /// 絶対誤差の許容値が不正です。
-    InvalidAbsoluteTolerance { value: f32 },
+    InvalidAbsoluteTolerance { value: f64 },
 
     /// 参照バックエンドを現在の環境で利用できません。
     ReferenceBackendUnavailable { backend: BackendKind },

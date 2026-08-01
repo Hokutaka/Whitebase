@@ -29,7 +29,7 @@ pub struct ComparisonSummary {
     pub mismatch_count: usize,
 
     /// 検出された最大絶対誤差。
-    pub maximum_absolute_error: f32,
+    pub maximum_absolute_error: f64,
 }
 
 /// 各バックエンドの実行状態です。
@@ -153,6 +153,28 @@ pub struct AddF32Report {
 
     /// 結果比較時の絶対誤差許容値。
     pub absolute_tolerance: f32,
+
+    /// 各バックエンドの実行結果。
+    pub results: Vec<BackendRunResult>,
+}
+
+/// `f64`配列加算の計測・比較レポートです。
+#[derive(Debug, Clone, PartialEq)]
+pub struct AddF64Report {
+    /// 入力配列の要素数。
+    pub input_length: usize,
+
+    /// 比較基準に使用したバックエンド。
+    pub reference_backend: BackendKind,
+
+    /// ウォームアップ回数。
+    pub warmup_iterations: usize,
+
+    /// 計測回数。
+    pub measured_iterations: usize,
+
+    /// 結果比較時の絶対誤差許容値。
+    pub absolute_tolerance: f64,
 
     /// 各バックエンドの実行結果。
     pub results: Vec<BackendRunResult>,
