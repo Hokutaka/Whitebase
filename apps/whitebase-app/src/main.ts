@@ -30,13 +30,17 @@ interface ScalarF64Observation {
   allBackendsMatch: boolean;
 }
 
+type BenchmarkPrecision = "f32" | "f64";
+
 interface BenchmarkRequest {
+  precision: BenchmarkPrecision;
   inputLength: number;
   warmupIterations: number;
   measuredIterations: number;
 }
 
 interface BenchmarkReport {
+  precision: BenchmarkPrecision;
   inputLength: number;
   referenceBackend: string;
   warmupIterations: number;
@@ -162,7 +166,7 @@ app.innerHTML = `
     <section class="control-panel">
       <div class="section-heading compact-heading">
         <div>
-          <p class="eyebrow">F32 ARRAY</p>
+          <p class="eyebrow">F32 / F64 ARRAY</p>
           <h2>Backend benchmark</h2>
         </div>
 
@@ -170,6 +174,22 @@ app.innerHTML = `
       </div>
 
       <form id="benchmark-form">
+        <fieldset class="precision-control">
+          <legend>Precision</legend>
+
+          <div class="precision-options">
+            <label class="precision-option">
+              <input type="radio" name="benchmark-precision" value="f32" checked />
+              <span>f32</span>
+            </label>
+
+            <label class="precision-option">
+              <input type="radio" name="benchmark-precision" value="f64" />
+              <span>f64</span>
+            </label>
+          </div>
+        </fieldset>
+
         <label>
           <span>Input length</span>
           <input
@@ -211,6 +231,11 @@ app.innerHTML = `
     </section>
 
     <section class="summary" id="summary" hidden>
+      <div class="metric">
+        <span>Precision</span>
+        <strong id="summary-precision">-</strong>
+      </div>
+
       <div class="metric">
         <span>Elements</span>
         <strong id="summary-elements">-</strong>
@@ -308,6 +333,7 @@ benchmarkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const request: BenchmarkRequest = {
+    precision: readBenchmarkPrecision(),
     inputLength: readNumber("input-length"),
     warmupIterations: readNumber("warmup-iterations"),
     measuredIterations: readNumber("measured-iterations"),
@@ -449,6 +475,7 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
     })
     .join("");
 
+  setText("summary-precision", report.precision.toUpperCase());
   setText("summary-elements", report.inputLength.toLocaleString());
   setText("summary-reference", report.referenceBackend);
   setText("summary-iterations", report.measuredIterations.toLocaleString());
@@ -478,6 +505,18 @@ function setBusy(
   if (running) {
     statusElement.textContent = "Running";
   }
+}
+
+function readBenchmarkPrecision(): BenchmarkPrecision {
+  const input = requireElement<HTMLInputElement>(
+    'input[name="benchmark-precision"]:checked',
+  );
+
+  if (input.value !== "f32" && input.value !== "f64") {
+    throw new Error(`unsupported benchmark precision: ${input.value}`);
+  }
+
+  return input.value;
 }
 
 function readNumber(id: string): number {
@@ -573,13 +612,13 @@ async function executeBenchmark(
   request: BenchmarkRequest,
 ): Promise<BenchmarkReport> {
   if (runningInTauri) {
-    return invoke<BenchmarkReport>("run_add_f32_benchmark", { request });
+    return invoke<BenchmarkReport>("run_add_benchmark", { request });
   }
 
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/benchmarks/add-f32`, {
+    response = await fetch(`${API_BASE_URL}/api/benchmarks/add-array`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

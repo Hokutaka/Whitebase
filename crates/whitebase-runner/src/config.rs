@@ -15,8 +15,11 @@ pub struct RunnerConfig {
     /// 計測対象として実行する回数。
     pub measured_iterations: usize,
 
-    /// 結果比較に使用する絶対誤差の許容値。
+    /// `f32`結果比較に使用する絶対誤差の許容値。
     pub absolute_tolerance: f32,
+
+    /// `f64`結果比較に使用する絶対誤差の許容値。
+    pub absolute_tolerance_f64: f64,
 }
 
 impl Default for RunnerConfig {
@@ -34,6 +37,7 @@ impl Default for RunnerConfig {
             warmup_iterations: 3,
             measured_iterations: 10,
             absolute_tolerance: 1.0e-6,
+            absolute_tolerance_f64: 1.0e-12,
         }
     }
 }

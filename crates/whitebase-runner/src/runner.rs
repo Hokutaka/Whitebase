@@ -5,9 +5,9 @@ use std::time::{Duration, Instant};
 use whitebase_core::{BackendKind, ComputeError, Whitebase};
 
 use crate::{
-    AddF32Report, AddScalarF64Report, BackendRunResult, BackendRunStatus, ComparisonSummary,
-    F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation, ScalarF64ObservationReport,
-    TimingSummary, decimal::ExactDecimal,
+    AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
+    ComparisonSummary, F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation,
+    ScalarF64ObservationReport, TimingSummary, decimal::ExactDecimal,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -111,33 +111,21 @@ impl Runner {
         rhs: &[f32],
         config: &RunnerConfig,
     ) -> Result<AddF32Report, RunnerError> {
-        validate_config(config)?;
-
+        validate_common_config(config)?;
+        validate_absolute_tolerance(f64::from(config.absolute_tolerance))?;
         ComputeError::validate_lengths(lhs.len(), rhs.len(), lhs.len())?;
-
-        let reference_info = self.whitebase.backend_info(config.reference_backend)?;
-
-        if !reference_info.available {
-            return Err(RunnerError::ReferenceBackendUnavailable {
-                backend: config.reference_backend,
-            });
-        }
+        self.validate_reference_backend(config.reference_backend)?;
 
         let mut reference_output = vec![0.0; lhs.len()];
 
         self.whitebase
             .add_f32(config.reference_backend, lhs, rhs, &mut reference_output)?;
 
-        let backends = unique_backends(&config.backends);
-
-        if backends.is_empty() {
-            return Err(RunnerError::NoBackends);
-        }
-
+        let backends = validate_and_deduplicate_backends(&config.backends)?;
         let mut results = Vec::with_capacity(backends.len());
 
         for backend in backends {
-            results.push(self.run_backend(backend, lhs, rhs, &reference_output, config));
+            results.push(self.run_backend_f32(backend, lhs, rhs, &reference_output, config));
         }
 
         Ok(AddF32Report {
@@ -150,7 +138,52 @@ impl Runner {
         })
     }
 
-    fn run_backend(
+    /// 指定されたバックエンドで`f64`配列加算を実行し、
+    /// 計測結果と比較結果を返します。
+    pub fn run_add_f64(
+        &self,
+        lhs: &[f64],
+        rhs: &[f64],
+        config: &RunnerConfig,
+    ) -> Result<AddF64Report, RunnerError> {
+        validate_common_config(config)?;
+        validate_absolute_tolerance(config.absolute_tolerance_f64)?;
+        ComputeError::validate_lengths(lhs.len(), rhs.len(), lhs.len())?;
+        self.validate_reference_backend(config.reference_backend)?;
+
+        let mut reference_output = vec![0.0; lhs.len()];
+
+        self.whitebase
+            .add_f64(config.reference_backend, lhs, rhs, &mut reference_output)?;
+
+        let backends = validate_and_deduplicate_backends(&config.backends)?;
+        let mut results = Vec::with_capacity(backends.len());
+
+        for backend in backends {
+            results.push(self.run_backend_f64(backend, lhs, rhs, &reference_output, config));
+        }
+
+        Ok(AddF64Report {
+            input_length: lhs.len(),
+            reference_backend: config.reference_backend,
+            warmup_iterations: config.warmup_iterations,
+            measured_iterations: config.measured_iterations,
+            absolute_tolerance: config.absolute_tolerance_f64,
+            results,
+        })
+    }
+
+    fn validate_reference_backend(&self, backend: BackendKind) -> Result<(), RunnerError> {
+        let reference_info = self.whitebase.backend_info(backend)?;
+
+        if !reference_info.available {
+            return Err(RunnerError::ReferenceBackendUnavailable { backend });
+        }
+
+        Ok(())
+    }
+
+    fn run_backend_f32(
         &self,
         backend: BackendKind,
         lhs: &[f32],
@@ -160,37 +193,23 @@ impl Runner {
     ) -> BackendRunResult {
         let info = match self.whitebase.backend_info(backend) {
             Ok(info) => info,
-
-            Err(error) => {
-                return BackendRunResult {
-                    backend,
-                    status: BackendRunStatus::Failed { error },
-                };
-            }
+            Err(error) => return failed_backend_result(backend, error),
         };
 
         if !info.available {
-            return BackendRunResult {
-                backend,
-                status: BackendRunStatus::Unavailable,
-            };
+            return unavailable_backend_result(backend);
         }
 
         let mut output = vec![0.0; lhs.len()];
 
         for _ in 0..config.warmup_iterations {
-            let result = self.whitebase.add_f32(
+            if let Err(error) = self.whitebase.add_f32(
                 backend,
                 black_box(lhs),
                 black_box(rhs),
                 black_box(output.as_mut_slice()),
-            );
-
-            if let Err(error) = result {
-                return BackendRunResult {
-                    backend,
-                    status: BackendRunStatus::Failed { error },
-                };
+            ) {
+                return failed_backend_result(backend, error);
             }
         }
 
@@ -198,33 +217,93 @@ impl Runner {
 
         for _ in 0..config.measured_iterations {
             let started_at = Instant::now();
-
             let result = self.whitebase.add_f32(
                 backend,
                 black_box(lhs),
                 black_box(rhs),
                 black_box(output.as_mut_slice()),
             );
-
             let elapsed = started_at.elapsed();
 
             if let Err(error) = result {
-                return BackendRunResult {
-                    backend,
-                    status: BackendRunStatus::Failed { error },
-                };
+                return failed_backend_result(backend, error);
             }
 
             durations.push(elapsed);
         }
 
-        let timing = summarize_timings(&durations);
+        BackendRunResult {
+            backend,
+            status: BackendRunStatus::Completed {
+                timing: summarize_timings(&durations),
+                comparison: compare_outputs_f32(
+                    &output,
+                    reference_output,
+                    config.absolute_tolerance,
+                ),
+            },
+        }
+    }
 
-        let comparison = compare_outputs(&output, reference_output, config.absolute_tolerance);
+    fn run_backend_f64(
+        &self,
+        backend: BackendKind,
+        lhs: &[f64],
+        rhs: &[f64],
+        reference_output: &[f64],
+        config: &RunnerConfig,
+    ) -> BackendRunResult {
+        let info = match self.whitebase.backend_info(backend) {
+            Ok(info) => info,
+            Err(error) => return failed_backend_result(backend, error),
+        };
+
+        if !info.available {
+            return unavailable_backend_result(backend);
+        }
+
+        let mut output = vec![0.0; lhs.len()];
+
+        for _ in 0..config.warmup_iterations {
+            if let Err(error) = self.whitebase.add_f64(
+                backend,
+                black_box(lhs),
+                black_box(rhs),
+                black_box(output.as_mut_slice()),
+            ) {
+                return failed_backend_result(backend, error);
+            }
+        }
+
+        let mut durations = Vec::with_capacity(config.measured_iterations);
+
+        for _ in 0..config.measured_iterations {
+            let started_at = Instant::now();
+            let result = self.whitebase.add_f64(
+                backend,
+                black_box(lhs),
+                black_box(rhs),
+                black_box(output.as_mut_slice()),
+            );
+            let elapsed = started_at.elapsed();
+
+            if let Err(error) = result {
+                return failed_backend_result(backend, error);
+            }
+
+            durations.push(elapsed);
+        }
 
         BackendRunResult {
             backend,
-            status: BackendRunStatus::Completed { timing, comparison },
+            status: BackendRunStatus::Completed {
+                timing: summarize_timings(&durations),
+                comparison: compare_outputs_f64(
+                    &output,
+                    reference_output,
+                    config.absolute_tolerance_f64,
+                ),
+            },
         }
     }
 }
@@ -264,7 +343,7 @@ fn parse_finite_f64(name: &'static str, input: &str) -> Result<f64, RunnerError>
     Ok(value)
 }
 
-fn validate_config(config: &RunnerConfig) -> Result<(), RunnerError> {
+fn validate_common_config(config: &RunnerConfig) -> Result<(), RunnerError> {
     if config.backends.is_empty() {
         return Err(RunnerError::NoBackends);
     }
@@ -273,13 +352,27 @@ fn validate_config(config: &RunnerConfig) -> Result<(), RunnerError> {
         return Err(RunnerError::ZeroMeasuredIterations);
     }
 
-    if !config.absolute_tolerance.is_finite() || config.absolute_tolerance < 0.0 {
-        return Err(RunnerError::InvalidAbsoluteTolerance {
-            value: config.absolute_tolerance,
-        });
+    Ok(())
+}
+
+fn validate_absolute_tolerance(value: f64) -> Result<(), RunnerError> {
+    if !value.is_finite() || value < 0.0 {
+        return Err(RunnerError::InvalidAbsoluteTolerance { value });
     }
 
     Ok(())
+}
+
+fn validate_and_deduplicate_backends(
+    backends: &[BackendKind],
+) -> Result<Vec<BackendKind>, RunnerError> {
+    let backends = unique_backends(backends);
+
+    if backends.is_empty() {
+        return Err(RunnerError::NoBackends);
+    }
+
+    Ok(backends)
 }
 
 fn unique_backends(backends: &[BackendKind]) -> Vec<BackendKind> {
@@ -292,21 +385,32 @@ fn unique_backends(backends: &[BackendKind]) -> Vec<BackendKind> {
         .collect()
 }
 
+fn unavailable_backend_result(backend: BackendKind) -> BackendRunResult {
+    BackendRunResult {
+        backend,
+        status: BackendRunStatus::Unavailable,
+    }
+}
+
+fn failed_backend_result(backend: BackendKind, error: ComputeError) -> BackendRunResult {
+    BackendRunResult {
+        backend,
+        status: BackendRunStatus::Failed { error },
+    }
+}
+
 fn summarize_timings(durations: &[Duration]) -> TimingSummary {
     let total = durations.iter().copied().sum::<Duration>();
-
     let minimum = durations
         .iter()
         .copied()
         .min()
         .expect("measured iterations are validated");
-
     let maximum = durations
         .iter()
         .copied()
         .max()
         .expect("measured iterations are validated");
-
     let total_nanoseconds = total.as_nanos();
 
     TimingSummary {
@@ -318,21 +422,52 @@ fn summarize_timings(durations: &[Duration]) -> TimingSummary {
     }
 }
 
-fn compare_outputs(actual: &[f32], reference: &[f32], tolerance: f32) -> ComparisonSummary {
+fn compare_outputs_f32(actual: &[f32], reference: &[f32], tolerance: f32) -> ComparisonSummary {
     let mut mismatch_count = 0;
-    let mut maximum_absolute_error = 0.0_f32;
+    let mut maximum_absolute_error = 0.0_f64;
 
     for (&actual_value, &reference_value) in actual.iter().zip(reference) {
         let exact_match = actual_value.to_bits() == reference_value.to_bits();
-
         let both_nan = actual_value.is_nan() && reference_value.is_nan();
+        let absolute_error = if exact_match || both_nan {
+            0.0
+        } else if actual_value.is_finite() && reference_value.is_finite() {
+            f64::from((actual_value - reference_value).abs())
+        } else {
+            f64::INFINITY
+        };
 
+        maximum_absolute_error = maximum_absolute_error.max(absolute_error);
+
+        let within_tolerance = actual_value.is_finite()
+            && reference_value.is_finite()
+            && absolute_error <= f64::from(tolerance);
+
+        if !exact_match && !both_nan && !within_tolerance {
+            mismatch_count += 1;
+        }
+    }
+
+    ComparisonSummary {
+        matches_reference: mismatch_count == 0,
+        mismatch_count,
+        maximum_absolute_error,
+    }
+}
+
+fn compare_outputs_f64(actual: &[f64], reference: &[f64], tolerance: f64) -> ComparisonSummary {
+    let mut mismatch_count = 0;
+    let mut maximum_absolute_error = 0.0_f64;
+
+    for (&actual_value, &reference_value) in actual.iter().zip(reference) {
+        let exact_match = actual_value.to_bits() == reference_value.to_bits();
+        let both_nan = actual_value.is_nan() && reference_value.is_nan();
         let absolute_error = if exact_match || both_nan {
             0.0
         } else if actual_value.is_finite() && reference_value.is_finite() {
             (actual_value - reference_value).abs()
         } else {
-            f32::INFINITY
+            f64::INFINITY
         };
 
         maximum_absolute_error = maximum_absolute_error.max(absolute_error);
@@ -366,20 +501,32 @@ mod tests {
 
         assert_eq!(
             backends,
-            vec![BackendKind::RustScalar, BackendKind::CppScalar,]
+            vec![BackendKind::RustScalar, BackendKind::CppScalar]
         );
     }
 
     #[test]
-    fn detects_result_mismatches() {
+    fn detects_f32_result_mismatches() {
         let actual = [1.0, 2.5, 3.0];
         let reference = [1.0, 2.0, 3.0];
 
-        let comparison = compare_outputs(&actual, &reference, 0.01);
+        let comparison = compare_outputs_f32(&actual, &reference, 0.01);
 
         assert!(!comparison.matches_reference);
         assert_eq!(comparison.mismatch_count, 1);
         assert_eq!(comparison.maximum_absolute_error, 0.5);
+    }
+
+    #[test]
+    fn detects_f64_result_mismatches() {
+        let actual = [1.0, 2.000_000_000_002, 3.0];
+        let reference = [1.0, 2.0, 3.0];
+
+        let comparison = compare_outputs_f64(&actual, &reference, 1.0e-13);
+
+        assert!(!comparison.matches_reference);
+        assert_eq!(comparison.mismatch_count, 1);
+        assert!(comparison.maximum_absolute_error > 1.0e-12);
     }
 
     #[test]
