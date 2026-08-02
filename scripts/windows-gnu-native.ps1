@@ -42,7 +42,7 @@ Commands:
 "@ | Write-Host
 }
 
-function Require-Command([string]$Name) {
+function Assert-CommandAvailable([string]$Name) {
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Required command was not found: $Name"
     }
@@ -54,7 +54,7 @@ function Confirm-Environment {
     }
 
     foreach ($commandName in @("cmake", "ctest", "ninja", "g++", "nasm")) {
-        Require-Command $commandName
+        Assert-CommandAvailable $commandName
     }
 
     $target = (& g++ -dumpmachine).Trim()
