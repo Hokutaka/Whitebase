@@ -23,10 +23,7 @@ unsafe extern "C" {
     );
 
     fn whitebase_asm_add_f64_scalar(lhs: f64, rhs: f64) -> f64;
-}
 
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-unsafe extern "C" {
     fn whitebase_asm_add_f32_avx(lhs: *const f32, rhs: *const f32, output: *mut f32, length: usize);
 
     fn whitebase_asm_add_f64_array_avx(
@@ -86,12 +83,10 @@ pub fn add_f64_scalar(lhs: f64, rhs: f64) -> f64 {
     unsafe { whitebase_asm_add_f64_scalar(lhs, rhs) }
 }
 
-/// 現在の実装でAVXバックエンドを利用できるか返します。
-///
-/// Linux版は現在Scalar実装のみのため、CPUがAVX対応でも`false`を返します。
+/// 現在のCPUとOSでAVXを利用できるか返します。
 #[must_use]
 pub fn is_avx_available() -> bool {
-    platform_is_avx_available()
+    std::arch::is_x86_feature_detected!("avx")
 }
 
 /// Assembly AVXバックエンドで`f32`配列を加算します。
@@ -100,7 +95,18 @@ pub fn is_avx_available() -> bool {
 pub fn add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<bool, ArrayLengthError> {
     validate_lengths(lhs, rhs, output)?;
 
-    Ok(platform_add_f32_avx(lhs, rhs, output))
+    if !is_avx_available() {
+        return Ok(false);
+    }
+
+    // SAFETY:
+    // AVXの利用可能性と配列長を確認済みです。
+    // 各ポインターは呼び出し中有効です。
+    unsafe {
+        whitebase_asm_add_f32_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len());
+    }
+
+    Ok(true)
 }
 
 /// Assembly AVXバックエンドで`f64`配列を加算します。
@@ -113,44 +119,8 @@ pub fn add_f64_array_avx(
 ) -> Result<bool, ArrayLengthError> {
     validate_lengths(lhs, rhs, output)?;
 
-    Ok(platform_add_f64_array_avx(lhs, rhs, output))
-}
-
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-fn platform_is_avx_available() -> bool {
-    std::arch::is_x86_feature_detected!("avx")
-}
-
-#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
-const fn platform_is_avx_available() -> bool {
-    false
-}
-
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-fn platform_add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> bool {
-    if !platform_is_avx_available() {
-        return false;
-    }
-
-    // SAFETY:
-    // AVXの利用可能性と配列長を確認済みです。
-    // 各ポインターは呼び出し中有効です。
-    unsafe {
-        whitebase_asm_add_f32_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len());
-    }
-
-    true
-}
-
-#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
-fn platform_add_f32_avx(_lhs: &[f32], _rhs: &[f32], _output: &mut [f32]) -> bool {
-    false
-}
-
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-fn platform_add_f64_array_avx(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> bool {
-    if !platform_is_avx_available() {
-        return false;
+    if !is_avx_available() {
+        return Ok(false);
     }
 
     // SAFETY:
@@ -160,12 +130,7 @@ fn platform_add_f64_array_avx(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> b
         whitebase_asm_add_f64_array_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len());
     }
 
-    true
-}
-
-#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
-fn platform_add_f64_array_avx(_lhs: &[f64], _rhs: &[f64], _output: &mut [f64]) -> bool {
-    false
+    Ok(true)
 }
 
 fn validate_lengths<T>(lhs: &[T], rhs: &[T], output: &[T]) -> Result<(), ArrayLengthError> {

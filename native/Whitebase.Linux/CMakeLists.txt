@@ -18,6 +18,8 @@ set(CMAKE_ASM_NASM_OBJECT_FORMAT elf64)
 
 add_library(whitebase_cpp_backend STATIC
     cpp/whitebase_cpp_scalar.cpp
+    cpp/whitebase_cpp_cpu.cpp
+    cpp/whitebase_cpp_avx.cpp
 )
 
 target_include_directories(whitebase_cpp_backend
@@ -44,7 +46,15 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
             -fno-vectorize
             -fno-slp-vectorize
     )
+else()
+    message(FATAL_ERROR "Whitebase.Linux AVX currently requires GCC or Clang.")
 endif()
+
+set_source_files_properties(
+    cpp/whitebase_cpp_avx.cpp
+    PROPERTIES
+        COMPILE_OPTIONS "-mavx"
+)
 
 set_target_properties(whitebase_cpp_backend PROPERTIES
     OUTPUT_NAME whitebase_cpp_backend
@@ -52,6 +62,7 @@ set_target_properties(whitebase_cpp_backend PROPERTIES
 
 add_library(whitebase_assembly STATIC
     assembly/whitebase_asm_scalar.asm
+    assembly/whitebase_asm_avx.asm
 )
 
 set_target_properties(whitebase_assembly PROPERTIES
