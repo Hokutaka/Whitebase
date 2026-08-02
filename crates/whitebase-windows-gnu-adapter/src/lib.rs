@@ -247,10 +247,6 @@ fn dll_candidates() -> Vec<PathBuf> {
         push_unique_path(&mut candidates, directory.join(DLL_NAME));
     }
 
-    if let Ok(directory) = env::current_dir() {
-        push_unique_path(&mut candidates, directory.join(DLL_NAME));
-    }
-
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
