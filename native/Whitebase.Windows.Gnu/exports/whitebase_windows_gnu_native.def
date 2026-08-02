@@ -1,0 +1,14 @@
+LIBRARY whitebase_windows_gnu_native
+
+EXPORTS
+    whitebase_gnu_cpp_add_f32_scalar
+    whitebase_gnu_cpp_add_f64_array_scalar
+    whitebase_gnu_cpp_add_f64_scalar
+    whitebase_gnu_cpp_is_avx_available
+    whitebase_gnu_cpp_add_f32_avx
+    whitebase_gnu_cpp_add_f64_array_avx
+    whitebase_gnu_asm_add_f32_scalar
+    whitebase_gnu_asm_add_f64_array_scalar
+    whitebase_gnu_asm_add_f64_scalar
+    whitebase_gnu_asm_add_f32_avx
+    whitebase_gnu_asm_add_f64_array_avx

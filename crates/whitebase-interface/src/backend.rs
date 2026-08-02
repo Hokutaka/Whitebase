@@ -20,6 +20,18 @@ pub enum BackendKind {
 
     /// AssemblyによるAVX実装。
     AssemblyAvx,
+
+    /// Windows GNU環境のGCCによるScalar実装。
+    WindowsGnuCppScalar,
+
+    /// Windows GNU環境のGCCによるAVX実装。
+    WindowsGnuCppAvx,
+
+    /// Windows GNU環境のNASMによるScalar実装。
+    WindowsGnuAssemblyScalar,
+
+    /// Windows GNU環境のNASMによるAVX実装。
+    WindowsGnuAssemblyAvx,
 }
 
 impl BackendKind {
@@ -33,6 +45,10 @@ impl BackendKind {
             Self::CppAvx => "C++ AVX",
             Self::AssemblyScalar => "Assembly Scalar",
             Self::AssemblyAvx => "Assembly AVX",
+            Self::WindowsGnuCppScalar => "Windows GCC Scalar",
+            Self::WindowsGnuCppAvx => "Windows GCC AVX",
+            Self::WindowsGnuAssemblyScalar => "Windows NASM Scalar",
+            Self::WindowsGnuAssemblyAvx => "Windows NASM AVX",
         }
     }
 }
