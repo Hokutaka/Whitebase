@@ -1,4 +1,7 @@
-#![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#![cfg(any(
+    all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+))]
 
 use whitebase_asm_adapter::{
     add_f32_avx, add_f32_scalar, add_f64_array_avx, add_f64_array_scalar, add_f64_scalar,
