@@ -1,25 +1,31 @@
 [![CI](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml)
 [![CodeQL](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql)
 
-学習・実験用リポジトリです。
+A repository for learning and experimentation.
+
 # Whitebase
 
-いろいろ作って試す場所です。
+> Most documentation is currently available in Japanese.
 
-今はRust・C++・Assemblyで配列演算をしています。
-試すなら自己責任でお願いします。
+A place to build various things and try them out.
 
-ルートで
-```powershell 
-cargo run --release -p whitebase-server
-```
-その状態でGitHub Pagesを開くと動きます。
+Whitebase currently compares `f32` and `f64` array operations across Rust, C++, and Assembly backends.
+
+Use it at your own risk.
+
+For more information, see the following documentation.
 
 ## Documentation
 
-- [詳しい説明](README.ja.md)
-- [プロジェクト構成](docs/project-tree.md)
+- [Detailed documentation](/docs//Overview.md)
+- [Project structure](docs/project-tree.md)
+
+### Tools
+
+- [Whitebase Operations](docs/tools/Whitebase%20Operations.md)
+- [Whitebase Control Center](docs/tools/Whitebase%20Control%20Center.md)
+- [Whitebase Control Panel](docs/tools/Whitebase%20Control%20Panel.md)
 
 ## License
 
-MIT LICENSE
+MIT License
