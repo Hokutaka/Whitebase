@@ -1,4 +1,4 @@
-use whitebase_core::{BackendKind, Whitebase};
+use whitebase_core::Whitebase;
 
 #[test]
 fn every_available_backend_produces_the_same_result() {
@@ -10,17 +10,10 @@ fn every_available_backend_produces_the_same_result() {
 
     let expected = [11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0, 99.0, 110.0];
 
-    let kinds = [
-        BackendKind::RustScalar,
-        BackendKind::RustSimd,
-        BackendKind::CppScalar,
-        BackendKind::CppAvx,
-        BackendKind::AssemblyScalar,
-        BackendKind::AssemblyAvx,
-    ];
+    let backends = whitebase.backends();
 
-    for kind in kinds {
-        let info = whitebase.backend_info(kind).unwrap();
+    for info in backends {
+        let kind = info.kind;
 
         println!("{} available: {}", kind.display_name(), info.available,);
 
@@ -45,5 +38,15 @@ fn every_available_backend_produces_the_same_result() {
 fn reports_all_standard_backends() {
     let whitebase = Whitebase::new();
 
-    assert_eq!(whitebase.backends().len(), 6);
+    let expected = if cfg!(all(
+        target_arch = "x86_64",
+        target_os = "windows",
+        target_env = "msvc"
+    )) {
+        10
+    } else {
+        6
+    };
+
+    assert_eq!(whitebase.backends().len(), expected);
 }

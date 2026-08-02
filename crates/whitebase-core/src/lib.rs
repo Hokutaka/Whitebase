@@ -6,6 +6,12 @@ use whitebase_backend_bridge::{
     AssemblyAvxBackend, AssemblyScalarBackend, CppAvxBackend, CppScalarBackend, RustScalarBackend,
     RustSimdBackend,
 };
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+use whitebase_backend_bridge::{
+    WindowsGnuAssemblyAvxBackend, WindowsGnuAssemblyScalarBackend, WindowsGnuCppAvxBackend,
+    WindowsGnuCppScalarBackend,
+};
 pub use whitebase_interface::{
     BackendCapabilities, BackendKind, ComputeBackend, ComputeError, OperationKind,
 };
@@ -33,14 +39,7 @@ impl Whitebase {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            backends: vec![
-                Box::new(RustScalarBackend),
-                Box::new(RustSimdBackend),
-                Box::new(CppScalarBackend),
-                Box::new(CppAvxBackend),
-                Box::new(AssemblyScalarBackend),
-                Box::new(AssemblyAvxBackend),
-            ],
+            backends: standard_backends(),
         }
     }
 
@@ -145,6 +144,34 @@ impl Whitebase {
             .map(Box::as_ref)
             .ok_or(ComputeError::BackendNotRegistered { backend: kind })
     }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
+    vec![
+        Box::new(RustScalarBackend),
+        Box::new(RustSimdBackend),
+        Box::new(CppScalarBackend),
+        Box::new(CppAvxBackend),
+        Box::new(AssemblyScalarBackend),
+        Box::new(AssemblyAvxBackend),
+        Box::new(WindowsGnuCppScalarBackend),
+        Box::new(WindowsGnuCppAvxBackend),
+        Box::new(WindowsGnuAssemblyScalarBackend),
+        Box::new(WindowsGnuAssemblyAvxBackend),
+    ]
+}
+
+#[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
+fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
+    vec![
+        Box::new(RustScalarBackend),
+        Box::new(RustSimdBackend),
+        Box::new(CppScalarBackend),
+        Box::new(CppAvxBackend),
+        Box::new(AssemblyScalarBackend),
+        Box::new(AssemblyAvxBackend),
+    ]
 }
 
 impl Default for Whitebase {
