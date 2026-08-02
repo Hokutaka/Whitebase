@@ -6239,6 +6239,7 @@ dependencies = [
  "whitebase-cpp-adapter",
  "whitebase-interface",
  "whitebase-rust-backend",
+ "whitebase-windows-gnu-adapter",
 ]
 
 [[package]]
@@ -6304,6 +6305,10 @@ dependencies = [
  "wasm-bindgen",
  "whitebase-rust-backend",
 ]
+
+[[package]]
+name = "whitebase-windows-gnu-adapter"
+version = "0.1.0"
 
 [[package]]
 name = "winapi"

@@ -54,3 +54,21 @@ fn assembly_scalar_adds_f64_values() {
 
     assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
 }
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn available_windows_gnu_scalar_backends_add_f64_values() {
+    let whitebase = Whitebase::new();
+
+    for backend in [
+        BackendKind::WindowsGnuCppScalar,
+        BackendKind::WindowsGnuAssemblyScalar,
+    ] {
+        if !whitebase.backend_info(backend).unwrap().available {
+            continue;
+        }
+
+        let result = whitebase.add_scalar_f64(backend, 0.1, 0.2).unwrap();
+        assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+    }
+}

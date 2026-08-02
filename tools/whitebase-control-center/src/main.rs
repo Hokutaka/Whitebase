@@ -75,6 +75,7 @@ enum Task {
     CheckWorkspace,
     CheckWasm,
     CheckLinuxNative,
+    CheckWindowsGnuNative,
     CheckCppClient,
     CheckCppBackend,
     CheckCppAdapter,
@@ -86,6 +87,8 @@ enum Task {
     BuildWasmRelease,
     BuildLinuxNative,
     BuildLinuxNativeRelease,
+    BuildWindowsGnuNative,
+    BuildWindowsGnuNativeRelease,
     BuildWindowsNativeRelease,
     BuildCApi,
     BuildCApiRelease,
@@ -102,6 +105,8 @@ const CHECK_ALL_TASKS: &[Task] = &[
     // LinuxではRustのAdapterを検査する前に、GCC/NASMのライブラリを準備する。
     // 非対応OSではTaskSequence::check_all()が除外する。
     Task::CheckLinuxNative,
+    // Windows GNU NativeのGCC/NASM Scalarバックエンドを検査する。
+    Task::CheckWindowsGnuNative,
     // RustのAdapterを検査する前に、Windowsのネイティブライブラリを準備する。
     // 非対応OSではTaskSequence::check_all()がこれらを除外する。
     Task::CheckCppBackend,
@@ -122,6 +127,7 @@ const BUILD_ALL_TASKS: &[Task] = &[
     Task::BuildCApi,
     Task::BuildCppClient,
     Task::BuildAssemblyClient,
+    Task::BuildWindowsGnuNative,
     Task::BuildWorkspace,
     Task::BuildWasm,
     // Wasm生成物を含んだ状態でFrontendを組み立てる。
@@ -134,6 +140,8 @@ const RELEASE_ALL_TASKS: &[Task] = &[
     // Linuxでは非対応タスクとしてTaskSequence::release_all()が除外する。
     Task::BuildCApiRelease,
     Task::BuildWindowsNativeRelease,
+    // Windows GNU NativeのGCC/NASM成果物をRelease構成で準備する。
+    Task::BuildWindowsGnuNativeRelease,
     // LinuxではRustのRelease成果物をリンクする前にGCC/NASMを準備する。
     // Windowsでは非対応タスクとして除外する。
     Task::BuildLinuxNativeRelease,
@@ -178,6 +186,7 @@ impl Task {
             Self::CheckWorkspace => "Check Workspace",
             Self::CheckWasm => "Check Wasm",
             Self::CheckLinuxNative => "Check Linux Native",
+            Self::CheckWindowsGnuNative => "Check Windows GNU Native",
             Self::CheckCppClient => "Check C++ Client",
             Self::CheckCppBackend => "Check C++ Backend",
             Self::CheckCppAdapter => "Check C++ Adapter",
@@ -189,6 +198,8 @@ impl Task {
             Self::BuildWasmRelease => "Build Wasm Release",
             Self::BuildLinuxNative => "Build Linux Native",
             Self::BuildLinuxNativeRelease => "Build Linux Native Release",
+            Self::BuildWindowsGnuNative => "Build Windows GNU Native",
+            Self::BuildWindowsGnuNativeRelease => "Build Windows GNU Native Release",
             Self::BuildWindowsNativeRelease => "Build Windows Native Release",
             Self::BuildCApi => "Build C API",
             Self::BuildCApiRelease => "Build C API Release",
@@ -209,6 +220,7 @@ impl Task {
             Self::CheckWorkspace => "Checking Workspace...",
             Self::CheckWasm => "Checking Wasm...",
             Self::CheckLinuxNative => "Checking Linux Native...",
+            Self::CheckWindowsGnuNative => "Checking Windows GNU Native...",
             Self::CheckCppClient => "Checking C++ Client...",
             Self::CheckCppBackend => "Checking C++ Backend...",
             Self::CheckCppAdapter => "Checking C++ Adapter...",
@@ -220,6 +232,8 @@ impl Task {
             Self::BuildWasmRelease => "Building Wasm Release...",
             Self::BuildLinuxNative => "Building Linux Native...",
             Self::BuildLinuxNativeRelease => "Building Linux Native Release...",
+            Self::BuildWindowsGnuNative => "Building Windows GNU Native...",
+            Self::BuildWindowsGnuNativeRelease => "Building Windows GNU Native Release...",
             Self::BuildWindowsNativeRelease => "Building Windows Native Release...",
             Self::BuildCApi => "Building C API...",
             Self::BuildCApiRelease => "Building C API Release...",
@@ -240,6 +254,7 @@ impl Task {
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::CheckWasm => "Wasm check completed successfully",
             Self::CheckLinuxNative => "Linux Native check completed successfully",
+            Self::CheckWindowsGnuNative => "Windows GNU Native check completed successfully",
             Self::CheckCppClient => "C++ Client check completed successfully",
             Self::CheckCppBackend => "C++ Backend check completed successfully",
             Self::CheckCppAdapter => "C++ Adapter check completed successfully",
@@ -251,6 +266,10 @@ impl Task {
             Self::BuildWasmRelease => "Wasm Release build completed successfully",
             Self::BuildLinuxNative => "Linux Native build completed successfully",
             Self::BuildLinuxNativeRelease => "Linux Native Release build completed successfully",
+            Self::BuildWindowsGnuNative => "Windows GNU Native build completed successfully",
+            Self::BuildWindowsGnuNativeRelease => {
+                "Windows GNU Native Release build completed successfully"
+            }
             Self::BuildWindowsNativeRelease => {
                 "Windows Native Release build completed successfully"
             }
@@ -305,6 +324,17 @@ impl Task {
             Self::CheckLinuxNative => CommandSpec {
                 program: "bash",
                 args: &["scripts/linux-native.sh", "check"],
+            },
+            Self::CheckWindowsGnuNative => CommandSpec {
+                program: "powershell.exe",
+                args: &[
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    "scripts\\windows-gnu-native.ps1",
+                    "check",
+                ],
             },
             Self::CheckCppClient => CommandSpec {
                 program: "cmd.exe",
@@ -374,6 +404,28 @@ impl Task {
             Self::BuildLinuxNativeRelease => CommandSpec {
                 program: "bash",
                 args: &["scripts/linux-native.sh", "release"],
+            },
+            Self::BuildWindowsGnuNative => CommandSpec {
+                program: "powershell.exe",
+                args: &[
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    "scripts\\windows-gnu-native.ps1",
+                    "build",
+                ],
+            },
+            Self::BuildWindowsGnuNativeRelease => CommandSpec {
+                program: "powershell.exe",
+                args: &[
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    "scripts\\windows-gnu-native.ps1",
+                    "release",
+                ],
             },
             Self::BuildWindowsNativeRelease => CommandSpec {
                 program: "powershell.exe",
@@ -462,6 +514,15 @@ impl Task {
             Self::CheckLinuxNative | Self::BuildLinuxNative | Self::BuildLinuxNativeRelease
         ) {
             return cfg!(all(target_os = "linux", target_arch = "x86_64"));
+        }
+
+        if matches!(
+            self,
+            Self::CheckWindowsGnuNative
+                | Self::BuildWindowsGnuNative
+                | Self::BuildWindowsGnuNativeRelease
+        ) {
+            return cfg!(all(target_os = "windows", target_arch = "x86_64"));
         }
 
         if matches!(
@@ -607,6 +668,7 @@ impl eframe::App for ControlCenterApp {
                     Task::CheckControlCenter,
                     Task::CheckFormat,
                     Task::CheckLinuxNative,
+                    Task::CheckWindowsGnuNative,
                     Task::CheckClippy,
                     Task::CheckWorkspace,
                     Task::CheckWasm,
@@ -638,6 +700,7 @@ impl eframe::App for ControlCenterApp {
 
                 for task in [
                     Task::BuildLinuxNative,
+                    Task::BuildWindowsGnuNative,
                     Task::BuildWorkspace,
                     Task::BuildFrontend,
                     Task::BuildWasm,
@@ -668,6 +731,7 @@ impl eframe::App for ControlCenterApp {
                 for task in [
                     Task::BuildCApiRelease,
                     Task::BuildWindowsNativeRelease,
+                    Task::BuildWindowsGnuNativeRelease,
                     Task::BuildLinuxNativeRelease,
                     Task::BuildWorkspaceRelease,
                     Task::BuildWasmRelease,
@@ -1337,6 +1401,35 @@ mod tests {
         assert_eq!(Task::CheckLinuxNative.is_supported(), expected);
         assert_eq!(Task::BuildLinuxNative.is_supported(), expected);
         assert_eq!(Task::BuildLinuxNativeRelease.is_supported(), expected);
+    }
+
+    #[test]
+    fn windows_gnu_native_tasks_use_windows_gnu_script() {
+        let check = Task::CheckWindowsGnuNative.command_spec();
+        let build = Task::BuildWindowsGnuNative.command_spec();
+        let release = Task::BuildWindowsGnuNativeRelease.command_spec();
+
+        for spec in [check, build, release] {
+            assert_eq!(spec.program, "powershell.exe");
+            assert!(spec.args.contains(&"-NoProfile"));
+            assert!(spec.args.contains(&"-ExecutionPolicy"));
+            assert!(spec.args.contains(&"Bypass"));
+            assert!(spec.args.contains(&"-File"));
+            assert!(spec.args.contains(&"scripts\\windows-gnu-native.ps1"));
+        }
+
+        assert_eq!(check.args.last(), Some(&"check"));
+        assert_eq!(build.args.last(), Some(&"build"));
+        assert_eq!(release.args.last(), Some(&"release"));
+    }
+
+    #[test]
+    fn windows_gnu_native_task_support_matches_platform() {
+        let expected = cfg!(all(target_os = "windows", target_arch = "x86_64"));
+
+        assert_eq!(Task::CheckWindowsGnuNative.is_supported(), expected);
+        assert_eq!(Task::BuildWindowsGnuNative.is_supported(), expected);
+        assert_eq!(Task::BuildWindowsGnuNativeRelease.is_supported(), expected);
     }
 
     #[test]

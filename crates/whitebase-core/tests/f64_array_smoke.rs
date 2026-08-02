@@ -1,4 +1,4 @@
-use whitebase_core::{BackendKind, OperationKind, Whitebase};
+use whitebase_core::{OperationKind, Whitebase};
 
 #[test]
 fn available_backends_add_f64_arrays() {
@@ -15,15 +15,8 @@ fn available_backends_add_f64_arrays() {
         55.0_f64.to_bits(),
     ];
 
-    for kind in [
-        BackendKind::RustScalar,
-        BackendKind::RustSimd,
-        BackendKind::CppScalar,
-        BackendKind::CppAvx,
-        BackendKind::AssemblyScalar,
-        BackendKind::AssemblyAvx,
-    ] {
-        let info = whitebase.backend_info(kind).unwrap();
+    for info in whitebase.backends() {
+        let kind = info.kind;
 
         assert!(info.capabilities.supports(OperationKind::AddF64));
 

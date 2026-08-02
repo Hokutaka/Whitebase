@@ -35,3 +35,25 @@ fn observes_assembly_scalar_f64_result() {
     assert_eq!(report.backend, BackendKind::AssemblyScalar);
     assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
 }
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn observes_available_windows_gnu_scalar_f64_results() {
+    let runner = Runner::new();
+
+    for backend in [
+        BackendKind::WindowsGnuCppScalar,
+        BackendKind::WindowsGnuAssemblyScalar,
+    ] {
+        let report = match runner.run_add_scalar_f64(backend, 0.1, 0.2) {
+            Ok(report) => report,
+            Err(whitebase_runner::RunnerError::Compute {
+                error: whitebase_core::ComputeError::BackendUnavailable { .. },
+            }) => continue,
+            Err(error) => panic!("{} failed: {error}", backend.display_name()),
+        };
+
+        assert_eq!(report.backend, backend);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+}

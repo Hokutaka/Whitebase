@@ -25,14 +25,7 @@ pub struct RunnerConfig {
 impl Default for RunnerConfig {
     fn default() -> Self {
         Self {
-            backends: vec![
-                BackendKind::RustScalar,
-                BackendKind::RustSimd,
-                BackendKind::CppScalar,
-                BackendKind::CppAvx,
-                BackendKind::AssemblyScalar,
-                BackendKind::AssemblyAvx,
-            ],
+            backends: default_backends(),
             reference_backend: BackendKind::RustScalar,
             warmup_iterations: 3,
             measured_iterations: 10,
@@ -40,4 +33,32 @@ impl Default for RunnerConfig {
             absolute_tolerance_f64: 1.0e-12,
         }
     }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+fn default_backends() -> Vec<BackendKind> {
+    vec![
+        BackendKind::RustScalar,
+        BackendKind::RustSimd,
+        BackendKind::CppScalar,
+        BackendKind::CppAvx,
+        BackendKind::AssemblyScalar,
+        BackendKind::AssemblyAvx,
+        BackendKind::WindowsGnuCppScalar,
+        BackendKind::WindowsGnuCppAvx,
+        BackendKind::WindowsGnuAssemblyScalar,
+        BackendKind::WindowsGnuAssemblyAvx,
+    ]
+}
+
+#[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
+fn default_backends() -> Vec<BackendKind> {
+    vec![
+        BackendKind::RustScalar,
+        BackendKind::RustSimd,
+        BackendKind::CppScalar,
+        BackendKind::CppAvx,
+        BackendKind::AssemblyScalar,
+        BackendKind::AssemblyAvx,
+    ]
 }
