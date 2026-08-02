@@ -107,6 +107,9 @@ jobs:
           sudo apt-get install --yes --no-install-recommends \
             libwebkit2gtk-4.1-dev \
             build-essential \
+            cmake \
+            nasm \
+            pkg-config \
             curl \
             wget \
             file \
@@ -119,6 +122,12 @@ jobs:
         run: |
           rustc --version
           cargo --version
+          g++ --version
+          cmake --version
+          nasm -v
+
+      - name: Check Linux native backends
+        run: bash scripts/linux-native.sh check
 
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
@@ -128,6 +137,9 @@ jobs:
 
       - name: Run workspace tests
         run: cargo test --workspace --locked
+
+      - name: Build Linux native backends release
+        run: bash scripts/linux-native.sh release
 
       - name: Build Linux Control Center release
         run: cargo build --release --locked -p whitebase-control-center

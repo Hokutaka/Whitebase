@@ -59,3 +59,12 @@ fn unavailable_backend_reports_an_error() {
 
     assert!(backend.add_f32(&lhs, &rhs, &mut output).is_err());
 }
+
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+#[test]
+fn linux_uses_native_scalar_backends_only() {
+    assert!(CppScalarBackend.is_available());
+    assert!(AssemblyScalarBackend.is_available());
+    assert!(!CppAvxBackend.is_available());
+    assert!(!AssemblyAvxBackend.is_available());
+}

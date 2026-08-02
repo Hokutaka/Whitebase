@@ -1,6 +1,9 @@
 //! C++計算バックエンドをRustから利用するためのアダプターです。
 
-#![cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#![cfg(any(
+    all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+))]
 
 use whitebase_rust_backend::ArrayLengthError;
 
@@ -20,7 +23,10 @@ unsafe extern "C" {
     );
 
     fn whitebase_cpp_add_f64_scalar(lhs: f64, rhs: f64) -> f64;
+}
 
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+unsafe extern "C" {
     fn whitebase_cpp_is_avx_available() -> i32;
 
     fn whitebase_cpp_add_f32_avx(
@@ -38,7 +44,7 @@ unsafe extern "C" {
     ) -> i32;
 }
 
-/// C++ Scalarバックエンドで2つの`f32`配列を加算します.
+/// C++ Scalarバックエンドで2つの`f32`配列を加算します。
 ///
 /// # Errors
 ///
@@ -98,14 +104,14 @@ pub fn add_f64_scalar(lhs: f64, rhs: f64) -> f64 {
 }
 
 /// C++ AVXバックエンドが現在の環境で利用可能か返します。
+///
+/// Linux版は現在Scalar実装のみのため、常に`false`を返します。
 #[must_use]
 pub fn is_avx_available() -> bool {
-    // SAFETY:
-    // 引数を取らず、CPUとOSの対応状況を確認するだけの関数です。
-    unsafe { whitebase_cpp_is_avx_available() != 0 }
+    platform_is_avx_available()
 }
 
-/// C++ AVXバックエンドで2つの`f32`配列を加算します.
+/// C++ AVXバックエンドで2つの`f32`配列を加算します。
 ///
 /// 戻り値が`true`ならAVX処理が実行されています。AVXを利用できない
 /// 環境では`false`を返し、出力は変更されません。
@@ -117,14 +123,7 @@ pub fn is_avx_available() -> bool {
 pub fn add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<bool, ArrayLengthError> {
     validate_lengths(lhs, rhs, output)?;
 
-    // SAFETY:
-    // 各ポインターは有効なスライスから取得しており、
-    // 事前にすべての長さが一致することを確認しています。
-    let executed = unsafe {
-        whitebase_cpp_add_f32_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len())
-    };
-
-    Ok(executed != 0)
+    Ok(platform_add_f32_avx(lhs, rhs, output))
 }
 
 /// C++ AVXバックエンドで2つの`f64`配列を加算します。
@@ -143,14 +142,50 @@ pub fn add_f64_array_avx(
 ) -> Result<bool, ArrayLengthError> {
     validate_lengths(lhs, rhs, output)?;
 
+    Ok(platform_add_f64_array_avx(lhs, rhs, output))
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+fn platform_is_avx_available() -> bool {
+    // SAFETY:
+    // 引数を取らず、CPUとOSの対応状況を確認するだけの関数です。
+    unsafe { whitebase_cpp_is_avx_available() != 0 }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+const fn platform_is_avx_available() -> bool {
+    false
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+fn platform_add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> bool {
     // SAFETY:
     // 各ポインターは有効なスライスから取得しており、
-    // 事前にすべての長さが一致することを確認しています。
-    let executed = unsafe {
-        whitebase_cpp_add_f64_array_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len())
-    };
+    // 呼び出し前にすべての長さが一致することを確認しています。
+    unsafe {
+        whitebase_cpp_add_f32_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len()) != 0
+    }
+}
 
-    Ok(executed != 0)
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+fn platform_add_f32_avx(_lhs: &[f32], _rhs: &[f32], _output: &mut [f32]) -> bool {
+    false
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+fn platform_add_f64_array_avx(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> bool {
+    // SAFETY:
+    // 各ポインターは有効なスライスから取得しており、
+    // 呼び出し前にすべての長さが一致することを確認しています。
+    unsafe {
+        whitebase_cpp_add_f64_array_avx(lhs.as_ptr(), rhs.as_ptr(), output.as_mut_ptr(), lhs.len())
+            != 0
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+fn platform_add_f64_array_avx(_lhs: &[f64], _rhs: &[f64], _output: &mut [f64]) -> bool {
+    false
 }
 
 fn validate_lengths<T>(lhs: &[T], rhs: &[T], output: &[T]) -> Result<(), ArrayLengthError> {
