@@ -48,6 +48,12 @@ target_compile_options(whitebase_windows_gnu_native
         $<$<COMPILE_LANGUAGE:CXX>:-fno-tree-slp-vectorize>
 )
 
+target_link_options(whitebase_windows_gnu_native
+    PRIVATE
+        -static-libgcc
+        -static-libstdc++
+)
+
 set_target_properties(whitebase_windows_gnu_native PROPERTIES
     OUTPUT_NAME whitebase_windows_gnu_native
     PREFIX ""

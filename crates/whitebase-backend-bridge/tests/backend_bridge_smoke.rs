@@ -4,16 +4,15 @@ use whitebase_backend_bridge::{
 };
 use whitebase_interface::ComputeBackend;
 
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+use whitebase_backend_bridge::{
+    WindowsGnuAssemblyAvxBackend, WindowsGnuAssemblyScalarBackend, WindowsGnuCppAvxBackend,
+    WindowsGnuCppScalarBackend,
+};
+
 #[test]
 fn available_backends_produce_the_same_result() {
-    let backends: Vec<Box<dyn ComputeBackend>> = vec![
-        Box::new(RustScalarBackend),
-        Box::new(RustSimdBackend),
-        Box::new(CppScalarBackend),
-        Box::new(CppAvxBackend),
-        Box::new(AssemblyScalarBackend),
-        Box::new(AssemblyAvxBackend),
-    ];
+    let backends = standard_backends();
 
     let lhs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
 
@@ -70,4 +69,54 @@ fn linux_uses_native_backends() {
 
     assert_eq!(CppAvxBackend.is_available(), avx_available);
     assert_eq!(AssemblyAvxBackend.is_available(), avx_available);
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
+    vec![
+        Box::new(RustScalarBackend),
+        Box::new(RustSimdBackend),
+        Box::new(CppScalarBackend),
+        Box::new(CppAvxBackend),
+        Box::new(AssemblyScalarBackend),
+        Box::new(AssemblyAvxBackend),
+        Box::new(WindowsGnuCppScalarBackend),
+        Box::new(WindowsGnuCppAvxBackend),
+        Box::new(WindowsGnuAssemblyScalarBackend),
+        Box::new(WindowsGnuAssemblyAvxBackend),
+    ]
+}
+
+#[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
+fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
+    vec![
+        Box::new(RustScalarBackend),
+        Box::new(RustSimdBackend),
+        Box::new(CppScalarBackend),
+        Box::new(CppAvxBackend),
+        Box::new(AssemblyScalarBackend),
+        Box::new(AssemblyAvxBackend),
+    ]
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn windows_gnu_backends_share_the_dll_availability_contract() {
+    let gcc_scalar = WindowsGnuCppScalarBackend;
+    let nasm_scalar = WindowsGnuAssemblyScalarBackend;
+    let gcc_avx = WindowsGnuCppAvxBackend;
+    let nasm_avx = WindowsGnuAssemblyAvxBackend;
+
+    assert_eq!(gcc_scalar.is_available(), nasm_scalar.is_available());
+
+    if !gcc_scalar.is_available() {
+        assert!(!gcc_avx.is_available());
+        assert!(!nasm_avx.is_available());
+        return;
+    }
+
+    let avx_available = std::arch::is_x86_feature_detected!("avx");
+
+    assert_eq!(gcc_avx.is_available(), avx_available);
+    assert_eq!(nasm_avx.is_available(), avx_available);
 }

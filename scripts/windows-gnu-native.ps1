@@ -90,6 +90,22 @@ function Configure-And-Build([string]$Configuration) {
     if ($LASTEXITCODE -ne 0) {
         throw "Native build failed."
     }
+
+    $cargoProfile = if ($Configuration -eq "Release") {
+        "release"
+    }
+    else {
+        "debug"
+    }
+
+    $nativeDll = Join-Path $buildDirectory "whitebase_windows_gnu_native.dll"
+    $runtimeDirectory = Join-Path $RepositoryRoot "target\$cargoProfile"
+    $runtimeDll = Join-Path $runtimeDirectory "whitebase_windows_gnu_native.dll"
+
+    New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
+    Copy-Item -Path $nativeDll -Destination $runtimeDll -Force
+
+    Write-Host "[Whitebase Windows GNU Native] Runtime DLL: $runtimeDll"
 }
 
 function Run-Tests([string]$Configuration) {
@@ -129,6 +145,15 @@ switch ($Command) {
     "clean" {
         $buildDirectory = Join-Path $SourceDirectory "build"
         Remove-Item -Recurse -Force $buildDirectory -ErrorAction SilentlyContinue
+
+        foreach ($cargoProfile in @("debug", "release")) {
+            $runtimeDll = Join-Path `
+                $RepositoryRoot `
+                "target\$cargoProfile\whitebase_windows_gnu_native.dll"
+
+            Remove-Item -Force $runtimeDll -ErrorAction SilentlyContinue
+        }
+
         Write-Host "[Whitebase Windows GNU Native] Removed build outputs."
     }
     "help" {

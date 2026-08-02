@@ -15,6 +15,9 @@ mod cpp;
 
 mod rust;
 
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+mod windows_gnu;
+
 #[cfg(not(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
@@ -38,6 +41,12 @@ pub use assembly::{AssemblyAvxBackend, AssemblyScalarBackend};
 pub use cpp::{CppAvxBackend, CppScalarBackend};
 
 pub use rust::{RustScalarBackend, RustSimdBackend};
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+pub use windows_gnu::{
+    WindowsGnuAssemblyAvxBackend, WindowsGnuAssemblyScalarBackend, WindowsGnuCppAvxBackend,
+    WindowsGnuCppScalarBackend,
+};
 
 #[cfg(not(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),

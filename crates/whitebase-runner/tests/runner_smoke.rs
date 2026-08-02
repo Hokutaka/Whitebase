@@ -17,7 +17,7 @@ fn measures_and_compares_standard_backends() {
     let report = runner.run_add_f32(&lhs, &rhs, &config).unwrap();
 
     assert_eq!(report.input_length, 10);
-    assert_eq!(report.results.len(), 6);
+    assert_eq!(report.results.len(), config.backends.len());
 
     for result in report.results {
         match result.status {
@@ -61,7 +61,7 @@ fn measures_and_compares_standard_f64_backends() {
     let report = runner.run_add_f64(&lhs, &rhs, &config).unwrap();
 
     assert_eq!(report.input_length, 10);
-    assert_eq!(report.results.len(), 6);
+    assert_eq!(report.results.len(), config.backends.len());
 
     for result in report.results {
         match result.status {
