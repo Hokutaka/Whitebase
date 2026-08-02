@@ -65,6 +65,9 @@ run_tests() {
 
     echo "[Whitebase Linux Native] Test ${configuration}"
     ctest --test-dir "${build_dir}" --output-on-failure
+
+    echo "[Whitebase Linux Native] Backend status ${configuration}"
+    "${build_dir}/whitebase_linux_native_smoke"
 }
 
 main() {

@@ -62,9 +62,12 @@ fn unavailable_backend_reports_an_error() {
 
 #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
 #[test]
-fn linux_uses_native_scalar_backends_only() {
+fn linux_uses_native_backends() {
     assert!(CppScalarBackend.is_available());
     assert!(AssemblyScalarBackend.is_available());
-    assert!(!CppAvxBackend.is_available());
-    assert!(!AssemblyAvxBackend.is_available());
+
+    let avx_available = std::arch::is_x86_feature_detected!("avx");
+
+    assert_eq!(CppAvxBackend.is_available(), avx_available);
+    assert_eq!(AssemblyAvxBackend.is_available(), avx_available);
 }
