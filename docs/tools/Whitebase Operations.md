@@ -1,4 +1,4 @@
-### Windows用開発用コマンド
+### Windows用開発コマンド
 
 Windows環境では、開発・テスト・ビルド用の操作を
 `scripts/ops.bat`から実行できます。
@@ -33,3 +33,24 @@ Windows環境では、開発・テスト・ビルド用の操作を
 | `web-build` | フロントエンドをビルドします。 | Build the frontend. |
 | `tauri-build` | Tauriデスクトップアプリケーションをビルドします。 | Build the Tauri desktop application. |
 | `clean` | 生成されたビルド成果物を削除します。 | Remove generated build artifacts. |
+
+### Linux Native用開発コマンド
+
+Linux x86_64環境では、GCCおよびNASMで実装された
+Linux Nativeバックエンドのビルド・テスト操作を
+`scripts/linux-native.sh`から実行できます。
+
+リポジトリのルートディレクトリで、以下の形式で実行します。
+
+```bash
+./scripts/linux-native.sh <command>
+````
+
+| コマンド | 説明 | Description |
+| --- | --- | --- |
+| `build` | Linux NativeバックエンドをDebug構成で設定し、ビルドします。| Configure and build the Linux Native backends in the Debug configuration. |
+| `check` | Linux NativeバックエンドをDebug構成でビルドし、CTestおよびNativeスモークテストを実行します。 | Build the Linux Native backends in the Debug configuration and run CTest and the native smoke test. |
+| `release`  | Linux NativeバックエンドをRelease構成でビルドし、CTestおよびNativeスモークテストを実行します。 | Build the Linux Native backends in the Release configuration and run CTest and the native smoke test. |
+| `clean` | `native/Whitebase.Linux/build`以下のLinux Nativeビルド成果物を削除します。 | Remove the Linux Native build outputs under `native/Whitebase.Linux/build`. |
+| `help`, `-h`, `--help` | 使用方法と利用可能なコマンドを表示します。 | Display usage information and the available commands. |
+
