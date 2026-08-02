@@ -54,14 +54,22 @@ void whitebase_asm_add_f64_array_scalar(
 
 double whitebase_asm_add_f64_scalar(double lhs, double rhs);
 
-void whitebase_asm_add_f32_avx(
+/*
+ * Returns 1 when the AVX operation was executed.
+ * Returns 0 without modifying output when AVX is unavailable.
+ */
+int whitebase_asm_add_f32_avx(
     const float* lhs,
     const float* rhs,
     float* output,
     size_t length
 );
 
-void whitebase_asm_add_f64_array_avx(
+/*
+ * Returns 1 when the AVX operation was executed.
+ * Returns 0 without modifying output when AVX is unavailable.
+ */
+int whitebase_asm_add_f64_array_avx(
     const double* lhs,
     const double* rhs,
     double* output,

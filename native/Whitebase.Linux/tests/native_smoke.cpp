@@ -128,42 +128,67 @@ namespace
             && std::bit_cast<std::uint64_t>(scalar) == UINT64_C(0x3fd3333333333334);
     }
 
-    bool test_assembly_avx_backend()
+    bool test_assembly_avx_backend(const bool avx_available)
     {
         const std::array<float, 10> lhs_f32 {
             1.0F, 2.0F, 3.0F, 4.0F, 5.0F,
             6.0F, 7.0F, 8.0F, 9.0F, 10.0F
         };
+
         const std::array<float, 10> rhs_f32 {
             10.0F, 20.0F, 30.0F, 40.0F, 50.0F,
             60.0F, 70.0F, 80.0F, 90.0F, 100.0F
         };
+
         const std::array<float, 10> expected_f32 {
             11.0F, 22.0F, 33.0F, 44.0F, 55.0F,
             66.0F, 77.0F, 88.0F, 99.0F, 110.0F
         };
+
         std::array<float, 10> output_f32 {};
 
-        whitebase_asm_add_f32_avx(
+        const int f32_executed = whitebase_asm_add_f32_avx(
             lhs_f32.data(),
             rhs_f32.data(),
             output_f32.data(),
             output_f32.size()
         );
 
-        const std::array<double, 6> lhs_f64 { 0.1, 1.0, 2.0, 3.0, 4.0, 5.0 };
-        const std::array<double, 6> rhs_f64 { 0.2, 10.0, 20.0, 30.0, 40.0, 50.0 };
-        const std::array<double, 6> expected_f64 { 0.1 + 0.2, 11.0, 22.0, 33.0, 44.0, 55.0 };
+        const std::array<double, 6> lhs_f64 {
+            0.1, 1.0, 2.0, 3.0, 4.0, 5.0
+        };
+
+        const std::array<double, 6> rhs_f64 {
+            0.2, 10.0, 20.0, 30.0, 40.0, 50.0
+        };
+
+        const std::array<double, 6> expected_f64 {
+            0.1 + 0.2, 11.0, 22.0, 33.0, 44.0, 55.0
+        };
+
         std::array<double, 6> output_f64 {};
 
-        whitebase_asm_add_f64_array_avx(
+        const int f64_executed = whitebase_asm_add_f64_array_avx(
             lhs_f64.data(),
             rhs_f64.data(),
             output_f64.data(),
             output_f64.size()
         );
 
-        return matches(output_f32, expected_f32)
+        if (!avx_available)
+        {
+            const std::array<float, 10> untouched_f32 {};
+            const std::array<double, 6> untouched_f64 {};
+
+            return f32_executed == 0
+                && f64_executed == 0
+                && matches(output_f32, untouched_f32)
+                && matches(output_f64, untouched_f64);
+        }
+
+        return f32_executed != 0
+            && f64_executed != 0
+            && matches(output_f32, expected_f32)
             && matches(output_f64, expected_f64);
     }
 
@@ -189,7 +214,7 @@ int main()
         !avx_available || test_cpp_avx_backend();
 
     const bool assembly_avx_passed =
-        !avx_available || test_assembly_avx_backend();
+        test_assembly_avx_backend(avx_available);
 
     std::cout << "C++ GCC Scalar: "
               << (cpp_scalar_passed ? "PASSED" : "FAILED")
