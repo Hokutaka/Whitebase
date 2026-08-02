@@ -166,50 +166,65 @@ Whitebase
 │   ├── Overview.ja.md
 │   └── Overview.md
 ├── native
-│   └── Whitebase.Cpp
-│       ├── Whitebase.Assembly
-│       │   ├── include
-│       │   │   └── whitebase_asm.h
-│       │   ├── src
-│       │   │   ├── whitebase_asm_add.asm
-│       │   │   ├── whitebase_asm_add_f32_avx.asm
-│       │   │   ├── whitebase_asm_add_f32_scalar.asm
-│       │   │   ├── whitebase_asm_add_f64_array_avx.asm
-│       │   │   ├── whitebase_asm_add_f64_array_scalar.asm
-│       │   │   └── whitebase_asm_add_f64_scalar.asm
-│       │   ├── Whitebase.Assembly.vcxproj
-│       │   └── Whitebase.Assembly.vcxproj.filters
-│       ├── Whitebase.AssemblyClient
-│       │   ├── Whitebase.AssemblyClient.cpp
-│       │   ├── Whitebase.AssemblyClient.vcxproj
-│       │   └── Whitebase.AssemblyClient.vcxproj.filters
-│       ├── Whitebase.CppBackend
-│       │   ├── include
-│       │   │   ├── whitebase_cpp_backend.h
-│       │   │   └── whitebase_cpp_backend_c.h
-│       │   ├── src
-│       │   │   ├── whitebase_cpp_avx.cpp
-│       │   │   ├── whitebase_cpp_c_api.cpp
-│       │   │   ├── whitebase_cpp_cpu.cpp
-│       │   │   └── whitebase_cpp_scalar.cpp
-│       │   ├── framework.h
-│       │   ├── pch.cpp
-│       │   ├── pch.h
-│       │   ├── Whitebase.CppBackend.cpp
-│       │   ├── Whitebase.CppBackend.vcxproj
-│       │   └── Whitebase.CppBackend.vcxproj.filters
-│       ├── Whitebase.CppBackendClient
-│       │   ├── Whitebase.CppBackendClient.cpp
-│       │   ├── Whitebase.CppBackendClient.vcxproj
-│       │   └── Whitebase.CppBackendClient.vcxproj.filters
-│       ├── Whitebase.CppClient
-│       │   ├── Whitebase.CppClient.cpp
-│       │   ├── Whitebase.CppClient.vcxproj
-│       │   └── Whitebase.CppClient.vcxproj.filters
-│       └── Whitebase.Cpp.slnx
+│   ├── Whitebase.Cpp
+│   │   ├── Whitebase.Assembly
+│   │   │   ├── include
+│   │   │   │   └── whitebase_asm.h
+│   │   │   ├── src
+│   │   │   │   ├── whitebase_asm_add.asm
+│   │   │   │   ├── whitebase_asm_add_f32_avx.asm
+│   │   │   │   ├── whitebase_asm_add_f32_scalar.asm
+│   │   │   │   ├── whitebase_asm_add_f64_array_avx.asm
+│   │   │   │   ├── whitebase_asm_add_f64_array_scalar.asm
+│   │   │   │   └── whitebase_asm_add_f64_scalar.asm
+│   │   │   ├── Whitebase.Assembly.vcxproj
+│   │   │   └── Whitebase.Assembly.vcxproj.filters
+│   │   ├── Whitebase.AssemblyClient
+│   │   │   ├── Whitebase.AssemblyClient.cpp
+│   │   │   ├── Whitebase.AssemblyClient.vcxproj
+│   │   │   └── Whitebase.AssemblyClient.vcxproj.filters
+│   │   ├── Whitebase.CppBackend
+│   │   │   ├── include
+│   │   │   │   ├── whitebase_cpp_backend.h
+│   │   │   │   └── whitebase_cpp_backend_c.h
+│   │   │   ├── src
+│   │   │   │   ├── whitebase_cpp_avx.cpp
+│   │   │   │   ├── whitebase_cpp_c_api.cpp
+│   │   │   │   ├── whitebase_cpp_cpu.cpp
+│   │   │   │   └── whitebase_cpp_scalar.cpp
+│   │   │   ├── framework.h
+│   │   │   ├── pch.cpp
+│   │   │   ├── pch.h
+│   │   │   ├── Whitebase.CppBackend.cpp
+│   │   │   ├── Whitebase.CppBackend.vcxproj
+│   │   │   └── Whitebase.CppBackend.vcxproj.filters
+│   │   ├── Whitebase.CppBackendClient
+│   │   │   ├── Whitebase.CppBackendClient.cpp
+│   │   │   ├── Whitebase.CppBackendClient.vcxproj
+│   │   │   └── Whitebase.CppBackendClient.vcxproj.filters
+│   │   ├── Whitebase.CppClient
+│   │   │   ├── Whitebase.CppClient.cpp
+│   │   │   ├── Whitebase.CppClient.vcxproj
+│   │   │   └── Whitebase.CppClient.vcxproj.filters
+│   │   └── Whitebase.Cpp.slnx
+│   └── Whitebase.Linux
+│       ├── assembly
+│       │   ├── whitebase_asm_avx.asm
+│       │   └── whitebase_asm_scalar.asm
+│       ├── cpp
+│       │   ├── whitebase_cpp_avx.cpp
+│       │   ├── whitebase_cpp_cpu.cpp
+│       │   └── whitebase_cpp_scalar.cpp
+│       ├── include
+│       │   └── whitebase_linux_native.h
+│       ├── tests
+│       │   └── native_smoke.cpp
+│       ├── .gitignore
+│       └── CMakeLists.txt
 ├── scripts
 │   ├── export-tree.bat
 │   ├── export-tree.ps1
+│   ├── linux-native.sh
 │   └── ops.bat
 ├── tools
 │   ├── Whitebase.Windows
@@ -244,7 +259,7 @@ Whitebase
 ├── package.json
 ├── package-lock.json
 ├── README.ja.md
-├── readme.md
+├── README.md
 ├── rust-toolchain.toml
 └── SECURITY.md
 ```
