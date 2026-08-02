@@ -81,7 +81,8 @@ Whitebase
 │   │   │   ├── cpp.rs
 │   │   │   ├── lib.rs
 │   │   │   ├── rust.rs
-│   │   │   └── unavailable.rs
+│   │   │   ├── unavailable.rs
+│   │   │   └── windows_gnu.rs
 │   │   ├── tests
 │   │   │   └── backend_bridge_smoke.rs
 │   │   └── Cargo.toml
@@ -141,9 +142,15 @@ Whitebase
 │   │   │   ├── simd_f64_array.rs
 │   │   │   └── simd_smoke.rs
 │   │   └── Cargo.toml
-│   └── whitebase-wasm
+│   ├── whitebase-wasm
+│   │   ├── src
+│   │   │   └── lib.rs
+│   │   └── Cargo.toml
+│   └── whitebase-windows-gnu-adapter
 │       ├── src
 │       │   └── lib.rs
+│       ├── tests
+│       │   └── windows_gnu_smoke.rs
 │       └── Cargo.toml
 ├── docs
 │   ├── diagrams
@@ -207,25 +214,41 @@ Whitebase
 │   │   │   ├── Whitebase.CppClient.vcxproj
 │   │   │   └── Whitebase.CppClient.vcxproj.filters
 │   │   └── Whitebase.Cpp.slnx
-│   └── Whitebase.Linux
+│   ├── Whitebase.Linux
+│   │   ├── assembly
+│   │   │   ├── whitebase_asm_avx.asm
+│   │   │   └── whitebase_asm_scalar.asm
+│   │   ├── cpp
+│   │   │   ├── whitebase_cpp_avx.cpp
+│   │   │   ├── whitebase_cpp_cpu.cpp
+│   │   │   └── whitebase_cpp_scalar.cpp
+│   │   ├── include
+│   │   │   └── whitebase_linux_native.h
+│   │   ├── tests
+│   │   │   └── native_smoke.cpp
+│   │   ├── .gitignore
+│   │   └── CMakeLists.txt
+│   └── Whitebase.Windows.Gnu
 │       ├── assembly
-│       │   ├── whitebase_asm_avx.asm
-│       │   └── whitebase_asm_scalar.asm
+│       │   ├── whitebase_gnu_asm_avx.asm
+│       │   └── whitebase_gnu_asm_scalar.asm
 │       ├── cpp
-│       │   ├── whitebase_cpp_avx.cpp
-│       │   ├── whitebase_cpp_cpu.cpp
-│       │   └── whitebase_cpp_scalar.cpp
+│       │   ├── whitebase_gnu_cpp_avx.cpp
+│       │   ├── whitebase_gnu_cpp_cpu.cpp
+│       │   └── whitebase_gnu_cpp_scalar.cpp
+│       ├── exports
+│       │   └── whitebase_windows_gnu_native.def
 │       ├── include
-│       │   └── whitebase_linux_native.h
+│       │   └── whitebase_windows_gnu_native.h
 │       ├── tests
 │       │   └── native_smoke.cpp
-│       ├── .gitignore
 │       └── CMakeLists.txt
 ├── scripts
 │   ├── export-tree.bat
 │   ├── export-tree.ps1
 │   ├── linux-native.sh
-│   └── ops.bat
+│   ├── ops.bat
+│   └── windows-gnu-native.ps1
 ├── tools
 │   ├── Whitebase.Windows
 │   │   ├── Desktop
