@@ -80,13 +80,18 @@ enum Task {
     CheckCppAdapter,
     CheckAssembly,
     BuildWorkspace,
+    BuildWorkspaceRelease,
     BuildFrontend,
     BuildWasm,
+    BuildWasmRelease,
     BuildLinuxNative,
     BuildLinuxNativeRelease,
+    BuildWindowsNativeRelease,
     BuildCApi,
+    BuildCApiRelease,
     BuildCppClient,
     BuildAssemblyClient,
+    BuildTauriRelease,
     BuildControlCenterRelease,
     TestWorkspace,
     RunServer,
@@ -121,6 +126,24 @@ const BUILD_ALL_TASKS: &[Task] = &[
     Task::BuildWasm,
     // Wasm生成物を含んだ状態でFrontendを組み立てる。
     Task::BuildFrontend,
+    Task::BuildControlCenterRelease,
+];
+
+const RELEASE_ALL_TASKS: &[Task] = &[
+    // WindowsのMSVC/MASM Releaseビルドが参照するRust C APIを先に準備する。
+    // Linuxでは非対応タスクとしてTaskSequence::release_all()が除外する。
+    Task::BuildCApiRelease,
+    Task::BuildWindowsNativeRelease,
+    // LinuxではRustのRelease成果物をリンクする前にGCC/NASMを準備する。
+    // Windowsでは非対応タスクとして除外する。
+    Task::BuildLinuxNativeRelease,
+    // 実行中のControl Center本体を除いたWorkspaceをReleaseでビルドする。
+    Task::BuildWorkspaceRelease,
+    // TauriのbeforeBuildCommandが参照するWasm成果物をReleaseで生成する。
+    Task::BuildWasmRelease,
+    // Tauri ReleaseはFrontendのProductionビルドとBundle生成を含む。
+    Task::BuildTauriRelease,
+    // 実行中のControl CenterがDebug版など、安全に上書きできる場合だけ実行する。
     Task::BuildControlCenterRelease,
 ];
 
@@ -160,13 +183,18 @@ impl Task {
             Self::CheckCppAdapter => "Check C++ Adapter",
             Self::CheckAssembly => "Check Assembly",
             Self::BuildWorkspace => "Build Workspace",
+            Self::BuildWorkspaceRelease => "Build Workspace Release",
             Self::BuildFrontend => "Build Frontend",
             Self::BuildWasm => "Build Wasm",
+            Self::BuildWasmRelease => "Build Wasm Release",
             Self::BuildLinuxNative => "Build Linux Native",
             Self::BuildLinuxNativeRelease => "Build Linux Native Release",
+            Self::BuildWindowsNativeRelease => "Build Windows Native Release",
             Self::BuildCApi => "Build C API",
+            Self::BuildCApiRelease => "Build C API Release",
             Self::BuildCppClient => "Build C++ Client",
             Self::BuildAssemblyClient => "Build Assembly Client",
+            Self::BuildTauriRelease => "Build Tauri Release",
             Self::BuildControlCenterRelease => "Build Control Center Release",
             Self::TestWorkspace => "Test Workspace",
             Self::RunServer => "Run Server",
@@ -186,13 +214,18 @@ impl Task {
             Self::CheckCppAdapter => "Checking C++ Adapter...",
             Self::CheckAssembly => "Checking Assembly...",
             Self::BuildWorkspace => "Building Workspace...",
+            Self::BuildWorkspaceRelease => "Building Workspace Release...",
             Self::BuildFrontend => "Building Frontend...",
             Self::BuildWasm => "Building Wasm...",
+            Self::BuildWasmRelease => "Building Wasm Release...",
             Self::BuildLinuxNative => "Building Linux Native...",
             Self::BuildLinuxNativeRelease => "Building Linux Native Release...",
+            Self::BuildWindowsNativeRelease => "Building Windows Native Release...",
             Self::BuildCApi => "Building C API...",
+            Self::BuildCApiRelease => "Building C API Release...",
             Self::BuildCppClient => "Building C++ Client...",
             Self::BuildAssemblyClient => "Building Assembly Client...",
+            Self::BuildTauriRelease => "Building Tauri Release...",
             Self::BuildControlCenterRelease => "Building Control Center Release...",
             Self::TestWorkspace => "Testing Workspace...",
             Self::RunServer => "Running Whitebase Server...",
@@ -212,13 +245,20 @@ impl Task {
             Self::CheckCppAdapter => "C++ Adapter check completed successfully",
             Self::CheckAssembly => "Assembly check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
+            Self::BuildWorkspaceRelease => "Workspace Release build completed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
             Self::BuildWasm => "Wasm build completed successfully",
+            Self::BuildWasmRelease => "Wasm Release build completed successfully",
             Self::BuildLinuxNative => "Linux Native build completed successfully",
             Self::BuildLinuxNativeRelease => "Linux Native Release build completed successfully",
+            Self::BuildWindowsNativeRelease => {
+                "Windows Native Release build completed successfully"
+            }
             Self::BuildCApi => "C API build completed successfully",
+            Self::BuildCApiRelease => "C API Release build completed successfully",
             Self::BuildCppClient => "C++ Client build completed successfully",
             Self::BuildAssemblyClient => "Assembly Client build completed successfully",
+            Self::BuildTauriRelease => "Tauri Release build completed successfully",
             Self::BuildControlCenterRelease => {
                 "Control Center Release build completed successfully"
             }
@@ -290,6 +330,17 @@ impl Task {
                     "whitebase-control-center",
                 ],
             },
+            Self::BuildWorkspaceRelease => CommandSpec {
+                program: "cargo",
+                args: &[
+                    "build",
+                    "--workspace",
+                    "--release",
+                    "--locked",
+                    "--exclude",
+                    "whitebase-control-center",
+                ],
+            },
             Self::BuildFrontend => CommandSpec {
                 program: if cfg!(windows) { "npm.cmd" } else { "npm" },
                 args: &["--prefix", "apps/whitebase-app", "run", "build"],
@@ -305,6 +356,17 @@ impl Task {
                     "../../apps/whitebase-app/src/wasm",
                 ],
             },
+            Self::BuildWasmRelease => CommandSpec {
+                program: "wasm-pack",
+                args: &[
+                    "build",
+                    "--target",
+                    "web",
+                    "--release",
+                    "--out-dir",
+                    "../../apps/whitebase-app/src/wasm",
+                ],
+            },
             Self::BuildLinuxNative => CommandSpec {
                 program: "bash",
                 args: &["scripts/linux-native.sh", "build"],
@@ -313,9 +375,23 @@ impl Task {
                 program: "bash",
                 args: &["scripts/linux-native.sh", "release"],
             },
+            Self::BuildWindowsNativeRelease => CommandSpec {
+                program: "powershell.exe",
+                args: &[
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    r#"$ErrorActionPreference = 'Stop'; $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'; if (-not (Test-Path $vswhere)) { throw "vswhere.exe was not found: $vswhere" }; $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath; if (-not $installationPath) { throw 'Visual Studio with MSBuild was not found.' }; $msbuild = Join-Path $installationPath 'MSBuild\Current\Bin\MSBuild.exe'; & $msbuild 'native\Whitebase.Cpp\Whitebase.Cpp.slnx' /t:Build /m /p:Configuration=Release /p:Platform=x64 /v:minimal; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"#,
+                ],
+            },
             Self::BuildCApi => CommandSpec {
                 program: "cargo",
                 args: &["build", "-p", "whitebase-c-api"],
+            },
+            Self::BuildCApiRelease => CommandSpec {
+                program: "cargo",
+                args: &["build", "--release", "--locked", "-p", "whitebase-c-api"],
             },
             Self::BuildCppClient => CommandSpec {
                 program: "cmd.exe",
@@ -329,9 +405,26 @@ impl Task {
                 program: "cmd.exe",
                 args: &["/C", "scripts\\ops.bat", "cpp-adapter-check"],
             },
+            Self::BuildTauriRelease => CommandSpec {
+                program: if cfg!(windows) { "npm.cmd" } else { "npm" },
+                args: &[
+                    "--prefix",
+                    "apps/whitebase-app",
+                    "run",
+                    "tauri",
+                    "--",
+                    "build",
+                ],
+            },
             Self::BuildControlCenterRelease => CommandSpec {
                 program: "cargo",
-                args: &["build", "--release", "-p", "whitebase-control-center"],
+                args: &[
+                    "build",
+                    "--release",
+                    "--locked",
+                    "-p",
+                    "whitebase-control-center",
+                ],
             },
             Self::TestWorkspace => CommandSpec {
                 program: "cargo",
@@ -355,7 +448,9 @@ impl Task {
 
     fn working_directory(self) -> PathBuf {
         match self {
-            Self::BuildWasm => repository_root().join("crates").join("whitebase-wasm"),
+            Self::BuildWasm | Self::BuildWasmRelease => {
+                repository_root().join("crates").join("whitebase-wasm")
+            }
 
             _ => repository_root(),
         }
@@ -377,6 +472,8 @@ impl Task {
                 | Self::CheckAssembly
                 | Self::BuildCppClient
                 | Self::BuildAssemblyClient
+                | Self::BuildWindowsNativeRelease
+                | Self::BuildCApiRelease
         ) {
             return cfg!(target_os = "windows");
         }
@@ -429,6 +526,14 @@ impl TaskSequence {
             "Build All",
             "Whitebase build completed successfully",
             BUILD_ALL_TASKS,
+        )
+    }
+
+    fn release_all() -> Self {
+        Self::from_supported_tasks(
+            "Release All",
+            "Whitebase Release build completed successfully",
+            RELEASE_ALL_TASKS,
         )
     }
 }
@@ -533,17 +638,43 @@ impl eframe::App for ControlCenterApp {
 
                 for task in [
                     Task::BuildLinuxNative,
-                    Task::BuildLinuxNativeRelease,
                     Task::BuildWorkspace,
                     Task::BuildFrontend,
                     Task::BuildWasm,
                     Task::BuildCApi,
                     Task::BuildCppClient,
                     Task::BuildAssemblyClient,
-                    Task::BuildControlCenterRelease,
                 ] {
                     let button = egui::Button::new(task.label());
 
+                    let is_enabled = !is_running && task.is_supported();
+
+                    if ui.add_enabled(is_enabled, button).clicked() {
+                        self.start_task(task);
+                    }
+                }
+            });
+
+            ui.add_space(8.0);
+            ui.label(egui::RichText::new("Release").strong());
+
+            ui.horizontal_wrapped(|ui| {
+                let release_all_button = egui::Button::new("Release All");
+
+                if ui.add_enabled(!is_running, release_all_button).clicked() {
+                    self.start_release_all();
+                }
+
+                for task in [
+                    Task::BuildCApiRelease,
+                    Task::BuildWindowsNativeRelease,
+                    Task::BuildLinuxNativeRelease,
+                    Task::BuildWorkspaceRelease,
+                    Task::BuildWasmRelease,
+                    Task::BuildTauriRelease,
+                    Task::BuildControlCenterRelease,
+                ] {
+                    let button = egui::Button::new(task.label());
                     let is_enabled = !is_running && task.is_supported();
 
                     if ui.add_enabled(is_enabled, button).clicked() {
@@ -637,6 +768,10 @@ impl ControlCenterApp {
 
     fn start_build_all(&mut self) {
         self.start_sequence(TaskSequence::build_all());
+    }
+
+    fn start_release_all(&mut self) {
+        self.start_sequence(TaskSequence::release_all());
     }
 
     fn start_sequence(&mut self, mut sequence: TaskSequence) {
@@ -1234,6 +1369,108 @@ mod tests {
         assert_eq!(
             sequence.success_message,
             "Whitebase build completed successfully"
+        );
+        assert_eq!(sequence.pending_tasks, expected);
+    }
+
+    #[test]
+    fn workspace_release_build_excludes_the_running_control_center() {
+        let spec = Task::BuildWorkspaceRelease.command_spec();
+
+        assert_eq!(spec.program, "cargo");
+        assert_eq!(
+            spec.args,
+            [
+                "build",
+                "--workspace",
+                "--release",
+                "--locked",
+                "--exclude",
+                "whitebase-control-center",
+            ]
+        );
+    }
+
+    #[test]
+    fn wasm_release_build_uses_release_profile() {
+        let spec = Task::BuildWasmRelease.command_spec();
+
+        assert_eq!(spec.program, "wasm-pack");
+        assert_eq!(
+            spec.args,
+            [
+                "build",
+                "--target",
+                "web",
+                "--release",
+                "--out-dir",
+                "../../apps/whitebase-app/src/wasm",
+            ]
+        );
+        assert_eq!(
+            Task::BuildWasmRelease.working_directory(),
+            repository_root().join("crates").join("whitebase-wasm")
+        );
+    }
+
+    #[test]
+    fn tauri_release_build_uses_the_platform_npm_launcher() {
+        let spec = Task::BuildTauriRelease.command_spec();
+        let expected_program = if cfg!(windows) { "npm.cmd" } else { "npm" };
+
+        assert_eq!(spec.program, expected_program);
+        assert_eq!(
+            spec.args,
+            [
+                "--prefix",
+                "apps/whitebase-app",
+                "run",
+                "tauri",
+                "--",
+                "build",
+            ]
+        );
+    }
+
+    #[test]
+    fn windows_native_release_builds_the_release_solution() {
+        let spec = Task::BuildWindowsNativeRelease.command_spec();
+
+        assert_eq!(spec.program, "powershell.exe");
+        assert!(spec.args.contains(&"-Command"));
+        assert!(
+            spec.args
+                .iter()
+                .any(|argument| argument.contains("/p:Configuration=Release"))
+        );
+        assert!(
+            spec.args
+                .iter()
+                .any(|argument| argument.contains("Whitebase.Cpp.slnx"))
+        );
+    }
+
+    #[test]
+    fn windows_release_tasks_support_matches_platform() {
+        let expected = cfg!(target_os = "windows");
+
+        assert_eq!(Task::BuildCApiRelease.is_supported(), expected);
+        assert_eq!(Task::BuildWindowsNativeRelease.is_supported(), expected);
+    }
+
+    #[test]
+    fn release_all_sequence_contains_expected_supported_tasks() {
+        let sequence = TaskSequence::release_all();
+        let expected = RELEASE_ALL_TASKS
+            .iter()
+            .copied()
+            .filter(|task| task.is_supported())
+            .collect::<VecDeque<_>>();
+
+        assert_eq!(sequence.label, "Release All");
+        assert_eq!(
+            sequence.success_message,
+            "Whitebase Release build completed successfully"
         );
         assert_eq!(sequence.pending_tasks, expected);
     }
