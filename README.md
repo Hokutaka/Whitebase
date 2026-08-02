@@ -1,7 +1,7 @@
 [![CI](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml)
 [![CodeQL](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql)
 
-[English](README.md) | [日本語](README.ja.md)
+**English** | [日本語](README.ja.md)
 
 A repository for learning and experimentation.
 
@@ -22,11 +22,13 @@ For more information, see the following documentation.
 - [Detailed documentation](/docs//Overview.md)
 - [Project structure](docs/project-tree.md)
 
-### Tools
+### Operation Tools
 
-- [Whitebase Operations](docs/tools/Whitebase%20Operations.md)
-- [Whitebase Control Center](docs/tools/Whitebase%20Control%20Center.md)
-- [Whitebase Control Panel](docs/tools/Whitebase%20Control%20Panel.md)
+| Name | Implementation |
+| --- | --- |
+| [Whitebase Operations](docs/tools/Whitebase%20Operations.md) | Windows Batch |
+| [Whitebase Control Center](docs/tools/Whitebase%20Control%20Center.md) | Rust + egui / Windows and Linux |
+| [Whitebase Control Panel](docs/tools/Whitebase%20Control%20Panel.md) | C# + WPF / Windows |
 
 ## License
 
