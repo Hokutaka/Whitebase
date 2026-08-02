@@ -21,8 +21,17 @@ set(CMAKE_ASM_NASM_OBJECT_FORMAT win64)
 
 add_library(whitebase_windows_gnu_native SHARED
     cpp/whitebase_gnu_cpp_scalar.cpp
+    cpp/whitebase_gnu_cpp_cpu.cpp
+    cpp/whitebase_gnu_cpp_avx.cpp
     assembly/whitebase_gnu_asm_scalar.asm
+    assembly/whitebase_gnu_asm_avx.asm
     exports/whitebase_windows_gnu_native.def
+)
+
+set_source_files_properties(
+    cpp/whitebase_gnu_cpp_avx.cpp
+    PROPERTIES
+        COMPILE_OPTIONS "-mavx"
 )
 
 target_include_directories(whitebase_windows_gnu_native
