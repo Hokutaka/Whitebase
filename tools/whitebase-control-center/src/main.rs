@@ -74,6 +74,7 @@ enum Task {
     CheckClippy,
     CheckWorkspace,
     CheckWasm,
+    CheckLinuxNative,
     CheckCppClient,
     CheckCppBackend,
     CheckCppAdapter,
@@ -81,6 +82,8 @@ enum Task {
     BuildWorkspace,
     BuildFrontend,
     BuildWasm,
+    BuildLinuxNative,
+    BuildLinuxNativeRelease,
     BuildCApi,
     BuildCppClient,
     BuildAssemblyClient,
@@ -91,6 +94,9 @@ enum Task {
 
 const CHECK_ALL_TASKS: &[Task] = &[
     Task::CheckFormat,
+    // LinuxではRustのAdapterを検査する前に、GCC/NASMのライブラリを準備する。
+    // 非対応OSではTaskSequence::check_all()が除外する。
+    Task::CheckLinuxNative,
     // RustのAdapterを検査する前に、Windowsのネイティブライブラリを準備する。
     // 非対応OSではTaskSequence::check_all()がこれらを除外する。
     Task::CheckCppBackend,
@@ -104,6 +110,8 @@ const CHECK_ALL_TASKS: &[Task] = &[
 ];
 
 const BUILD_ALL_TASKS: &[Task] = &[
+    // LinuxではWorkspace内のAdapterをリンクする前にネイティブ成果物を準備する。
+    Task::BuildLinuxNative,
     // Build欄の個別タスクをすべて順番に実行する。
     // WindowsではWorkspace内のAdapterをリンクする前にネイティブ成果物を準備する。
     Task::BuildCApi,
@@ -146,6 +154,7 @@ impl Task {
             Self::CheckClippy => "Check Clippy",
             Self::CheckWorkspace => "Check Workspace",
             Self::CheckWasm => "Check Wasm",
+            Self::CheckLinuxNative => "Check Linux Native",
             Self::CheckCppClient => "Check C++ Client",
             Self::CheckCppBackend => "Check C++ Backend",
             Self::CheckCppAdapter => "Check C++ Adapter",
@@ -153,6 +162,8 @@ impl Task {
             Self::BuildWorkspace => "Build Workspace",
             Self::BuildFrontend => "Build Frontend",
             Self::BuildWasm => "Build Wasm",
+            Self::BuildLinuxNative => "Build Linux Native",
+            Self::BuildLinuxNativeRelease => "Build Linux Native Release",
             Self::BuildCApi => "Build C API",
             Self::BuildCppClient => "Build C++ Client",
             Self::BuildAssemblyClient => "Build Assembly Client",
@@ -169,6 +180,7 @@ impl Task {
             Self::CheckClippy => "Checking with Clippy...",
             Self::CheckWorkspace => "Checking Workspace...",
             Self::CheckWasm => "Checking Wasm...",
+            Self::CheckLinuxNative => "Checking Linux Native...",
             Self::CheckCppClient => "Checking C++ Client...",
             Self::CheckCppBackend => "Checking C++ Backend...",
             Self::CheckCppAdapter => "Checking C++ Adapter...",
@@ -176,6 +188,8 @@ impl Task {
             Self::BuildWorkspace => "Building Workspace...",
             Self::BuildFrontend => "Building Frontend...",
             Self::BuildWasm => "Building Wasm...",
+            Self::BuildLinuxNative => "Building Linux Native...",
+            Self::BuildLinuxNativeRelease => "Building Linux Native Release...",
             Self::BuildCApi => "Building C API...",
             Self::BuildCppClient => "Building C++ Client...",
             Self::BuildAssemblyClient => "Building Assembly Client...",
@@ -192,6 +206,7 @@ impl Task {
             Self::CheckClippy => "Clippy check completed successfully",
             Self::CheckWorkspace => "Workspace check completed successfully",
             Self::CheckWasm => "Wasm check completed successfully",
+            Self::CheckLinuxNative => "Linux Native check completed successfully",
             Self::CheckCppClient => "C++ Client check completed successfully",
             Self::CheckCppBackend => "C++ Backend check completed successfully",
             Self::CheckCppAdapter => "C++ Adapter check completed successfully",
@@ -199,6 +214,8 @@ impl Task {
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
             Self::BuildWasm => "Wasm build completed successfully",
+            Self::BuildLinuxNative => "Linux Native build completed successfully",
+            Self::BuildLinuxNativeRelease => "Linux Native Release build completed successfully",
             Self::BuildCApi => "C API build completed successfully",
             Self::BuildCppClient => "C++ Client build completed successfully",
             Self::BuildAssemblyClient => "Assembly Client build completed successfully",
@@ -245,6 +262,10 @@ impl Task {
                     "wasm32-unknown-unknown",
                 ],
             },
+            Self::CheckLinuxNative => CommandSpec {
+                program: "bash",
+                args: &["scripts/linux-native.sh", "check"],
+            },
             Self::CheckCppClient => CommandSpec {
                 program: "cmd.exe",
                 args: &["/C", "scripts\\ops.bat", "cpp-check"],
@@ -283,6 +304,14 @@ impl Task {
                     "--out-dir",
                     "../../apps/whitebase-app/src/wasm",
                 ],
+            },
+            Self::BuildLinuxNative => CommandSpec {
+                program: "bash",
+                args: &["scripts/linux-native.sh", "build"],
+            },
+            Self::BuildLinuxNativeRelease => CommandSpec {
+                program: "bash",
+                args: &["scripts/linux-native.sh", "release"],
             },
             Self::BuildCApi => CommandSpec {
                 program: "cargo",
@@ -333,6 +362,13 @@ impl Task {
     }
 
     fn is_supported(self) -> bool {
+        if matches!(
+            self,
+            Self::CheckLinuxNative | Self::BuildLinuxNative | Self::BuildLinuxNativeRelease
+        ) {
+            return cfg!(all(target_os = "linux", target_arch = "x86_64"));
+        }
+
         if matches!(
             self,
             Self::CheckCppClient
@@ -465,6 +501,7 @@ impl eframe::App for ControlCenterApp {
                 for task in [
                     Task::CheckControlCenter,
                     Task::CheckFormat,
+                    Task::CheckLinuxNative,
                     Task::CheckClippy,
                     Task::CheckWorkspace,
                     Task::CheckWasm,
@@ -495,6 +532,8 @@ impl eframe::App for ControlCenterApp {
                 }
 
                 for task in [
+                    Task::BuildLinuxNative,
+                    Task::BuildLinuxNativeRelease,
                     Task::BuildWorkspace,
                     Task::BuildFrontend,
                     Task::BuildWasm,
@@ -1140,6 +1179,29 @@ mod tests {
 
         assert_eq!(spec.program, "cmd.exe");
         assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "asm-build"]);
+    }
+
+    #[test]
+    fn linux_native_tasks_use_linux_native_script() {
+        let check = Task::CheckLinuxNative.command_spec();
+        let build = Task::BuildLinuxNative.command_spec();
+        let release = Task::BuildLinuxNativeRelease.command_spec();
+
+        assert_eq!(check.program, "bash");
+        assert_eq!(check.args, ["scripts/linux-native.sh", "check"]);
+        assert_eq!(build.program, "bash");
+        assert_eq!(build.args, ["scripts/linux-native.sh", "build"]);
+        assert_eq!(release.program, "bash");
+        assert_eq!(release.args, ["scripts/linux-native.sh", "release"]);
+    }
+
+    #[test]
+    fn linux_native_task_support_matches_platform() {
+        let expected = cfg!(all(target_os = "linux", target_arch = "x86_64"));
+
+        assert_eq!(Task::CheckLinuxNative.is_supported(), expected);
+        assert_eq!(Task::BuildLinuxNative.is_supported(), expected);
+        assert_eq!(Task::BuildLinuxNativeRelease.is_supported(), expected);
     }
 
     #[test]
