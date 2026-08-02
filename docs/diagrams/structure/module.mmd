@@ -1,10 +1,11 @@
 flowchart TB
     subgraph Apps["Applications"]
         direction LR
-        Web["whitebase-app<br/>Web UI"]
+        Web["whitebase-app<br/>Web UI<br/>(Browser runtime)"]
         TauriApp["whitebase-app<br/>Tauri Application"]
         Server["whitebase-server<br/>ローカルHTTP API"]
         CppClient["Whitebase.CppClient<br/>C ABIスモークテスト"]
+        CppBackendClient["Whitebase.CppBackendClient<br/>C++ Backendスモークテスト"]
         AssemblyClient["Whitebase.AssemblyClient<br/>Assemblyスモークテスト"]
         External["External Applications<br/>C#・その他"]
     end
@@ -16,22 +17,23 @@ flowchart TB
         CApi["whitebase-c-api<br/>C ABI境界"]
     end
 
-    Interface["whitebase-interface<br/>trait・共通型・エラー・能力情報"]
+    Interface["whitebase-interface<br/>trait・共通型・エラー・能力情報・演算種別"]
 
-    Runner["whitebase-runner<br/>ウォームアップ・計測・結果比較"]
+    Runner["whitebase-runner<br/>入力生成・ウォームアップ・計測<br/>結果比較・レポート生成"]
 
-    Core["whitebase-core<br/>Backend選択・統一計算API"]
+    Core["whitebase-core<br/>Backend登録・指定実行<br/>能力・可用性確認・統一計算API"]
 
-    Bridge["whitebase-backend-bridge<br/>各実装を共通Interfaceへ接続"]
+    Bridge["whitebase-backend-bridge<br/>各Backendを共通Interfaceへ接続"]
 
-    subgraph Backends["Backend implementations"]
+    subgraph Backends["Backend implementations / bindings"]
         direction LR
-        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD"]
-        CppAdapter["whitebase-cpp-adapter<br/>Rust / C++ FFI"]
-        AsmAdapter["whitebase-asm-adapter<br/>Rust / Assembly FFI"]
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD実装"]
+        CppAdapter["whitebase-cpp-adapter<br/>Rust / C++ FFI境界"]
+        AsmAdapter["whitebase-asm-adapter<br/>Rust / Assembly FFI境界"]
+        Unavailable["unavailable backend<br/>非対応環境用フォールバック"]
     end
 
-    subgraph Native["Native libraries"]
+    subgraph Native["Native libraries — Windows x64 / MSVC"]
         direction LR
         CppLib["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
         AsmLib["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
@@ -47,66 +49,62 @@ flowchart TB
 
     subgraph Tools["Development tools"]
         direction LR
-        Scripts["scripts<br/>ビルド・テスト・運用"]
+        Scripts["scripts / ops.bat<br/>ビルド・テスト・運用"]
+
+        ControlCenter["whitebase-control-center<br/>Rust + egui操作ツール"]
 
         subgraph Operation["Operation / Control Panel"]
             direction LR
-            ControlPanel["whitebase-control-panel<br/>GUI操作パネル"]
-            WhitebaseWindows["whitebase-windows<br/>Win32 API・プロセス制御"]
+            ControlPanel["whitebase-control-panel<br/>Windows GUI操作パネル"]
+            WhitebaseWindows["Whitebase.Windows<br/>Win32 API・プロセス制御"]
         end
     end
 
-    subgraph Documents["Documentation"]
-        direction LR
-        Docs["docs<br/>設計・実験記録"]
-    end
-
-    Web -. browser-only .-> Wasm
-    Web -. HTTP .-> Server
-    TauriApp --> TauriCommands
+    Web -. "planned: browser-only" .-> Wasm
+    Web -->|"HTTP"| Server
+    TauriApp -->|"IPC / invoke()"| TauriCommands
     Server --> Runner
 
     CppClient --> CApi
     External --> CApi
+    CppBackendClient --> CppLib
     AssemblyClient --> AsmLib
 
-    Wasm -. current .-> RustBackend
-    CApi -. current .-> RustBackend
+    Wasm -. "current: direct call" .-> RustBackend
+    CApi -. "current: direct call" .-> RustBackend
 
     TauriCommands --> Runner
     Runner --> Core
     Core --> Bridge
-    Core -. uses .-> Interface
-    Bridge -. implements .-> Interface
+    Core -. "uses contract" .-> Interface
+    Bridge -. "implements contract" .-> Interface
 
     Bridge --> RustBackend
     Bridge --> CppAdapter
     Bridge --> AsmAdapter
+    Bridge -. "unsupported targets" .-> Unavailable
 
     CppAdapter --> CppLib
     AsmAdapter --> AsmLib
 
-    Visualization -. planned .-> Interface
-    OutputModule -. planned .-> Interface
-    OutputModule -. generates .-> Artifacts
-    Python -. reads / analyzes .-> Artifacts
+    Runner -. "planned: report" .-> Visualization
+    Runner -. "planned: report" .-> OutputModule
+    OutputModule -. "planned: generates" .-> Artifacts
+    Python -. "planned: reads / analyzes" .-> Artifacts
 
-    Scripts -. build / test .-> Runner
-    Scripts -. build / test .-> Core
-    Scripts -. build / test .-> Backends
-    Scripts -. smoke test .-> CppClient
-    Scripts -. smoke test .-> AssemblyClient
-    Scripts -. run .-> Server
+    Scripts -. "build / test" .-> Runner
+    Scripts -. "build / test" .-> Core
+    Scripts -. "build / test" .-> Backends
+    Scripts -. "smoke test" .-> CppClient
+    Scripts -. "smoke test" .-> CppBackendClient
+    Scripts -. "smoke test" .-> AssemblyClient
+    Scripts -. "run / release" .-> Server
+    Scripts -. "build / release" .-> TauriApp
 
-    ControlPanel -. operation / check .-> Scripts
-    ControlPanel -->|Win32 interop / process control| WhitebaseWindows
+    ControlCenter -. "operation / check / build" .-> Scripts
+    ControlPanel -. "operation / check / build" .-> Scripts
+    ControlPanel -->|"Win32 interop / process control"| WhitebaseWindows
 
-    Docs -. documents .-> Apps
-    Docs -. documents .-> Consumers
-    Docs -. documents .-> Runner
-    Docs -. documents .-> Core
-    Docs -. documents .-> Backends
-    Docs -. documents .-> Tools
 
     classDef planned stroke-dasharray: 6 4
     class Visualization,OutputModule,Artifacts,Python planned

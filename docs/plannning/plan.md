@@ -4,7 +4,6 @@
 
 1. Tauri Visualizationへの接続
 2. Python Tools置き場の作成
-3. `0.1+0.2`追加をして、機能追加フローを作成
 
 やれればどっかにデモ。
 

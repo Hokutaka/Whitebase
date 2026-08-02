@@ -157,8 +157,14 @@ Whitebase
 │   ├── images
 │   │   ├── image.png
 │   │   └── whitebase-control-center.png
-│   └── plannning
-│       └── plan.md
+│   ├── plannning
+│   │   └── plan.md
+│   ├── tools
+│   │   ├── Whitebase Control Center.md
+│   │   ├── Whitebase Control Panel.md
+│   │   └── Whitebase Operations.md
+│   ├── Overview.ja.md
+│   └── Overview.md
 ├── native
 │   └── Whitebase.Cpp
 │       ├── Whitebase.Assembly

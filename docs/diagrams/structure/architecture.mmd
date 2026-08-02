@@ -1,29 +1,33 @@
 flowchart TB
     subgraph Frontends["Frontend"]
         Tauri["Tauri WebView"]
-        Browser["Browser"]
+        Browser["Browser<br/>(Local / GitHub Pages)"]
     end
 
     subgraph ApplicationBoundaries["Application Boundary"]
-        TauriCommand["Tauri Command<br/>invoke()"]
+        TauriCommand["Tauri Commands<br/>IPC / invoke()"]
         HttpServer["whitebase-server<br/>HTTP + JSON"]
     end
 
-    Runner["whitebase-runner<br/>ウォームアップ・計測・結果比較"]
+    Runner["whitebase-runner<br/>入力生成・ウォームアップ<br/>計測・結果比較・レポート生成"]
 
-    Core["whitebase-core<br/>Backend選択・統一計算API"]
+    Core["whitebase-core<br/>Backend登録・指定実行<br/>能力・可用性確認・統一計算API"]
 
-    Bridge["whitebase-backend-bridge<br/>各実装を共通Interfaceへ接続"]
+    Interface["whitebase-interface<br/>BackendKind / Capabilities<br/>ComputeBackend / Error"]
 
-    subgraph Backends["Backend Implementations"]
+    Bridge["whitebase-backend-bridge<br/>各Backendを共通Interfaceへ統合"]
+
+    subgraph BackendConnections["Backend Implementations / Bindings"]
         RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD"]
 
-        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
+        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI<br/>Windows x64 / MSVC"]
 
-        AssemblyAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
+        AssemblyAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI<br/>Windows x64 / MSVC"]
+
+        Unavailable["unavailable<br/>非対応環境用Backend"]
     end
 
-    subgraph NativeLibraries["Native Libraries"]
+    subgraph NativeLibraries["Native Libraries — Windows x64 / MSVC"]
         CppLibrary["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
 
         AssemblyLibrary["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
@@ -38,9 +42,13 @@ flowchart TB
     Runner --> Core
     Core --> Bridge
 
+    Core -. "uses contract" .-> Interface
+    Bridge -. "implements contract" .-> Interface
+
     Bridge --> RustBackend
     Bridge --> CppAdapter
     Bridge --> AssemblyAdapter
+    Bridge -. "other targets" .-> Unavailable
 
     CppAdapter --> CppLibrary
     AssemblyAdapter --> AssemblyLibrary
