@@ -10,21 +10,53 @@ PUBLIC whitebase_asm_add_f32_scalar
 ; );
 
 whitebase_asm_add_f32_scalar PROC
-    xor rax, rax
-
     test r9, r9
-    jz done
+    jz scalar_done
 
-loop_start:
-    movss xmm0, DWORD PTR [rcx + rax * 4]
-    addss xmm0, DWORD PTR [rdx + rax * 4]
-    movss DWORD PTR [r8 + rax * 4], xmm0
+    cmp r9, 4
+    jb scalar_tail
 
-    inc rax
-    cmp rax, r9
-    jb loop_start
+    ALIGN 16
+scalar_loop4:
+    movd xmm0, DWORD PTR [rcx]
+    movd xmm1, DWORD PTR [rcx + 4]
+    movd xmm2, DWORD PTR [rcx + 8]
+    movd xmm3, DWORD PTR [rcx + 12]
 
-done:
+    addss xmm0, DWORD PTR [rdx]
+    addss xmm1, DWORD PTR [rdx + 4]
+    addss xmm2, DWORD PTR [rdx + 8]
+    addss xmm3, DWORD PTR [rdx + 12]
+
+    movss DWORD PTR [r8],      xmm0
+    movss DWORD PTR [r8 + 4],  xmm1
+    movss DWORD PTR [r8 + 8],  xmm2
+    movss DWORD PTR [r8 + 12], xmm3
+
+    add rcx, 16
+    add rdx, 16
+    add r8, 16
+    sub r9, 4
+
+    cmp r9, 4
+    jae scalar_loop4
+
+scalar_tail:
+    test r9, r9
+    jz scalar_done
+
+scalar_loop1:
+    movd xmm0, DWORD PTR [rcx]
+    addss xmm0, DWORD PTR [rdx]
+    movss DWORD PTR [r8], xmm0
+
+    add rcx, 4
+    add rdx, 4
+    add r8, 4
+    dec r9
+    jnz scalar_loop1
+
+scalar_done:
     ret
 whitebase_asm_add_f32_scalar ENDP
 
