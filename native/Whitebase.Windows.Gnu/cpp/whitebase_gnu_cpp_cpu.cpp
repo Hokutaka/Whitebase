@@ -44,5 +44,6 @@ namespace
 
 extern "C" int whitebase_gnu_cpp_is_avx_available(void)
 {
-    return cpu_and_os_support_avx() ? 1 : 0;
+    static const int available = cpu_and_os_support_avx() ? 1 : 0;
+    return available;
 }

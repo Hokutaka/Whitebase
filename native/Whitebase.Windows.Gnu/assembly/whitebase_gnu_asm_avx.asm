@@ -4,6 +4,12 @@ default rel
 %define CPUID_OSXSAVE_AVX_MASK 0x18000000
 %define XCR0_XMM_YMM_MASK     0x6
 %define CALL_FRAME_SIZE       72
+%define AVX_CACHE_UNKNOWN     -1
+
+section .data
+align 4
+whitebase_gnu_asm_avx_available_cache:
+    dd AVX_CACHE_UNKNOWN
 
 section .text
 
@@ -19,6 +25,10 @@ global whitebase_gnu_asm_add_f64_array_avx
 ; CPUID destroys eax, ebx, ecx and edx. RBX is nonvolatile in the
 ; Windows x64 ABI, so preserve it here.
 whitebase_gnu_asm_is_avx_available:
+    mov eax, [rel whitebase_gnu_asm_avx_available_cache]
+    test eax, eax
+    jns .cached
+
     push rbx
 
     xor eax, eax
@@ -43,12 +53,17 @@ whitebase_gnu_asm_is_avx_available:
     jne .unavailable
 
     mov eax, 1
+    mov [rel whitebase_gnu_asm_avx_available_cache], eax
     pop rbx
     ret
 
 .unavailable:
     xor eax, eax
+    mov [rel whitebase_gnu_asm_avx_available_cache], eax
     pop rbx
+    ret
+
+.cached:
     ret
 
 ; Windows x64 ABI

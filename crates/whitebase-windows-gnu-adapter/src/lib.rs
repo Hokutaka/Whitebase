@@ -5,7 +5,7 @@
 use std::{
     env,
     error::Error,
-    ffi::{c_char, c_void},
+    ffi::{CStr, c_char, c_void},
     fmt,
     mem::{size_of, transmute_copy},
     os::windows::ffi::OsStrExt,
@@ -153,37 +153,28 @@ impl NativeApi {
         // 各シンボル名と関数型はCヘッダーおよびDEFファイルの契約と一致しています。
         unsafe {
             Ok(Self {
-                cpp_add_f32_scalar: load_symbol(&module, b"whitebase_gnu_cpp_add_f32_scalar\0")?,
+                cpp_add_f32_scalar: load_symbol(&module, c"whitebase_gnu_cpp_add_f32_scalar")?,
                 cpp_add_f64_array_scalar: load_symbol(
                     &module,
-                    b"whitebase_gnu_cpp_add_f64_array_scalar\0",
+                    c"whitebase_gnu_cpp_add_f64_array_scalar",
                 )?,
-                cpp_add_f64_scalar: load_symbol(&module, b"whitebase_gnu_cpp_add_f64_scalar\0")?,
-                cpp_is_avx_available: load_symbol(
-                    &module,
-                    b"whitebase_gnu_cpp_is_avx_available\0",
-                )?,
-                cpp_add_f32_avx: load_symbol(&module, b"whitebase_gnu_cpp_add_f32_avx\0")?,
+                cpp_add_f64_scalar: load_symbol(&module, c"whitebase_gnu_cpp_add_f64_scalar")?,
+                cpp_is_avx_available: load_symbol(&module, c"whitebase_gnu_cpp_is_avx_available")?,
+                cpp_add_f32_avx: load_symbol(&module, c"whitebase_gnu_cpp_add_f32_avx")?,
                 cpp_add_f64_array_avx: load_symbol(
                     &module,
-                    b"whitebase_gnu_cpp_add_f64_array_avx\0",
+                    c"whitebase_gnu_cpp_add_f64_array_avx",
                 )?,
-                assembly_add_f32_scalar: load_symbol(
-                    &module,
-                    b"whitebase_gnu_asm_add_f32_scalar\0",
-                )?,
+                assembly_add_f32_scalar: load_symbol(&module, c"whitebase_gnu_asm_add_f32_scalar")?,
                 assembly_add_f64_array_scalar: load_symbol(
                     &module,
-                    b"whitebase_gnu_asm_add_f64_array_scalar\0",
+                    c"whitebase_gnu_asm_add_f64_array_scalar",
                 )?,
-                assembly_add_f64_scalar: load_symbol(
-                    &module,
-                    b"whitebase_gnu_asm_add_f64_scalar\0",
-                )?,
-                assembly_add_f32_avx: load_symbol(&module, b"whitebase_gnu_asm_add_f32_avx\0")?,
+                assembly_add_f64_scalar: load_symbol(&module, c"whitebase_gnu_asm_add_f64_scalar")?,
+                assembly_add_f32_avx: load_symbol(&module, c"whitebase_gnu_asm_add_f32_avx")?,
                 assembly_add_f64_array_avx: load_symbol(
                     &module,
-                    b"whitebase_gnu_asm_add_f64_array_avx\0",
+                    c"whitebase_gnu_asm_add_f64_array_avx",
                 )?,
                 _module: module,
             })
@@ -191,39 +182,30 @@ impl NativeApi {
     }
 }
 
-static NATIVE_API: OnceLock<NativeApi> = OnceLock::new();
+static NATIVE_API: OnceLock<Result<NativeApi, AdapterError>> = OnceLock::new();
 
 fn native_api() -> Result<&'static NativeApi, AdapterError> {
-    if let Some(api) = NATIVE_API.get() {
-        return Ok(api);
-    }
-
-    let api = NativeApi::load()?;
-    let _ = NATIVE_API.set(api);
-
     NATIVE_API
-        .get()
-        .ok_or_else(|| AdapterError::NativeLibraryUnavailable {
-            message: "failed to retain the Windows GNU Native API".to_owned(),
-        })
+        .get_or_init(NativeApi::load)
+        .as_ref()
+        .map_err(Clone::clone)
 }
 
 unsafe fn load_symbol<T: Copy>(
     module: &ModuleHandle,
-    name: &'static [u8],
+    name: &'static CStr,
 ) -> Result<T, AdapterError> {
     debug_assert_eq!(size_of::<T>(), size_of::<FarProc>());
 
     // SAFETY:
     // モジュールハンドルは有効で、`name`はNUL終端された静的文字列です。
-    let address = unsafe { get_proc_address(module.as_raw(), name.as_ptr().cast()) };
+    let address = unsafe { get_proc_address(module.as_raw(), name.as_ptr()) };
 
     let Some(address) = address else {
-        let symbol_name = String::from_utf8_lossy(&name[..name.len().saturating_sub(1)]);
-
         return Err(AdapterError::NativeLibraryUnavailable {
             message: format!(
-                "failed to load symbol {symbol_name}: {}",
+                "failed to load symbol {}: {}",
+                name.to_string_lossy(),
                 std::io::Error::last_os_error(),
             ),
         });

@@ -315,8 +315,8 @@ impl Default for Runner {
 }
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-fn scalar_f64_backends() -> [BackendKind; 5] {
-    [
+fn scalar_f64_backends() -> Vec<BackendKind> {
+    vec![
         BackendKind::RustScalar,
         BackendKind::CppScalar,
         BackendKind::AssemblyScalar,
@@ -326,8 +326,8 @@ fn scalar_f64_backends() -> [BackendKind; 5] {
 }
 
 #[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
-fn scalar_f64_backends() -> [BackendKind; 3] {
-    [
+fn scalar_f64_backends() -> Vec<BackendKind> {
+    vec![
         BackendKind::RustScalar,
         BackendKind::CppScalar,
         BackendKind::AssemblyScalar,
