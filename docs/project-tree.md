@@ -49,7 +49,8 @@ Whitebase
 │   │   │   ├── src
 │   │   │   │   ├── benchmark.rs
 │   │   │   │   ├── lib.rs
-│   │   │   │   └── main.rs
+│   │   │   │   ├── main.rs
+│   │   │   │   └── scalar_f64.rs
 │   │   │   ├── .gitignore
 │   │   │   ├── build.rs
 │   │   │   ├── Cargo.lock
@@ -94,7 +95,9 @@ Whitebase
 │   │   ├── src
 │   │   │   └── lib.rs
 │   │   ├── tests
-│   │   │   └── core_smoke.rs
+│   │   │   ├── core_smoke.rs
+│   │   │   ├── f64_array_smoke.rs
+│   │   │   └── scalar_f64_smoke.rs
 │   │   └── Cargo.toml
 │   ├── whitebase-cpp-adapter
 │   │   ├── src
@@ -112,14 +115,18 @@ Whitebase
 │   │   │   └── operation.rs
 │   │   └── Cargo.toml
 │   ├── whitebase-runner
+│   │   ├── examples
+│   │   │   └── scalar_f64.rs
 │   │   ├── src
 │   │   │   ├── config.rs
+│   │   │   ├── decimal.rs
 │   │   │   ├── error.rs
 │   │   │   ├── lib.rs
 │   │   │   ├── report.rs
 │   │   │   └── runner.rs
 │   │   ├── tests
-│   │   │   └── runner_smoke.rs
+│   │   │   ├── runner_smoke.rs
+│   │   │   └── scalar_f64.rs
 │   │   └── Cargo.toml
 │   ├── whitebase-rust-backend
 │   │   ├── src
@@ -128,7 +135,10 @@ Whitebase
 │   │   │   ├── scalar.rs
 │   │   │   └── simd.rs
 │   │   ├── tests
+│   │   │   ├── scalar_f64.rs
+│   │   │   ├── scalar_f64_array.rs
 │   │   │   ├── scalar_smoke.rs
+│   │   │   ├── simd_f64_array.rs
 │   │   │   └── simd_smoke.rs
 │   │   └── Cargo.toml
 │   └── whitebase-wasm
@@ -145,10 +155,10 @@ Whitebase
 │   │       ├── usage.mmd
 │   │       └── usage.svg
 │   ├── images
-│   │   └── image.png
-│   ├── plannning
-│   │   └── plan.md
-│   └── setup.md
+│   │   ├── image.png
+│   │   └── whitebase-control-center.png
+│   └── plannning
+│       └── plan.md
 ├── native
 │   └── Whitebase.Cpp
 │       ├── Whitebase.Assembly
@@ -157,7 +167,10 @@ Whitebase
 │       │   ├── src
 │       │   │   ├── whitebase_asm_add.asm
 │       │   │   ├── whitebase_asm_add_f32_avx.asm
-│       │   │   └── whitebase_asm_add_f32_scalar.asm
+│       │   │   ├── whitebase_asm_add_f32_scalar.asm
+│       │   │   ├── whitebase_asm_add_f64_array_avx.asm
+│       │   │   ├── whitebase_asm_add_f64_array_scalar.asm
+│       │   │   └── whitebase_asm_add_f64_scalar.asm
 │       │   ├── Whitebase.Assembly.vcxproj
 │       │   └── Whitebase.Assembly.vcxproj.filters
 │       ├── Whitebase.AssemblyClient
