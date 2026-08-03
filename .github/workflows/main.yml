@@ -141,7 +141,7 @@ jobs:
         run: cargo build --release --locked -p whitebase-control-center
 
       - name: Upload Windows Control Center
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: whitebase-control-center-windows-x86_64
           path: target/release/whitebase-control-center.exe
@@ -195,7 +195,7 @@ jobs:
             whitebase-control-center
 
       - name: Upload Linux Control Center
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: whitebase-control-center-linux-x86_64
           path: whitebase-control-center-linux-x86_64.tar.gz
