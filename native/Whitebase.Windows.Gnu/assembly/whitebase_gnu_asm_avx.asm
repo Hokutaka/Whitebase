@@ -15,6 +15,7 @@ section .text
 
 global whitebase_gnu_asm_add_f32_avx
 global whitebase_gnu_asm_add_f64_array_avx
+global whitebase_gnu_asm_sum_f64_avx
 
 ; Internal AVX availability check.
 ;
@@ -182,6 +183,67 @@ whitebase_gnu_asm_add_f64_array_avx:
     jb .tail_loop
 
 .done:
+    vzeroupper
+    mov eax, 1
+    ret
+
+.unavailable:
+    xor eax, eax
+    ret
+
+; Windows x64 ABI
+; rcx = input, rdx = length, r8 = output
+;
+; Return value:
+; eax = 1: AVX operation executed and output was written
+; eax = 0: AVX unavailable; output is not modified
+whitebase_gnu_asm_sum_f64_avx:
+    ; Reserve shadow space, save three arguments and align RSP before call.
+    sub rsp, CALL_FRAME_SIZE
+    mov [rsp + 32], rcx
+    mov [rsp + 40], rdx
+    mov [rsp + 48], r8
+
+    call whitebase_gnu_asm_is_avx_available
+
+    mov rcx, [rsp + 32]
+    mov rdx, [rsp + 40]
+    mov r8, [rsp + 48]
+    add rsp, CALL_FRAME_SIZE
+
+    test eax, eax
+    jz .unavailable
+
+    vxorpd ymm0, ymm0, ymm0
+    xor r9, r9
+    mov r10, rdx
+    and r10, -4
+
+.avx_loop:
+    cmp r9, r10
+    jae .reduce_vector
+
+    vaddpd ymm0, ymm0, [rcx + r9 * 8]
+    add r9, 4
+    jmp .avx_loop
+
+.reduce_vector:
+    vextractf128 xmm1, ymm0, 1
+    vaddpd xmm0, xmm0, xmm1
+    vhaddpd xmm0, xmm0, xmm0
+
+.scalar_tail:
+    cmp r9, rdx
+    jae .done
+
+.tail_loop:
+    vaddsd xmm0, xmm0, [rcx + r9 * 8]
+    inc r9
+    cmp r9, rdx
+    jb .tail_loop
+
+.done:
+    vmovsd [r8], xmm0
     vzeroupper
     mov eax, 1
     ret

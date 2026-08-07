@@ -124,23 +124,6 @@ fn assembly_backends_sum_f64_values() {
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
 #[test]
-fn non_sum_backend_reports_unsupported_operation() {
-    use whitebase_core::{BackendKind, ComputeError, OperationKind};
-
-    let whitebase = Whitebase::new();
-    let input = [1.0, 2.0, 3.0];
-    let backend = BackendKind::WindowsGnuAssemblyScalar;
-
-    assert_eq!(
-        whitebase.sum_f64(backend, &input),
-        Err(ComputeError::OperationUnsupported {
-            backend,
-            operation: OperationKind::SumF64,
-        })
-    );
-}
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-#[test]
 fn windows_gnu_cpp_backends_sum_f64_values() {
     use whitebase_core::BackendKind;
 
@@ -166,6 +149,39 @@ fn windows_gnu_cpp_backends_sum_f64_values() {
         assert_eq!(
             whitebase
                 .sum_f64(BackendKind::WindowsGnuCppAvx, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn windows_gnu_assembly_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    let scalar_info = whitebase
+        .backend_info(BackendKind::WindowsGnuAssemblyScalar)
+        .unwrap();
+    if scalar_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuAssemblyScalar, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+
+    let avx_info = whitebase
+        .backend_info(BackendKind::WindowsGnuAssemblyAvx)
+        .unwrap();
+    if avx_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuAssemblyAvx, &input)
                 .unwrap(),
             55.0
         );

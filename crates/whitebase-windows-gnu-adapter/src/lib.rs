@@ -127,8 +127,10 @@ struct NativeApi {
     assembly_add_f32_scalar: AddF32Array,
     assembly_add_f64_array_scalar: AddF64Array,
     assembly_add_f64_scalar: AddF64Scalar,
+    assembly_sum_f64_scalar: SumF64Scalar,
     assembly_add_f32_avx: AddF32ArrayAvx,
     assembly_add_f64_array_avx: AddF64ArrayAvx,
+    assembly_sum_f64_avx: SumF64Avx,
 }
 
 impl NativeApi {
@@ -177,11 +179,13 @@ impl NativeApi {
                     c"whitebase_gnu_asm_add_f64_array_scalar",
                 )?,
                 assembly_add_f64_scalar: load_symbol(&module, c"whitebase_gnu_asm_add_f64_scalar")?,
+                assembly_sum_f64_scalar: load_symbol(&module, c"whitebase_gnu_asm_sum_f64_scalar")?,
                 assembly_add_f32_avx: load_symbol(&module, c"whitebase_gnu_asm_add_f32_avx")?,
                 assembly_add_f64_array_avx: load_symbol(
                     &module,
                     c"whitebase_gnu_asm_add_f64_array_avx",
                 )?,
+                assembly_sum_f64_avx: load_symbol(&module, c"whitebase_gnu_asm_sum_f64_avx")?,
                 _module: module,
             })
         }
@@ -460,6 +464,15 @@ pub fn assembly_add_f64_scalar(lhs: f64, rhs: f64) -> Result<f64, AdapterError> 
     Ok(unsafe { (api.assembly_add_f64_scalar)(lhs, rhs) })
 }
 
+/// NASM Scalarバックエンドで`f64`配列の要素を合計します。
+pub fn assembly_sum_f64_scalar(input: &[f64]) -> Result<f64, AdapterError> {
+    let api = native_api()?;
+
+    // SAFETY:
+    // `input`は呼び出し中有効で、Native側は指定された長さの範囲だけを読み取ります。
+    Ok(unsafe { (api.assembly_sum_f64_scalar)(input.as_ptr(), input.len()) })
+}
+
 /// NASM AVXバックエンドで`f32`配列を加算します。
 pub fn assembly_add_f32_avx(
     lhs: &[f32],
@@ -494,6 +507,20 @@ pub fn assembly_add_f64_array_avx(
     };
 
     Ok(executed != 0)
+}
+
+/// NASM AVXバックエンドで`f64`配列の要素を合計します。
+///
+/// AVXを利用できない場合は`None`を返します。
+pub fn assembly_sum_f64_avx(input: &[f64]) -> Result<Option<f64>, AdapterError> {
+    let api = native_api()?;
+    let mut output = 0.0;
+
+    // SAFETY:
+    // `input`と`output`は呼び出し中有効で、NASM側もAVXの利用可能性を確認します。
+    let executed = unsafe { (api.assembly_sum_f64_avx)(input.as_ptr(), input.len(), &mut output) };
+
+    Ok((executed != 0).then_some(output))
 }
 
 #[cfg(test)]
