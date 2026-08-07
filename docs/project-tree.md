@@ -153,6 +153,9 @@ Whitebase
 │       │   └── windows_gnu_smoke.rs
 │       └── Cargo.toml
 ├── docs
+│   ├── api
+│   │   ├── HTTP-API.ja.md
+│   │   └── HTTP-API.md
 │   ├── diagrams
 │   │   └── structure
 │   │       ├── architecture.mmd
@@ -164,7 +167,7 @@ Whitebase
 │   ├── images
 │   │   ├── image.png
 │   │   └── whitebase-control-center.png
-│   ├── plannning
+│   ├── planning
 │   │   └── plan.md
 │   ├── tools
 │   │   ├── Whitebase Control Center.md
@@ -183,7 +186,9 @@ Whitebase
 │   │   │   │   ├── whitebase_asm_add_f32_scalar.asm
 │   │   │   │   ├── whitebase_asm_add_f64_array_avx.asm
 │   │   │   │   ├── whitebase_asm_add_f64_array_scalar.asm
-│   │   │   │   └── whitebase_asm_add_f64_scalar.asm
+│   │   │   │   ├── whitebase_asm_add_f64_scalar.asm
+│   │   │   │   ├── whitebase_asm_sum_f64_avx.asm
+│   │   │   │   └── whitebase_asm_sum_f64_scalar.asm
 │   │   │   ├── Whitebase.Assembly.vcxproj
 │   │   │   └── Whitebase.Assembly.vcxproj.filters
 │   │   ├── Whitebase.AssemblyClient
@@ -275,8 +280,10 @@ Whitebase
 │   │       └── Whitebase.ControlPanel.slnx
 │   └── control-panel.bat
 ├── .gitignore
+├── apply-f64-sum-ui-api.py
 ├── Cargo.lock
 ├── Cargo.toml
+├── CONTRIBUTING.ja.md
 ├── CONTRIBUTING.md
 ├── LICENSE.md
 ├── package.json
