@@ -19,6 +19,7 @@ impl ComputeBackend for WindowsGnuCppScalarBackend {
         BackendCapabilities::scalar_add_f32()
             .with_add_f64(1)
             .with_add_scalar_f64()
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -55,6 +56,14 @@ impl ComputeBackend for WindowsGnuCppScalarBackend {
         whitebase_windows_gnu_adapter::cpp_add_f64_scalar(lhs, rhs)
             .map_err(|error| backend_failure(self.kind(), error))
     }
+    fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
+        if !self.is_available() {
+            return Err(unavailable(self.kind()));
+        }
+
+        whitebase_windows_gnu_adapter::cpp_sum_f64_scalar(input)
+            .map_err(|error| backend_failure(self.kind(), error))
+    }
 }
 
 /// Windows GNU環境のGCCによるAVX計算バックエンドです。
@@ -67,7 +76,9 @@ impl ComputeBackend for WindowsGnuCppAvxBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::avx_add_f32().with_add_f64(4)
+        BackendCapabilities::avx_add_f32()
+            .with_add_f64(4)
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -106,6 +117,16 @@ impl ComputeBackend for WindowsGnuCppAvxBackend {
         }
 
         Ok(())
+    }
+    fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
+        if !self.is_available() {
+            return Err(unavailable(self.kind()));
+        }
+
+        let result = whitebase_windows_gnu_adapter::cpp_sum_f64_avx(input)
+            .map_err(|error| backend_failure(self.kind(), error))?;
+
+        result.ok_or_else(|| unavailable(self.kind()))
     }
 }
 
