@@ -15,6 +15,7 @@ impl ComputeBackend for CppScalarBackend {
         BackendCapabilities::scalar_add_f32()
             .with_add_f64(1)
             .with_add_scalar_f64()
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -38,6 +39,10 @@ impl ComputeBackend for CppScalarBackend {
     fn add_scalar_f64(&self, lhs: f64, rhs: f64) -> Result<f64, ComputeError> {
         Ok(whitebase_cpp_adapter::add_f64_scalar(lhs, rhs))
     }
+
+    fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
+        Ok(whitebase_cpp_adapter::sum_f64_scalar(input))
+    }
 }
 
 /// C++によるAVX計算バックエンドです。
@@ -50,7 +55,9 @@ impl ComputeBackend for CppAvxBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::avx_add_f32().with_add_f64(4)
+        BackendCapabilities::avx_add_f32()
+            .with_add_f64(4)
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -97,5 +104,17 @@ impl ComputeBackend for CppAvxBackend {
         }
 
         Ok(())
+    }
+
+    fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
+        if !self.is_available() {
+            return Err(ComputeError::BackendUnavailable {
+                backend: self.kind(),
+            });
+        }
+
+        whitebase_cpp_adapter::sum_f64_avx(input).ok_or(ComputeError::BackendUnavailable {
+            backend: self.kind(),
+        })
     }
 }

@@ -21,6 +21,7 @@ void whitebase_cpp_add_f64_array_scalar(
 );
 
 double whitebase_cpp_add_f64_scalar(double lhs, double rhs);
+double whitebase_cpp_sum_f64_scalar(const double* input, size_t length);
 
 int whitebase_cpp_is_avx_available(void);
 
@@ -36,6 +37,11 @@ int whitebase_cpp_add_f64_array_avx(
     const double* rhs,
     double* output,
     size_t length
+);
+int whitebase_cpp_sum_f64_avx(
+    const double* input,
+    size_t length,
+    double* output
 );
 
 void whitebase_asm_add_f32_scalar(

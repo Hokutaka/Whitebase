@@ -22,6 +22,12 @@ namespace whitebase::cpp_backend
     double add_f64_scalar(double lhs, double rhs) noexcept;
 
     [[nodiscard]]
+    double sum_f64_scalar(
+        const double* input,
+        std::size_t length
+    ) noexcept;
+
+    [[nodiscard]]
     bool is_avx_available() noexcept;
 
     [[nodiscard]]
@@ -38,5 +44,12 @@ namespace whitebase::cpp_backend
         const double* rhs,
         double* output,
         std::size_t length
+    ) noexcept;
+
+    [[nodiscard]]
+    bool sum_f64_avx(
+        const double* input,
+        std::size_t length,
+        double* output
     ) noexcept;
 }
