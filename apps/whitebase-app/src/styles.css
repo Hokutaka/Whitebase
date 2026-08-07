@@ -148,7 +148,7 @@ h2 {
 }
 
 #benchmark-form {
-  grid-template-columns: minmax(150px, 0.8fr) repeat(3, minmax(150px, 1fr)) auto;
+  grid-template-columns: repeat(2, minmax(150px, 0.8fr)) repeat(3, minmax(150px, 1fr)) auto;
 }
 
 label {
@@ -181,6 +181,7 @@ input:not([type="radio"]):focus {
   box-shadow: 0 0 0 3px #70a7ff20;
 }
 
+.operation-control,
 .precision-control {
   min-width: 0;
   margin: 0;
@@ -188,6 +189,7 @@ input:not([type="radio"]):focus {
   border: 0;
 }
 
+.operation-control legend,
 .precision-control legend {
   margin-bottom: 8px;
   padding: 0;
@@ -198,6 +200,7 @@ input:not([type="radio"]):focus {
   text-transform: uppercase;
 }
 
+.operation-options,
 .precision-options {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -208,11 +211,13 @@ input:not([type="radio"]):focus {
   background: #09111d;
 }
 
+.operation-option,
 .precision-option {
   display: block;
   cursor: pointer;
 }
 
+.operation-option input,
 .precision-option input {
   position: absolute;
   width: 1px;
@@ -221,6 +226,7 @@ input:not([type="radio"]):focus {
   pointer-events: none;
 }
 
+.operation-option span,
 .precision-option span {
   display: flex;
   align-items: center;
@@ -237,13 +243,20 @@ input:not([type="radio"]):focus {
     background 120ms ease;
 }
 
+.operation-option input:checked + span,
 .precision-option input:checked + span {
   color: #06101f;
   background: #82b4ff;
 }
 
+.operation-option input:focus-visible + span,
 .precision-option input:focus-visible + span {
   box-shadow: 0 0 0 3px #70a7ff35;
+}
+
+.precision-option input:disabled + span {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 #observe-button,
@@ -303,7 +316,7 @@ input:not([type="radio"]):focus {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 14px;
   margin-top: 14px;
 }
