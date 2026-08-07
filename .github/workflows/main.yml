@@ -68,7 +68,7 @@ jobs:
       - name: Check Windows GNU native backends
         shell: pwsh
         env:
-          WHITEBASE_UCRT64_BIN: "${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin"
+          WHITEBASE_UCRT64_BIN: `${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin`
         run: .\scripts\windows-gnu-native.ps1 check
 
       - name: Run integrated check
@@ -169,7 +169,7 @@ jobs:
       - name: Build Windows GNU native backends release
         shell: pwsh
         env:
-          WHITEBASE_UCRT64_BIN: "${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin"
+          WHITEBASE_UCRT64_BIN: `${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin`
         run: .\scripts\windows-gnu-native.ps1 release
 
       - name: Build Windows Control Center release
