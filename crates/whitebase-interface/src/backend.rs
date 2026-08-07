@@ -85,4 +85,12 @@ pub trait ComputeBackend: Send + Sync {
             operation: OperationKind::AddScalarF64,
         })
     }
+
+    /// `f64`配列の要素を合計します。空配列の合計は`0.0`です。
+    fn sum_f64(&self, _input: &[f64]) -> Result<f64, ComputeError> {
+        Err(ComputeError::OperationUnsupported {
+            backend: self.kind(),
+            operation: OperationKind::SumF64,
+        })
+    }
 }

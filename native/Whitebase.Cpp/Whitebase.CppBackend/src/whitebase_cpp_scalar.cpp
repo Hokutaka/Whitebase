@@ -32,4 +32,18 @@ namespace whitebase::cpp_backend
     {
         return lhs + rhs;
     }
+
+    double sum_f64_scalar(
+        const double* input,
+        const std::size_t length
+    ) noexcept
+    {
+        double sum = 0.0;
+        for (std::size_t index = 0; index < length; ++index)
+        {
+            sum += input[index];
+        }
+
+        return sum;
+    }
 }

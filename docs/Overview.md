@@ -109,32 +109,6 @@ Release builds are recommended instead of Debug builds when comparing performanc
 
 ### HTTP API
 
-The local HTTP API is implemented using Rust and Axum.
+Whitebase Server exposes a local HTTP/JSON API.
 
-```text
-GET  /api/health
-POST /api/benchmarks/add-f32
-```
-
-Health check:
-
-```powershell
-Invoke-RestMethod `
-  -Uri "http://127.0.0.1:1430/api/health"
-```
-
-Run a benchmark:
-
-```powershell
-$body = @{
-  inputLength = 1000000
-  warmupIterations = 10
-  measuredIterations = 100
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-  -Method Post `
-  -Uri "http://127.0.0.1:1430/api/benchmarks/add-f32" `
-  -ContentType "application/json" `
-  -Body $body
-```
+See [HTTP API](api/HTTP-API.md) for endpoint and request/response details.

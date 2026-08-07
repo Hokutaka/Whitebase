@@ -30,9 +30,11 @@ interface ScalarF64Observation {
   allBackendsMatch: boolean;
 }
 
+type BenchmarkOperation = "add-array" | "sum-f64";
 type BenchmarkPrecision = "f32" | "f64";
 
 interface BenchmarkRequest {
+  operation: BenchmarkOperation;
   precision: BenchmarkPrecision;
   inputLength: number;
   warmupIterations: number;
@@ -40,6 +42,7 @@ interface BenchmarkRequest {
 }
 
 interface BenchmarkReport {
+  operation: BenchmarkOperation;
   precision: BenchmarkPrecision;
   inputLength: number;
   referenceBackend: string;
@@ -166,7 +169,7 @@ app.innerHTML = `
     <section class="control-panel">
       <div class="section-heading compact-heading">
         <div>
-          <p class="eyebrow">F32 / F64 ARRAY</p>
+          <p id="benchmark-eyebrow" class="eyebrow">F32 / F64 ARRAY</p>
           <h2>Backend benchmark</h2>
         </div>
 
@@ -174,6 +177,21 @@ app.innerHTML = `
       </div>
 
       <form id="benchmark-form">
+        <fieldset class="operation-control">
+          <legend>Operation</legend>
+
+          <div class="operation-options">
+            <label class="operation-option">
+              <input type="radio" name="benchmark-operation" value="add-array" checked />
+              <span>Add</span>
+            </label>
+            <label class="operation-option">
+              <input type="radio" name="benchmark-operation" value="sum-f64" />
+              <span>Sum f64</span>
+            </label>
+          </div>
+        </fieldset>
+
         <fieldset class="precision-control">
           <legend>Precision</legend>
 
@@ -231,6 +249,11 @@ app.innerHTML = `
     </section>
 
     <section class="summary" id="summary" hidden>
+      <div class="metric">
+        <span>Operation</span>
+        <strong id="summary-operation">-</strong>
+      </div>
+
       <div class="metric">
         <span>Precision</span>
         <strong id="summary-precision">-</strong>
@@ -304,6 +327,18 @@ const statusElement = requireElement<HTMLSpanElement>("#application-status");
 const errorElement = requireElement<HTMLParagraphElement>("#error-message");
 const resultsBody = requireElement<HTMLTableSectionElement>("#results-body");
 const summary = requireElement<HTMLElement>("#summary");
+const f32PrecisionInput = requireElement<HTMLInputElement>(
+  'input[name="benchmark-precision"][value="f32"]',
+);
+const f64PrecisionInput = requireElement<HTMLInputElement>(
+  'input[name="benchmark-precision"][value="f64"]',
+);
+
+document
+  .querySelectorAll<HTMLInputElement>('input[name="benchmark-operation"]')
+  .forEach((input) => input.addEventListener("change", syncBenchmarkControls));
+
+syncBenchmarkControls();
 
 observationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -333,6 +368,7 @@ benchmarkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const request: BenchmarkRequest = {
+    operation: readBenchmarkOperation(),
     precision: readBenchmarkPrecision(),
     inputLength: readNumber("input-length"),
     warmupIterations: readNumber("warmup-iterations"),
@@ -475,6 +511,10 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
     })
     .join("");
 
+  setText(
+    "summary-operation",
+    report.operation === "sum-f64" ? "Sum f64" : "Add array",
+  );
   setText("summary-precision", report.precision.toUpperCase());
   setText("summary-elements", report.inputLength.toLocaleString());
   setText("summary-reference", report.referenceBackend);
@@ -505,6 +545,33 @@ function setBusy(
   if (running) {
     statusElement.textContent = "Running";
   }
+}
+
+function syncBenchmarkControls(): void {
+  const operation = readBenchmarkOperation();
+  const sumSelected = operation === "sum-f64";
+
+  f32PrecisionInput.disabled = sumSelected;
+  if (sumSelected) {
+    f64PrecisionInput.checked = true;
+  }
+
+  setText(
+    "benchmark-eyebrow",
+    sumSelected ? "F64 REDUCTION" : "F32 / F64 ARRAY",
+  );
+}
+
+function readBenchmarkOperation(): BenchmarkOperation {
+  const input = requireElement<HTMLInputElement>(
+    'input[name="benchmark-operation"]:checked',
+  );
+
+  if (input.value !== "add-array" && input.value !== "sum-f64") {
+    throw new Error(`unsupported benchmark operation: ${input.value}`);
+  }
+
+  return input.value;
 }
 
 function readBenchmarkPrecision(): BenchmarkPrecision {
@@ -612,13 +679,13 @@ async function executeBenchmark(
   request: BenchmarkRequest,
 ): Promise<BenchmarkReport> {
   if (runningInTauri) {
-    return invoke<BenchmarkReport>("run_add_benchmark", { request });
+    return invoke<BenchmarkReport>("run_benchmark", { request });
   }
 
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/benchmarks/add-array`, {
+    response = await fetch(`${API_BASE_URL}/api/benchmarks/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

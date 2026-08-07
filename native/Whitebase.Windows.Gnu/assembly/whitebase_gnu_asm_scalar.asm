@@ -6,6 +6,7 @@ section .text
 global whitebase_gnu_asm_add_f32_scalar
 global whitebase_gnu_asm_add_f64_array_scalar
 global whitebase_gnu_asm_add_f64_scalar
+global whitebase_gnu_asm_sum_f64_scalar
 
 ; Windows x64 ABI
 ; rcx = lhs, rdx = rhs, r8 = output, r9 = length
@@ -49,4 +50,21 @@ whitebase_gnu_asm_add_f64_array_scalar:
 ; xmm0 = lhs, xmm1 = rhs, xmm0 = return value
 whitebase_gnu_asm_add_f64_scalar:
     addsd xmm0, xmm1
+    ret
+
+; Windows x64 ABI
+; rcx = input, rdx = length, xmm0 = return value
+whitebase_gnu_asm_sum_f64_scalar:
+    xorpd xmm0, xmm0
+    xor r8, r8
+
+.loop:
+    cmp r8, rdx
+    jae .done
+
+    addsd xmm0, [rcx + r8 * 8]
+    inc r8
+    jmp .loop
+
+.done:
     ret
