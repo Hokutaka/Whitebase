@@ -35,6 +35,18 @@ jobs:
           cache: npm
           cache-dependency-path: apps/whitebase-app/package-lock.json
 
+      - name: Setup MSYS2 UCRT64
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-nasm
+
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -56,7 +68,7 @@ jobs:
       - name: Check Windows GNU native backends
         shell: pwsh
         env:
-          WHITEBASE_UCRT64_BIN: "${{ steps.msys2.outputs.msys2.-location }}\ucrt64\bin"
+          WHITEBASE_UCRT64_BIN: "${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin"
         run: .\scripts\windows-gnu-native.ps1 check
 
       - name: Run integrated check
@@ -154,6 +166,12 @@ jobs:
         shell: cmd
         run: scripts\ops.bat setup
 
+      - name: Build Windows GNU native backends release
+        shell: pwsh
+        env:
+          WHITEBASE_UCRT64_BIN: "${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin"
+        run: .\scripts\windows-gnu-native.ps1 release
+
       - name: Build Windows Control Center release
         shell: pwsh
         run: cargo build --release --locked -p whitebase-control-center
@@ -250,12 +268,6 @@ jobs:
       - name: Setup Whitebase
         shell: cmd
         run: scripts\ops.bat setup
-
-      - name: Build Windows GNU native backends release
-        shell: pwsh
-        env:
-          WHITEBASE_UCRT64_BIN: "${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin"
-        run: .\scripts\windows-gnu-native.ps1 release
 
       - name: Build GitHub Pages
         shell: cmd
