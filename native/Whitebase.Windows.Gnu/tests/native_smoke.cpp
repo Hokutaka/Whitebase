@@ -159,10 +159,22 @@ namespace
         );
 
         const double scalar = whitebase_gnu_asm_add_f64_scalar(0.25, 0.5);
+        const double sum = whitebase_gnu_asm_sum_f64_scalar(
+            lhs_f64.data(),
+            lhs_f64.size()
+        );
+        constexpr std::array<double, 0> empty{};
+        const double empty_sum = whitebase_gnu_asm_sum_f64_scalar(
+            empty.data(),
+            empty.size()
+        );
+
 
         return arrays_match(output_f32, expected_f32)
             && arrays_match(output_f64, expected_f64)
-            && std::abs(scalar - 0.75) <= 1.0e-12;
+            && std::abs(scalar - 0.75) <= 1.0e-12
+            && std::abs(sum - 10.5) <= 1.0e-12
+            && empty_sum == 0.0;
     }
 
     bool test_nasm_avx(const bool avx_available)
@@ -200,16 +212,31 @@ namespace
             output_f64.size()
         );
 
+        constexpr std::array<double, 10> sum_input{
+            1.0, 2.0, 3.0, 4.0, 5.0,
+            6.0, 7.0, 8.0, 9.0, 10.0,
+        };
+        double sum_output = -1234.0;
+        const int sum_executed = whitebase_gnu_asm_sum_f64_avx(
+            sum_input.data(),
+            sum_input.size(),
+            &sum_output
+        );
+
         if (!avx_available)
         {
             return f32_executed == 0
                 && f64_executed == 0
+                && sum_executed == 0
+                && sum_output == -1234.0
                 && arrays_match(output_f32, std::array<float, 10>{})
                 && arrays_match(output_f64, std::array<double, 6>{});
         }
 
         return f32_executed != 0
             && f64_executed != 0
+            && sum_executed != 0
+            && std::abs(sum_output - 55.0) <= 1.0e-12
             && arrays_match(output_f32, expected_f32)
             && arrays_match(output_f64, expected_f64);
     }
