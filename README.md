@@ -6,16 +6,16 @@
 A repository for learning and experimentation.
 
 # Whitebase
+Whitebase is a place for building and experimenting with various foundational implementations.
 
-> Most documentation is currently available in Japanese.
+It is organized as a monorepo centered around Core.
+Consumer-facing functionality is limited to displaying execution results, charts, and other visualizations.
+Concrete applications and use-case-specific implementations are kept in separate projects.
 
-A place to build various things and try them out.
-
-Whitebase currently compares `f32` and `f64` array operations across Rust, C++, and Assembly backends.
-
+Currently, it focuses on array operations for f32 and f64 using Rust, C++, and Assembly.
 Use it at your own risk.
 
-For more information, see the following documentation.
+For more details, see the sections below.
 
 ## Documentation
 
