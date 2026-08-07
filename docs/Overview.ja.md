@@ -95,6 +95,10 @@ TauriではIPC、通常のブラウザではHTTP APIを通して、
 
 ※ベンチマーク結果はビルド構成、CPU、キャッシュ、メモリ帯域、OSのスケジューリングなどに影響されます。性能比較ではDebugではなくRelease構成を推奨します。
 
+### Core API
+
+See [Core API](api/Core-API.ja.md) for the Rust API, operations, backends, and errors.
+
 
 ### HTTP API
 
