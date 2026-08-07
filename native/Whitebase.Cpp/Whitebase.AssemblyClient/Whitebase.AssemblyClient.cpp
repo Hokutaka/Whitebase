@@ -141,7 +141,7 @@ int main()
         return 1;
     }
 
-    std::cout << "AVX f64 array add passed.\\n";
+    std::cout << "AVX f64 array add passed.\n";
 
     const std::array<double, 10> sum_input{
         1.0, 2.0, 3.0, 4.0, 5.0,
@@ -152,19 +152,19 @@ int main()
         whitebase_asm_sum_f64_scalar(sum_input.data(), sum_input.size());
     if (scalar_sum != 55.0)
     {
-        std::cerr << "Unexpected scalar f64 sum result.\\n";
+        std::cerr << "Unexpected scalar f64 sum result.\n";
         return 1;
     }
-    std::cout << "Scalar f64 sum passed.\\n";
+    std::cout << "Scalar f64 sum passed.\n";
 
     const double avx_sum =
         whitebase_asm_sum_f64_avx(sum_input.data(), sum_input.size());
     if (avx_sum != 55.0)
     {
-        std::cerr << "Unexpected AVX f64 sum result.\\n";
+        std::cerr << "Unexpected AVX f64 sum result.\n";
         return 1;
     }
-    std::cout << "AVX f64 sum passed.\\n";
+    std::cout << "AVX f64 sum passed.\n";
 
     return 0;
 }
