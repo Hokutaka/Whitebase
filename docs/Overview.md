@@ -109,7 +109,7 @@ Release builds are recommended instead of Debug builds when comparing performanc
 
 ### Core API
 
-Rust API、演算、バックエンド、エラーについては [Core API](api/Core-API.ja.md) を参照してください。
+Rust API、演算、バックエンド、エラーについては [Core API](api/Core-API.md) を参照してください。
 
 ### HTTP API
 
