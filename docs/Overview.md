@@ -107,6 +107,10 @@ Benchmark results are affected by the build configuration, CPU, cache, memory ba
 
 Release builds are recommended instead of Debug builds when comparing performance.
 
+### Core API
+
+Rust API、演算、バックエンド、エラーについては [Core API](api/Core-API.ja.md) を参照してください。
+
 ### HTTP API
 
 Whitebase Server exposes a local HTTP/JSON API.
