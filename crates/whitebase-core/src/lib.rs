@@ -137,6 +137,23 @@ impl Whitebase {
         backend.add_scalar_f64(lhs, rhs)
     }
 
+    /// 指定されたバックエンドで`f64`配列の要素を合計します。
+    pub fn sum_f64(&self, kind: BackendKind, input: &[f64]) -> Result<f64, ComputeError> {
+        let backend = self.find_backend(kind)?;
+        if !backend.capabilities().supports(OperationKind::SumF64) {
+            return Err(ComputeError::OperationUnsupported {
+                backend: kind,
+                operation: OperationKind::SumF64,
+            });
+        }
+
+        if !backend.is_available() {
+            return Err(ComputeError::BackendUnavailable { backend: kind });
+        }
+
+        backend.sum_f64(input)
+    }
+
     fn find_backend(&self, kind: BackendKind) -> Result<&dyn ComputeBackend, ComputeError> {
         self.backends
             .iter()

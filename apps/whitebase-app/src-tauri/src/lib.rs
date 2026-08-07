@@ -1,7 +1,7 @@
 mod benchmark;
 mod scalar_f64;
 
-use benchmark::run_add_benchmark;
+use benchmark::run_benchmark;
 use scalar_f64::observe_add_scalar_f64;
 
 #[tauri::command]
@@ -15,7 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             add,
-            run_add_benchmark,
+            run_benchmark,
             observe_add_scalar_f64,
         ])
         .run(tauri::generate_context!())

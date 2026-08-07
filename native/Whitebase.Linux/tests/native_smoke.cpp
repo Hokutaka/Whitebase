@@ -123,9 +123,19 @@ namespace
 
         const double scalar = whitebase_asm_add_f64_scalar(0.1, 0.2);
 
+        const std::array<double, 10> sum_input {
+            1.0, 2.0, 3.0, 4.0, 5.0,
+            6.0, 7.0, 8.0, 9.0, 10.0
+        };
+        const double sum = whitebase_asm_sum_f64_scalar(
+            sum_input.data(),
+            sum_input.size()
+        );
+
         return matches(output_f32, expected_f32)
             && matches(output_f64, expected_f64)
-            && std::bit_cast<std::uint64_t>(scalar) == UINT64_C(0x3fd3333333333334);
+            && std::bit_cast<std::uint64_t>(scalar) == UINT64_C(0x3fd3333333333334)
+            && sum == 55.0;
     }
 
     bool test_assembly_avx_backend(const bool avx_available)
@@ -175,6 +185,17 @@ namespace
             output_f64.size()
         );
 
+        const std::array<double, 10> sum_input {
+            1.0, 2.0, 3.0, 4.0, 5.0,
+            6.0, 7.0, 8.0, 9.0, 10.0
+        };
+        double sum_output = -1234.0;
+        const int sum_executed = whitebase_asm_sum_f64_avx(
+            sum_input.data(),
+            sum_input.size(),
+            &sum_output
+        );
+
         if (!avx_available)
         {
             const std::array<float, 10> untouched_f32 {};
@@ -182,14 +203,18 @@ namespace
 
             return f32_executed == 0
                 && f64_executed == 0
+                && sum_executed == 0
                 && matches(output_f32, untouched_f32)
-                && matches(output_f64, untouched_f64);
+                && matches(output_f64, untouched_f64)
+                && sum_output == -1234.0;
         }
 
         return f32_executed != 0
             && f64_executed != 0
+            && sum_executed != 0
             && matches(output_f32, expected_f32)
-            && matches(output_f64, expected_f64);
+            && matches(output_f64, expected_f64)
+            && sum_output == 55.0;
     }
 
     const char* avx_status(const bool available, const bool passed)

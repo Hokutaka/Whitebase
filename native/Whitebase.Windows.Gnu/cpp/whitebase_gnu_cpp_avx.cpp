@@ -73,4 +73,41 @@ extern "C"
         _mm256_zeroupper();
         return 1;
     }
+    int whitebase_gnu_cpp_sum_f64_avx(
+        const double* input,
+        const size_t length,
+        double* output
+    )
+    {
+        if (whitebase_gnu_cpp_is_avx_available() == 0)
+        {
+            return 0;
+        }
+
+        constexpr size_t lane_count = 4;
+        const size_t vectorized_length =
+            length / lane_count * lane_count;
+        __m256d accumulator = _mm256_setzero_pd();
+        size_t index = 0;
+        for (; index < vectorized_length; index += lane_count)
+        {
+            accumulator = _mm256_add_pd(
+                accumulator,
+                _mm256_loadu_pd(input + index)
+            );
+        }
+
+        double lanes[lane_count];
+        _mm256_storeu_pd(lanes, accumulator);
+        double sum = lanes[0] + lanes[1] + lanes[2] + lanes[3];
+        for (; index < length; ++index)
+        {
+            sum += input[index];
+        }
+
+        *output = sum;
+        _mm256_zeroupper();
+        return 1;
+    }
+
 }

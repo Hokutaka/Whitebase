@@ -22,9 +22,11 @@ type FarProc = Option<unsafe extern "system" fn() -> isize>;
 type AddF32Array = unsafe extern "C" fn(*const f32, *const f32, *mut f32, usize);
 type AddF64Array = unsafe extern "C" fn(*const f64, *const f64, *mut f64, usize);
 type AddF64Scalar = unsafe extern "C" fn(f64, f64) -> f64;
+type SumF64Scalar = unsafe extern "C" fn(*const f64, usize) -> f64;
 type IsAvxAvailable = unsafe extern "C" fn() -> i32;
 type AddF32ArrayAvx = unsafe extern "C" fn(*const f32, *const f32, *mut f32, usize) -> i32;
 type AddF64ArrayAvx = unsafe extern "C" fn(*const f64, *const f64, *mut f64, usize) -> i32;
+type SumF64Avx = unsafe extern "C" fn(*const f64, usize, *mut f64) -> i32;
 
 #[link(name = "kernel32")]
 unsafe extern "system" {
@@ -117,14 +119,18 @@ struct NativeApi {
     cpp_add_f32_scalar: AddF32Array,
     cpp_add_f64_array_scalar: AddF64Array,
     cpp_add_f64_scalar: AddF64Scalar,
+    cpp_sum_f64_scalar: SumF64Scalar,
     cpp_is_avx_available: IsAvxAvailable,
     cpp_add_f32_avx: AddF32ArrayAvx,
     cpp_add_f64_array_avx: AddF64ArrayAvx,
+    cpp_sum_f64_avx: SumF64Avx,
     assembly_add_f32_scalar: AddF32Array,
     assembly_add_f64_array_scalar: AddF64Array,
     assembly_add_f64_scalar: AddF64Scalar,
+    assembly_sum_f64_scalar: SumF64Scalar,
     assembly_add_f32_avx: AddF32ArrayAvx,
     assembly_add_f64_array_avx: AddF64ArrayAvx,
+    assembly_sum_f64_avx: SumF64Avx,
 }
 
 impl NativeApi {
@@ -159,23 +165,27 @@ impl NativeApi {
                     c"whitebase_gnu_cpp_add_f64_array_scalar",
                 )?,
                 cpp_add_f64_scalar: load_symbol(&module, c"whitebase_gnu_cpp_add_f64_scalar")?,
+                cpp_sum_f64_scalar: load_symbol(&module, c"whitebase_gnu_cpp_sum_f64_scalar")?,
                 cpp_is_avx_available: load_symbol(&module, c"whitebase_gnu_cpp_is_avx_available")?,
                 cpp_add_f32_avx: load_symbol(&module, c"whitebase_gnu_cpp_add_f32_avx")?,
                 cpp_add_f64_array_avx: load_symbol(
                     &module,
                     c"whitebase_gnu_cpp_add_f64_array_avx",
                 )?,
+                cpp_sum_f64_avx: load_symbol(&module, c"whitebase_gnu_cpp_sum_f64_avx")?,
                 assembly_add_f32_scalar: load_symbol(&module, c"whitebase_gnu_asm_add_f32_scalar")?,
                 assembly_add_f64_array_scalar: load_symbol(
                     &module,
                     c"whitebase_gnu_asm_add_f64_array_scalar",
                 )?,
                 assembly_add_f64_scalar: load_symbol(&module, c"whitebase_gnu_asm_add_f64_scalar")?,
+                assembly_sum_f64_scalar: load_symbol(&module, c"whitebase_gnu_asm_sum_f64_scalar")?,
                 assembly_add_f32_avx: load_symbol(&module, c"whitebase_gnu_asm_add_f32_avx")?,
                 assembly_add_f64_array_avx: load_symbol(
                     &module,
                     c"whitebase_gnu_asm_add_f64_array_avx",
                 )?,
+                assembly_sum_f64_avx: load_symbol(&module, c"whitebase_gnu_asm_sum_f64_avx")?,
                 _module: module,
             })
         }
@@ -349,6 +359,15 @@ pub fn cpp_add_f64_scalar(lhs: f64, rhs: f64) -> Result<f64, AdapterError> {
     Ok(unsafe { (api.cpp_add_f64_scalar)(lhs, rhs) })
 }
 
+/// GCC Scalarバックエンドで`f64`配列の要素を合計します。
+pub fn cpp_sum_f64_scalar(input: &[f64]) -> Result<f64, AdapterError> {
+    let api = native_api()?;
+
+    // SAFETY:
+    // `input`は呼び出し中有効で、Native側は指定された長さの範囲だけを読み取ります。
+    Ok(unsafe { (api.cpp_sum_f64_scalar)(input.as_ptr(), input.len()) })
+}
+
 /// GCC AVXバックエンドで`f32`配列を加算します。
 pub fn cpp_add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<bool, AdapterError> {
     validate_lengths(lhs, rhs, output)?;
@@ -379,6 +398,20 @@ pub fn cpp_add_f64_array_avx(
     };
 
     Ok(executed != 0)
+}
+
+/// GCC AVXバックエンドで`f64`配列の要素を合計します。
+///
+/// AVXを利用できない場合は`None`を返します。
+pub fn cpp_sum_f64_avx(input: &[f64]) -> Result<Option<f64>, AdapterError> {
+    let api = native_api()?;
+    let mut output = 0.0;
+
+    // SAFETY:
+    // `input`と`output`は呼び出し中有効で、Native側は指定された長さの範囲だけを読み取ります。
+    let executed = unsafe { (api.cpp_sum_f64_avx)(input.as_ptr(), input.len(), &mut output) };
+
+    Ok((executed != 0).then_some(output))
 }
 
 /// NASM Scalarバックエンドで`f32`配列を加算します。
@@ -431,6 +464,15 @@ pub fn assembly_add_f64_scalar(lhs: f64, rhs: f64) -> Result<f64, AdapterError> 
     Ok(unsafe { (api.assembly_add_f64_scalar)(lhs, rhs) })
 }
 
+/// NASM Scalarバックエンドで`f64`配列の要素を合計します。
+pub fn assembly_sum_f64_scalar(input: &[f64]) -> Result<f64, AdapterError> {
+    let api = native_api()?;
+
+    // SAFETY:
+    // `input`は呼び出し中有効で、Native側は指定された長さの範囲だけを読み取ります。
+    Ok(unsafe { (api.assembly_sum_f64_scalar)(input.as_ptr(), input.len()) })
+}
+
 /// NASM AVXバックエンドで`f32`配列を加算します。
 pub fn assembly_add_f32_avx(
     lhs: &[f32],
@@ -465,6 +507,20 @@ pub fn assembly_add_f64_array_avx(
     };
 
     Ok(executed != 0)
+}
+
+/// NASM AVXバックエンドで`f64`配列の要素を合計します。
+///
+/// AVXを利用できない場合は`None`を返します。
+pub fn assembly_sum_f64_avx(input: &[f64]) -> Result<Option<f64>, AdapterError> {
+    let api = native_api()?;
+    let mut output = 0.0;
+
+    // SAFETY:
+    // `input`と`output`は呼び出し中有効で、NASM側もAVXの利用可能性を確認します。
+    let executed = unsafe { (api.assembly_sum_f64_avx)(input.as_ptr(), input.len(), &mut output) };
+
+    Ok((executed != 0).then_some(output))
 }
 
 #[cfg(test)]

@@ -38,6 +38,16 @@ void whitebase_asm_add_f64_array_avx(
     size_t length
 );
 
+double whitebase_asm_sum_f64_scalar(
+    const double* input,
+    size_t length
+);
+
+double whitebase_asm_sum_f64_avx(
+    const double* input,
+    size_t length
+);
+
 #ifdef __cplusplus
 }
 #endif

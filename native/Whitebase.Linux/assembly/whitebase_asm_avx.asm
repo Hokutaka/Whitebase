@@ -8,6 +8,7 @@ section .text
 
 global whitebase_asm_add_f32_avx
 global whitebase_asm_add_f64_array_avx
+global whitebase_asm_sum_f64_avx
 
 ; 内部用AVX可用性チェック
 ;
@@ -194,5 +195,68 @@ whitebase_asm_add_f64_array_avx:
     xor eax, eax
     ret
 
+
+; System V AMD64 ABI
+; rdi = input
+; rsi = length
+; rdx = output
+;
+; 戻り値:
+; eax = 1: AVX処理を実行し、outputへ合計値を書き込む
+; eax = 0: AVX利用不可。outputは変更しない
+whitebase_asm_sum_f64_avx:
+    ; AVX可用性チェックのcallをまたぐため引数を保存する。
+    ; 関数入口ではrsp % 16 == 8、3回pushするとcall直前は16バイト境界になる。
+    push rdi
+    push rsi
+    push rdx
+
+    call whitebase_asm_is_avx_available
+
+    pop rdx
+    pop rsi
+    pop rdi
+
+    test eax, eax
+    jz .unavailable
+
+    vxorpd ymm0, ymm0, ymm0
+    xor r8, r8
+
+    mov r9, rsi
+    and r9, -4
+
+.avx_loop:
+    cmp r8, r9
+    jae .reduce_vector
+
+    vaddpd ymm0, ymm0, [rdi + r8 * 8]
+    add r8, 4
+    jmp .avx_loop
+
+.reduce_vector:
+    vextractf128 xmm1, ymm0, 1
+    vaddpd xmm0, xmm0, xmm1
+    vhaddpd xmm0, xmm0, xmm0
+
+.scalar_tail:
+    cmp r8, rsi
+    jae .done
+
+.tail_loop:
+    vaddsd xmm0, xmm0, [rdi + r8 * 8]
+    inc r8
+    cmp r8, rsi
+    jb .tail_loop
+
+.done:
+    vmovsd [rdx], xmm0
+    vzeroupper
+    mov eax, 1
+    ret
+
+.unavailable:
+    xor eax, eax
+    ret
 
 section .note.GNU-stack noalloc noexec nowrite progbits

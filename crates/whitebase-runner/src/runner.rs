@@ -7,7 +7,7 @@ use whitebase_core::{BackendKind, ComputeError, Whitebase};
 use crate::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
     ComparisonSummary, F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation,
-    ScalarF64ObservationReport, TimingSummary, decimal::ExactDecimal,
+    ScalarF64ObservationReport, SumF64Report, TimingSummary, decimal::ExactDecimal,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -173,6 +173,36 @@ impl Runner {
         })
     }
 
+    /// 指定されたバックエンドで`f64`配列の合計を計測し、
+    /// 参照バックエンドの結果と比較します。
+    pub fn run_sum_f64(
+        &self,
+        input: &[f64],
+        config: &RunnerConfig,
+    ) -> Result<SumF64Report, RunnerError> {
+        validate_common_config(config)?;
+        validate_absolute_tolerance(config.absolute_tolerance_f64)?;
+        self.validate_reference_backend(config.reference_backend)?;
+
+        let reference_result = self.whitebase.sum_f64(config.reference_backend, input)?;
+        let backends = validate_and_deduplicate_backends(&config.backends)?;
+        let mut results = Vec::with_capacity(backends.len());
+
+        for backend in backends {
+            results.push(self.run_backend_sum_f64(backend, input, reference_result, config));
+        }
+
+        Ok(SumF64Report {
+            input_length: input.len(),
+            reference_backend: config.reference_backend,
+            reference_result: F64Value::new(reference_result),
+            warmup_iterations: config.warmup_iterations,
+            measured_iterations: config.measured_iterations,
+            absolute_tolerance: config.absolute_tolerance_f64,
+            results,
+        })
+    }
+
     fn validate_reference_backend(&self, backend: BackendKind) -> Result<(), RunnerError> {
         let reference_info = self.whitebase.backend_info(backend)?;
 
@@ -301,6 +331,59 @@ impl Runner {
                 comparison: compare_outputs_f64(
                     &output,
                     reference_output,
+                    config.absolute_tolerance_f64,
+                ),
+            },
+        }
+    }
+
+    fn run_backend_sum_f64(
+        &self,
+        backend: BackendKind,
+        input: &[f64],
+        reference_result: f64,
+        config: &RunnerConfig,
+    ) -> BackendRunResult {
+        let info = match self.whitebase.backend_info(backend) {
+            Ok(info) => info,
+            Err(error) => return failed_backend_result(backend, error),
+        };
+
+        if !info.available {
+            return unavailable_backend_result(backend);
+        }
+
+        for _ in 0..config.warmup_iterations {
+            if let Err(error) = self.whitebase.sum_f64(backend, black_box(input)) {
+                return failed_backend_result(backend, error);
+            }
+        }
+
+        let mut durations = Vec::with_capacity(config.measured_iterations);
+        let mut output = None;
+
+        for _ in 0..config.measured_iterations {
+            let started_at = Instant::now();
+            let result = self.whitebase.sum_f64(backend, black_box(input));
+            let elapsed = started_at.elapsed();
+
+            match result {
+                Ok(value) => output = Some(black_box(value)),
+                Err(error) => return failed_backend_result(backend, error),
+            }
+
+            durations.push(elapsed);
+        }
+
+        let output = output.expect("measured iterations are validated");
+
+        BackendRunResult {
+            backend,
+            status: BackendRunStatus::Completed {
+                timing: summarize_timings(&durations),
+                comparison: compare_outputs_f64(
+                    std::slice::from_ref(&output),
+                    std::slice::from_ref(&reference_result),
                     config.absolute_tolerance_f64,
                 ),
             },
