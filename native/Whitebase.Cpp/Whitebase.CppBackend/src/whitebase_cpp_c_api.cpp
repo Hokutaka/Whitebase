@@ -33,12 +33,19 @@ extern "C"
         );
     }
 
-    double whitebase_cpp_add_f64_scalar(const double lhs, const double rhs)
+        double whitebase_cpp_add_f64_scalar(const double lhs, const double rhs)
     {
         return whitebase::cpp_backend::add_f64_scalar(lhs, rhs);
     }
-
+    double whitebase_cpp_sum_f64_scalar(
+        const double* input,
+        const size_t length
+    )
+    {
+        return whitebase::cpp_backend::sum_f64_scalar(input, length);
+    }
     int whitebase_cpp_is_avx_available(void)
+
     {
         return whitebase::cpp_backend::is_avx_available()
             ? 1
@@ -75,6 +82,16 @@ extern "C"
             output,
             length
         )
+            ? 1
+            : 0;
+    }
+    int whitebase_cpp_sum_f64_avx(
+        const double* input,
+        const size_t length,
+        double* output
+    )
+    {
+        return whitebase::cpp_backend::sum_f64_avx(input, length, output)
             ? 1
             : 0;
     }

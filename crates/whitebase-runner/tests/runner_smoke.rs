@@ -91,11 +91,16 @@ fn measures_and_compares_standard_f64_backends() {
 }
 
 #[test]
-fn measures_and_compares_rust_sum_f64_backends() {
+fn measures_and_compares_rust_and_cpp_sum_f64_backends() {
     let runner = Runner::new();
     let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
     let config = RunnerConfig {
-        backends: vec![BackendKind::RustScalar, BackendKind::RustSimd],
+        backends: vec![
+            BackendKind::RustScalar,
+            BackendKind::RustSimd,
+            BackendKind::CppScalar,
+            BackendKind::CppAvx,
+        ],
         reference_backend: BackendKind::RustScalar,
         warmup_iterations: 1,
         measured_iterations: 3,
@@ -106,7 +111,7 @@ fn measures_and_compares_rust_sum_f64_backends() {
 
     assert_eq!(report.input_length, input.len());
     assert_eq!(report.reference_result.value, 55.0);
-    assert_eq!(report.results.len(), 2);
+    assert_eq!(report.results.len(), 4);
 
     for result in report.results {
         match result.status {
@@ -122,7 +127,10 @@ fn measures_and_compares_rust_sum_f64_backends() {
                 assert_eq!(comparison.mismatch_count, 0);
             }
             BackendRunStatus::Unavailable => {
-                assert_eq!(result.backend, BackendKind::RustSimd);
+                assert!(matches!(
+                    result.backend,
+                    BackendKind::RustSimd | BackendKind::CppAvx
+                ));
             }
             BackendRunStatus::Failed { error } => {
                 panic!("{} failed: {error}", result.backend.display_name());

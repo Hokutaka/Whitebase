@@ -35,4 +35,18 @@ extern "C"
     {
         return lhs + rhs;
     }
+
+    double whitebase_cpp_sum_f64_scalar(
+        const double* input,
+        const size_t length
+    )
+    {
+        double sum = 0.0;
+        for (size_t index = 0; index < length; ++index)
+        {
+            sum += input[index];
+        }
+
+        return sum;
+    }
 }
