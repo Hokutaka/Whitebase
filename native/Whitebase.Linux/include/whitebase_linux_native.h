@@ -82,6 +82,21 @@ int whitebase_asm_add_f64_array_avx(
     size_t length
 );
 
+double whitebase_asm_sum_f64_scalar(
+    const double* input,
+    size_t length
+);
+
+/*
+ * Returns 1 when the AVX reduction was executed and writes the sum to output.
+ * Returns 0 without modifying output when AVX is unavailable.
+ */
+int whitebase_asm_sum_f64_avx(
+    const double* input,
+    size_t length,
+    double* output
+);
+
 #ifdef __cplusplus
 }
 #endif

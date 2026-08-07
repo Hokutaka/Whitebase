@@ -12,20 +12,10 @@ impl ComputeBackend for AssemblyScalarBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-        {
-            BackendCapabilities::scalar_add_f32()
-                .with_add_f64(1)
-                .with_add_scalar_f64()
-                .with_sum_f64()
-        }
-
-        #[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
-        {
-            BackendCapabilities::scalar_add_f32()
-                .with_add_f64(1)
-                .with_add_scalar_f64()
-        }
+        BackendCapabilities::scalar_add_f32()
+            .with_add_f64(1)
+            .with_add_scalar_f64()
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -50,7 +40,6 @@ impl ComputeBackend for AssemblyScalarBackend {
         Ok(whitebase_asm_adapter::add_f64_scalar(lhs, rhs))
     }
 
-    #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
     fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
         Ok(whitebase_asm_adapter::sum_f64_scalar(input))
     }
@@ -66,17 +55,9 @@ impl ComputeBackend for AssemblyAvxBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-        {
-            BackendCapabilities::avx_add_f32()
-                .with_add_f64(4)
-                .with_sum_f64()
-        }
-
-        #[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
-        {
-            BackendCapabilities::avx_add_f32().with_add_f64(4)
-        }
+        BackendCapabilities::avx_add_f32()
+            .with_add_f64(4)
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -125,7 +106,6 @@ impl ComputeBackend for AssemblyAvxBackend {
         Ok(())
     }
 
-    #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
     fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
         if !self.is_available() {
             return Err(ComputeError::BackendUnavailable {
