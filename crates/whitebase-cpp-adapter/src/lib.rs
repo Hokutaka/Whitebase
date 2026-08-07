@@ -108,8 +108,8 @@ pub fn sum_f64_scalar(input: &[f64]) -> f64 {
     // ポインターと長さは同じ有効なスライスから取得しています。
     unsafe { whitebase_cpp_sum_f64_scalar(input.as_ptr(), input.len()) }
 }
-/// C++ AVXバックエンドが現在の環境で利用可能か返します。
 
+/// C++ AVXバックエンドが現在の環境で利用可能か返します。
 #[must_use]
 pub fn is_avx_available() -> bool {
     // SAFETY:

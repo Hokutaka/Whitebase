@@ -110,3 +110,36 @@ fn non_sum_backend_reports_unsupported_operation() {
         })
     );
 }
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn windows_gnu_cpp_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    let scalar_info = whitebase
+        .backend_info(BackendKind::WindowsGnuCppScalar)
+        .unwrap();
+    if scalar_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuCppScalar, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+
+    let avx_info = whitebase
+        .backend_info(BackendKind::WindowsGnuCppAvx)
+        .unwrap();
+    if avx_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuCppAvx, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+}
