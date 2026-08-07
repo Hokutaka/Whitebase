@@ -80,6 +80,64 @@ pub fn add_f64_array(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(),
     crate::scalar::add_f64_array(lhs, rhs, output)
 }
 
+/// `f64`配列の要素をSIMDを利用して合計します。
+///
+/// x86_64環境でAVXが利用できる場合はAVX実装を使用します。
+/// AVXを利用できない環境ではScalar実装へフォールバックします。
+/// 空配列の合計は`0.0`です。
+#[must_use]
+pub fn sum_f64(input: &[f64]) -> f64 {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if is_avx_available() {
+            // SAFETY:
+            // 実行前にAVX対応を確認しています。
+            unsafe {
+                return sum_f64_avx(input);
+            }
+        }
+    }
+
+    crate::scalar::sum_f64(input)
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx")]
+unsafe fn sum_f64_avx(input: &[f64]) -> f64 {
+    use std::arch::x86_64::{_mm256_add_pd, _mm256_loadu_pd, _mm256_setzero_pd, _mm256_storeu_pd};
+
+    let vectorized_len = input.len() / AVX_F64_LANES * AVX_F64_LANES;
+    let mut accumulator = _mm256_setzero_pd();
+    let mut index = 0;
+
+    while index < vectorized_len {
+        // SAFETY:
+        // vectorized_lenは4要素単位に切り下げられているため、
+        // indexから4要素分の読み込みがinputの範囲内に収まります。
+        unsafe {
+            let values = _mm256_loadu_pd(input.as_ptr().add(index));
+            accumulator = _mm256_add_pd(accumulator, values);
+        }
+        index += AVX_F64_LANES;
+    }
+
+    let mut lanes = [0.0; AVX_F64_LANES];
+    // SAFETY:
+    // lanesは4要素のf64配列であり、storeuはアラインメントを要求しません。
+    unsafe {
+        _mm256_storeu_pd(lanes.as_mut_ptr(), accumulator);
+    }
+
+    let mut sum = lanes[0] + lanes[1] + lanes[2] + lanes[3];
+
+    while index < input.len() {
+        sum += input[index];
+        index += 1;
+    }
+
+    sum
+}
+
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx")]
 unsafe fn add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) {
@@ -215,6 +273,21 @@ mod tests {
         add_f64_array(&lhs, &rhs, &mut simd_output).unwrap();
 
         assert_eq!(simd_output, scalar_output);
+    }
+
+    #[test]
+    fn sums_f64_vector_and_tail_elements() {
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+        assert_eq!(sum_f64(&input), 55.0);
+        assert_eq!(sum_f64(&[]), 0.0);
+    }
+
+    #[test]
+    fn f64_sum_matches_scalar_reference_for_exact_values() {
+        let input: Vec<f64> = (1..=19).map(f64::from).collect();
+
+        assert_eq!(sum_f64(&input), crate::scalar::sum_f64(&input));
     }
 
     #[test]

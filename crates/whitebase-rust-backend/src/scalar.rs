@@ -46,6 +46,20 @@ pub fn add_f64(lhs: f64, rhs: f64) -> f64 {
     lhs + rhs
 }
 
+/// `f64`配列の要素を先頭から順に合計します。
+///
+/// 空配列の合計は`0.0`です。
+#[must_use]
+pub fn sum_f64(input: &[f64]) -> f64 {
+    let mut sum = 0.0;
+
+    for &value in input {
+        sum += value;
+    }
+
+    sum
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,6 +96,14 @@ mod tests {
         let result = add_f32(&lhs, &rhs, &mut output);
 
         assert_eq!(result, Ok(()));
+    }
+
+    #[test]
+    fn sums_f64_values() {
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0];
+
+        assert_eq!(sum_f64(&input), 15.0);
+        assert_eq!(sum_f64(&[]), 0.0);
     }
 
     #[test]

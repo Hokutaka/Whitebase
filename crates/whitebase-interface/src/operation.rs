@@ -9,4 +9,7 @@ pub enum OperationKind {
 
     /// 2つの`f64`スカラー値を加算します。
     AddScalarF64,
+
+    /// `f64`配列の要素を合計します。
+    SumF64,
 }
