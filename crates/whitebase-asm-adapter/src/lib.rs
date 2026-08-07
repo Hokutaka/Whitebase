@@ -35,6 +35,9 @@ unsafe extern "C" {
         output: *mut f64,
         length: usize,
     );
+
+    fn whitebase_asm_sum_f64_scalar(input: *const f64, length: usize) -> f64;
+    fn whitebase_asm_sum_f64_avx(input: *const f64, length: usize) -> f64;
 }
 
 #[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
@@ -101,6 +104,31 @@ pub fn add_f64_scalar(lhs: f64, rhs: f64) -> f64 {
     // SAFETY:
     // 値渡しの`f64`を受け取り、値渡しの`f64`を返すC ABI関数です。
     unsafe { whitebase_asm_add_f64_scalar(lhs, rhs) }
+}
+
+/// Windows MASM Scalarバックエンドで`f64`配列の要素を合計します。
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[must_use]
+pub fn sum_f64_scalar(input: &[f64]) -> f64 {
+    // SAFETY:
+    // 有効なスライスから取得したポインターと、その要素数をC ABI関数へ渡します。
+    unsafe { whitebase_asm_sum_f64_scalar(input.as_ptr(), input.len()) }
+}
+
+/// Windows MASM AVXバックエンドで`f64`配列の要素を合計します。
+///
+/// AVXを利用できない環境では`None`を返します。
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[must_use]
+pub fn sum_f64_avx(input: &[f64]) -> Option<f64> {
+    if !is_avx_available() {
+        return None;
+    }
+
+    // SAFETY:
+    // AVXの利用可能性を確認済みで、有効なスライスから取得したポインターと
+    // その要素数をC ABI関数へ渡します。
+    Some(unsafe { whitebase_asm_sum_f64_avx(input.as_ptr(), input.len()) })
 }
 
 /// 現在のCPUとOSでAVXを利用できるか返します。
@@ -213,6 +241,20 @@ mod tests {
 
         assert_eq!(output[0].to_bits(), 0x3fd3_3333_3333_3334);
         assert_eq!(output[1..], [11.0, 22.0, 33.0, 44.0, 55.0]);
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+    #[test]
+    fn sums_f64_values_with_masm_scalar_and_avx() {
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+        assert_eq!(sum_f64_scalar(&input), 55.0);
+        assert_eq!(sum_f64_scalar(&[]), 0.0);
+
+        if is_avx_available() {
+            assert_eq!(sum_f64_avx(&input), Some(55.0));
+            assert_eq!(sum_f64_avx(&[]), Some(0.0));
+        }
     }
 
     #[test]
