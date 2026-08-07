@@ -179,3 +179,28 @@ pub struct AddF64Report {
     /// 各バックエンドの実行結果。
     pub results: Vec<BackendRunResult>,
 }
+
+/// `f64`配列合計の計測・比較レポートです。
+#[derive(Debug, Clone, PartialEq)]
+pub struct SumF64Report {
+    /// 入力配列の要素数。
+    pub input_length: usize,
+
+    /// 比較基準に使用したバックエンド。
+    pub reference_backend: BackendKind,
+
+    /// 参照バックエンドが返した合計値。
+    pub reference_result: F64Value,
+
+    /// ウォームアップ回数。
+    pub warmup_iterations: usize,
+
+    /// 計測回数。
+    pub measured_iterations: usize,
+
+    /// 結果比較時の絶対誤差許容値。
+    pub absolute_tolerance: f64,
+
+    /// 各バックエンドの実行結果。
+    pub results: Vec<BackendRunResult>,
+}

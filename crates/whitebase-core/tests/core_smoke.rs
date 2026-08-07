@@ -50,3 +50,39 @@ fn reports_all_standard_backends() {
 
     assert_eq!(whitebase.backends().len(), expected);
 }
+#[test]
+fn rust_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    assert_eq!(
+        whitebase.sum_f64(BackendKind::RustScalar, &input).unwrap(),
+        55.0
+    );
+
+    let simd_info = whitebase.backend_info(BackendKind::RustSimd).unwrap();
+    if simd_info.available {
+        assert_eq!(
+            whitebase.sum_f64(BackendKind::RustSimd, &input).unwrap(),
+            55.0
+        );
+    }
+}
+
+#[test]
+fn non_sum_backend_reports_unsupported_operation() {
+    use whitebase_core::{BackendKind, ComputeError, OperationKind};
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0];
+
+    assert_eq!(
+        whitebase.sum_f64(BackendKind::CppScalar, &input),
+        Err(ComputeError::OperationUnsupported {
+            backend: BackendKind::CppScalar,
+            operation: OperationKind::SumF64,
+        })
+    );
+}
