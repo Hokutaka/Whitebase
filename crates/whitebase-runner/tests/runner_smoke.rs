@@ -1,3 +1,4 @@
+use whitebase_core::BackendKind;
 use whitebase_runner::{BackendRunStatus, Runner, RunnerConfig};
 
 #[test]
@@ -82,6 +83,55 @@ fn measures_and_compares_standard_f64_backends() {
                 println!("{}: unavailable", result.backend.display_name());
             }
 
+            BackendRunStatus::Failed { error } => {
+                panic!("{} failed: {error}", result.backend.display_name());
+            }
+        }
+    }
+}
+
+#[test]
+fn measures_and_compares_rust_and_cpp_sum_f64_backends() {
+    let runner = Runner::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+    let config = RunnerConfig {
+        backends: vec![
+            BackendKind::RustScalar,
+            BackendKind::RustSimd,
+            BackendKind::CppScalar,
+            BackendKind::CppAvx,
+        ],
+        reference_backend: BackendKind::RustScalar,
+        warmup_iterations: 1,
+        measured_iterations: 3,
+        ..RunnerConfig::default()
+    };
+
+    let report = runner.run_sum_f64(&input, &config).unwrap();
+
+    assert_eq!(report.input_length, input.len());
+    assert_eq!(report.reference_result.value, 55.0);
+    assert_eq!(report.results.len(), 4);
+
+    for result in report.results {
+        match result.status {
+            BackendRunStatus::Completed { timing, comparison } => {
+                println!(
+                    "{}: mean {:.2} ns, match={}",
+                    result.backend.display_name(),
+                    timing.mean_nanoseconds,
+                    comparison.matches_reference,
+                );
+                assert_eq!(timing.iterations, 3);
+                assert!(comparison.matches_reference);
+                assert_eq!(comparison.mismatch_count, 0);
+            }
+            BackendRunStatus::Unavailable => {
+                assert!(matches!(
+                    result.backend,
+                    BackendKind::RustSimd | BackendKind::CppAvx
+                ));
+            }
             BackendRunStatus::Failed { error } => {
                 panic!("{} failed: {error}", result.backend.display_name());
             }

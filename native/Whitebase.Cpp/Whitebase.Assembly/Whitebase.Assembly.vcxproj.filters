@@ -33,6 +33,12 @@
     <MASM Include="src\whitebase_asm_add_f64_scalar.asm">
       <Filter>ソース ファイル</Filter>
     </MASM>
+    <MASM Include="src\whitebase_asm_sum_f64_scalar.asm">
+      <Filter>ソース ファイル</Filter>
+    </MASM>
+    <MASM Include="src\whitebase_asm_sum_f64_avx.asm">
+      <Filter>ソース ファイル</Filter>
+    </MASM>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\whitebase_asm.h">

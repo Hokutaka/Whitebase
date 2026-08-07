@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
 use whitebase_runner::{
     AddF32Report, AddF64Report, BackendRunResult, BackendRunStatus, F64Value, Runner, RunnerConfig,
-    RunnerError, ScalarF64BackendObservation, ScalarF64ObservationReport,
+    RunnerError, ScalarF64BackendObservation, ScalarF64ObservationReport, SumF64Report,
 };
 
 const SERVER_ADDRESS: &str = "127.0.0.1:1430";
@@ -41,6 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "/api/observations/add-scalar-f64",
             post(observe_add_scalar_f64),
         )
+        .route("/api/benchmarks/run", post(run_benchmark))
         .route("/api/benchmarks/add-array", post(run_add_benchmark))
         .route(
             "/api/benchmarks/add-f32",
@@ -102,9 +103,16 @@ fn map_scalar_f64_error(error: RunnerError) -> ApiError {
     }
 }
 
-async fn run_add_benchmark(
+async fn run_benchmark(
     Json(request): Json<BenchmarkRequest>,
 ) -> Result<Json<BenchmarkReportDto>, ApiError> {
+    run_benchmark_task(request).await.map(Json)
+}
+
+async fn run_add_benchmark(
+    Json(mut request): Json<BenchmarkRequest>,
+) -> Result<Json<BenchmarkReportDto>, ApiError> {
+    request.operation = BenchmarkOperation::AddArray;
     run_benchmark_task(request).await.map(Json)
 }
 
@@ -112,6 +120,7 @@ async fn run_legacy_add_f32_benchmark(
     Json(request): Json<LegacyBenchmarkRequest>,
 ) -> Result<Json<BenchmarkReportDto>, ApiError> {
     run_benchmark_task(BenchmarkRequest {
+        operation: BenchmarkOperation::AddArray,
         precision: BenchmarkPrecision::F32,
         input_length: request.input_length,
         warmup_iterations: request.warmup_iterations,
@@ -143,23 +152,38 @@ fn execute_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReportDto, Ap
 
     let runner = Runner::new();
 
-    match request.precision {
-        BenchmarkPrecision::F32 => {
-            let lhs = create_lhs_f32(request.input_length);
-            let rhs = create_rhs_f32(request.input_length);
+    match request.operation {
+        BenchmarkOperation::AddArray => match request.precision {
+            BenchmarkPrecision::F32 => {
+                let lhs = create_lhs_f32(request.input_length);
+                let rhs = create_rhs_f32(request.input_length);
 
+                runner
+                    .run_add_f32(&lhs, &rhs, &config)
+                    .map(Into::into)
+                    .map_err(|error| ApiError::internal("runner_failed", error.to_string()))
+            }
+            BenchmarkPrecision::F64 => {
+                let lhs = create_lhs_f64(request.input_length);
+                let rhs = create_rhs_f64(request.input_length);
+
+                runner
+                    .run_add_f64(&lhs, &rhs, &config)
+                    .map(Into::into)
+                    .map_err(|error| ApiError::internal("runner_failed", error.to_string()))
+            }
+        },
+        BenchmarkOperation::SumF64 => {
+            if request.precision != BenchmarkPrecision::F64 {
+                return Err(ApiError::bad_request(
+                    "invalid_benchmark_precision",
+                    "sum-f64 benchmark requires f64 precision",
+                ));
+            }
+
+            let input = create_lhs_f64(request.input_length);
             runner
-                .run_add_f32(&lhs, &rhs, &config)
-                .map(Into::into)
-                .map_err(|error| ApiError::internal("runner_failed", error.to_string()))
-        }
-
-        BenchmarkPrecision::F64 => {
-            let lhs = create_lhs_f64(request.input_length);
-            let rhs = create_rhs_f64(request.input_length);
-
-            runner
-                .run_add_f64(&lhs, &rhs, &config)
+                .run_sum_f64(&input, &config)
                 .map(Into::into)
                 .map_err(|error| ApiError::internal("runner_failed", error.to_string()))
         }
@@ -312,6 +336,14 @@ impl From<F64Value> for F64ValueDto {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum BenchmarkOperation {
+    #[default]
+    AddArray,
+    SumF64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 enum BenchmarkPrecision {
@@ -322,6 +354,8 @@ enum BenchmarkPrecision {
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchmarkRequest {
+    #[serde(default)]
+    operation: BenchmarkOperation,
     precision: BenchmarkPrecision,
     input_length: usize,
     warmup_iterations: usize,
@@ -339,6 +373,7 @@ struct LegacyBenchmarkRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchmarkReportDto {
+    operation: BenchmarkOperation,
     precision: BenchmarkPrecision,
     input_length: usize,
     reference_backend: String,
@@ -370,6 +405,7 @@ struct BackendResultDto {
 impl From<AddF32Report> for BenchmarkReportDto {
     fn from(report: AddF32Report) -> Self {
         Self {
+            operation: BenchmarkOperation::AddArray,
             precision: BenchmarkPrecision::F32,
             input_length: report.input_length,
             reference_backend: report.reference_backend.display_name().to_owned(),
@@ -388,6 +424,26 @@ impl From<AddF32Report> for BenchmarkReportDto {
 impl From<AddF64Report> for BenchmarkReportDto {
     fn from(report: AddF64Report) -> Self {
         Self {
+            operation: BenchmarkOperation::AddArray,
+            precision: BenchmarkPrecision::F64,
+            input_length: report.input_length,
+            reference_backend: report.reference_backend.display_name().to_owned(),
+            warmup_iterations: report.warmup_iterations,
+            measured_iterations: report.measured_iterations,
+            absolute_tolerance: report.absolute_tolerance,
+            results: report
+                .results
+                .into_iter()
+                .map(BackendResultDto::from)
+                .collect(),
+        }
+    }
+}
+
+impl From<SumF64Report> for BenchmarkReportDto {
+    fn from(report: SumF64Report) -> Self {
+        Self {
+            operation: BenchmarkOperation::SumF64,
             precision: BenchmarkPrecision::F64,
             input_length: report.input_length,
             reference_backend: report.reference_backend.display_name().to_owned(),
@@ -554,6 +610,7 @@ mod tests {
     #[test]
     fn f64_array_benchmark_uses_all_available_backends() {
         let report = execute_benchmark(BenchmarkRequest {
+            operation: BenchmarkOperation::AddArray,
             precision: BenchmarkPrecision::F64,
             input_length: 17,
             warmup_iterations: 1,
@@ -561,6 +618,25 @@ mod tests {
         })
         .expect("f64 benchmark must succeed");
 
+        assert_eq!(report.precision, BenchmarkPrecision::F64);
+        assert_eq!(report.input_length, 17);
+        assert!(report.results.iter().all(|result| {
+            result.status == "unavailable" || result.matches_reference == Some(true)
+        }));
+    }
+
+    #[test]
+    fn sum_f64_benchmark_uses_all_available_backends() {
+        let report = execute_benchmark(BenchmarkRequest {
+            operation: BenchmarkOperation::SumF64,
+            precision: BenchmarkPrecision::F64,
+            input_length: 17,
+            warmup_iterations: 1,
+            measured_iterations: 2,
+        })
+        .expect("sum f64 benchmark must succeed");
+
+        assert_eq!(report.operation, BenchmarkOperation::SumF64);
         assert_eq!(report.precision, BenchmarkPrecision::F64);
         assert_eq!(report.input_length, 17);
         assert!(report.results.iter().all(|result| {

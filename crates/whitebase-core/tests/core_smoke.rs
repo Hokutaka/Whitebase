@@ -50,3 +50,140 @@ fn reports_all_standard_backends() {
 
     assert_eq!(whitebase.backends().len(), expected);
 }
+#[test]
+fn rust_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    assert_eq!(
+        whitebase.sum_f64(BackendKind::RustScalar, &input).unwrap(),
+        55.0
+    );
+
+    let simd_info = whitebase.backend_info(BackendKind::RustSimd).unwrap();
+    if simd_info.available {
+        assert_eq!(
+            whitebase.sum_f64(BackendKind::RustSimd, &input).unwrap(),
+            55.0
+        );
+    }
+}
+
+#[cfg(any(
+    all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+))]
+#[test]
+fn cpp_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    assert_eq!(
+        whitebase.sum_f64(BackendKind::CppScalar, &input).unwrap(),
+        55.0
+    );
+
+    let avx_info = whitebase.backend_info(BackendKind::CppAvx).unwrap();
+    if avx_info.available {
+        assert_eq!(
+            whitebase.sum_f64(BackendKind::CppAvx, &input).unwrap(),
+            55.0
+        );
+    }
+}
+#[cfg(any(
+    all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+))]
+#[test]
+fn assembly_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    assert_eq!(
+        whitebase
+            .sum_f64(BackendKind::AssemblyScalar, &input)
+            .unwrap(),
+        55.0
+    );
+
+    let avx_info = whitebase.backend_info(BackendKind::AssemblyAvx).unwrap();
+    if avx_info.available {
+        assert_eq!(
+            whitebase.sum_f64(BackendKind::AssemblyAvx, &input).unwrap(),
+            55.0
+        );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn windows_gnu_cpp_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    let scalar_info = whitebase
+        .backend_info(BackendKind::WindowsGnuCppScalar)
+        .unwrap();
+    if scalar_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuCppScalar, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+
+    let avx_info = whitebase
+        .backend_info(BackendKind::WindowsGnuCppAvx)
+        .unwrap();
+    if avx_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuCppAvx, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[test]
+fn windows_gnu_assembly_backends_sum_f64_values() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+    let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+    let scalar_info = whitebase
+        .backend_info(BackendKind::WindowsGnuAssemblyScalar)
+        .unwrap();
+    if scalar_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuAssemblyScalar, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+
+    let avx_info = whitebase
+        .backend_info(BackendKind::WindowsGnuAssemblyAvx)
+        .unwrap();
+    if avx_info.available {
+        assert_eq!(
+            whitebase
+                .sum_f64(BackendKind::WindowsGnuAssemblyAvx, &input)
+                .unwrap(),
+            55.0
+        );
+    }
+}

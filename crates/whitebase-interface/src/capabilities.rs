@@ -12,6 +12,9 @@ pub struct BackendCapabilities {
     /// `f64`スカラー加算を実行できるかどうか。
     pub add_scalar_f64: bool,
 
+    /// `f64`配列の合計を計算できるかどうか。
+    pub sum_f64: bool,
+
     /// 1命令または1ループ単位で処理する`f32`要素数の目安。
     ///
     /// Scalar実装では`1`、256-bit AVX実装では`8`です。
@@ -31,6 +34,7 @@ impl BackendCapabilities {
             add_f32: true,
             add_f64: false,
             add_scalar_f64: false,
+            sum_f64: false,
             vector_width_f32: 1,
             vector_width_f64: 0,
         }
@@ -43,6 +47,7 @@ impl BackendCapabilities {
             add_f32: true,
             add_f64: false,
             add_scalar_f64: false,
+            sum_f64: false,
             vector_width_f32: 8,
             vector_width_f64: 0,
         }
@@ -63,6 +68,13 @@ impl BackendCapabilities {
         self
     }
 
+    /// `f64`配列合計能力を追加します。
+    #[must_use]
+    pub const fn with_sum_f64(mut self) -> Self {
+        self.sum_f64 = true;
+        self
+    }
+
     /// 指定された演算をサポートするか返します。
     #[must_use]
     pub const fn supports(self, operation: OperationKind) -> bool {
@@ -70,6 +82,7 @@ impl BackendCapabilities {
             OperationKind::AddF32 => self.add_f32,
             OperationKind::AddF64 => self.add_f64,
             OperationKind::AddScalarF64 => self.add_scalar_f64,
+            OperationKind::SumF64 => self.sum_f64,
         }
     }
 }

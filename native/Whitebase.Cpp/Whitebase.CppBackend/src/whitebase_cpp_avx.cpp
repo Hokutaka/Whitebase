@@ -90,4 +90,41 @@ namespace whitebase::cpp_backend
         return true;
     }
 
+    bool sum_f64_avx(
+        const double* input,
+        const std::size_t length,
+        double* output
+    ) noexcept
+    {
+        if (!is_avx_available())
+        {
+            return false;
+        }
+
+        constexpr std::size_t lane_count = 4;
+        const std::size_t vectorized_length =
+            length / lane_count * lane_count;
+
+        __m256d accumulator = _mm256_setzero_pd();
+        std::size_t index = 0;
+        for (; index < vectorized_length; index += lane_count)
+        {
+            const __m256d values = _mm256_loadu_pd(input + index);
+            accumulator = _mm256_add_pd(accumulator, values);
+        }
+
+        double lanes[lane_count] {};
+        _mm256_storeu_pd(lanes, accumulator);
+
+        double sum = lanes[0] + lanes[1] + lanes[2] + lanes[3];
+        for (; index < length; ++index)
+        {
+            sum += input[index];
+        }
+
+        *output = sum;
+        _mm256_zeroupper();
+        return true;
+    }
+
 }

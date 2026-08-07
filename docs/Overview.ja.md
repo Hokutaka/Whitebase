@@ -98,33 +98,8 @@ TauriではIPC、通常のブラウザではHTTP APIを通して、
 
 ### HTTP API
 
-ローカルHTTP　APIはRust+Axumで実装しています。
+`Whitebase Server`は`local HTTP/JSON API`を公開しています
 
-```powershell
-GET  /api/health
-POST /api/benchmarks/add-f32
-```
-
-ヘルスチェック
-```powershell
-Invoke-RestMethod `
-  -Uri "http://127.0.0.1:1430/api/health"
-```
-
-ベンチマーク実行
-```powershell
-$body = @{
-  inputLength = 1000000
-  warmupIterations = 10
-  measuredIterations = 100
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-  -Method Post `
-  -Uri "http://127.0.0.1:1430/api/benchmarks/add-f32" `
-  -ContentType "application/json" `
-  -Body $body
-
-```
+See [HTTP API](api/HTTP-API.ja.md) for endpoint and request/response details.
 
 

@@ -15,6 +15,7 @@ impl ComputeBackend for RustScalarBackend {
         BackendCapabilities::scalar_add_f32()
             .with_add_f64(1)
             .with_add_scalar_f64()
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -38,6 +39,10 @@ impl ComputeBackend for RustScalarBackend {
     fn add_scalar_f64(&self, lhs: f64, rhs: f64) -> Result<f64, ComputeError> {
         Ok(whitebase_rust_backend::scalar::add_f64(lhs, rhs))
     }
+
+    fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
+        Ok(whitebase_rust_backend::scalar::sum_f64(input))
+    }
 }
 
 /// RustによるAVX計算バックエンドです。
@@ -50,7 +55,9 @@ impl ComputeBackend for RustSimdBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::avx_add_f32().with_add_f64(4)
+        BackendCapabilities::avx_add_f32()
+            .with_add_f64(4)
+            .with_sum_f64()
     }
 
     fn is_available(&self) -> bool {
@@ -81,5 +88,15 @@ impl ComputeBackend for RustSimdBackend {
 
         whitebase_rust_backend::simd::add_f64_array(lhs, rhs, output)
             .map_err(|error| backend_failure(self.kind(), error))
+    }
+
+    fn sum_f64(&self, input: &[f64]) -> Result<f64, ComputeError> {
+        if !self.is_available() {
+            return Err(ComputeError::BackendUnavailable {
+                backend: self.kind(),
+            });
+        }
+
+        Ok(whitebase_rust_backend::simd::sum_f64(input))
     }
 }

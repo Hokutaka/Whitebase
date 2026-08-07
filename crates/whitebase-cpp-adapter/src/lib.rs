@@ -23,6 +23,7 @@ unsafe extern "C" {
     );
 
     fn whitebase_cpp_add_f64_scalar(lhs: f64, rhs: f64) -> f64;
+    fn whitebase_cpp_sum_f64_scalar(input: *const f64, length: usize) -> f64;
 
     fn whitebase_cpp_is_avx_available() -> i32;
 
@@ -39,6 +40,7 @@ unsafe extern "C" {
         output: *mut f64,
         length: usize,
     ) -> i32;
+    fn whitebase_cpp_sum_f64_avx(input: *const f64, length: usize, output: *mut f64) -> i32;
 }
 
 /// C++ Scalarバックエンドで2つの`f32`配列を加算します。
@@ -99,6 +101,13 @@ pub fn add_f64_scalar(lhs: f64, rhs: f64) -> f64 {
     // 値渡しの`f64`を受け取り、値渡しの`f64`を返すC ABI関数です。
     unsafe { whitebase_cpp_add_f64_scalar(lhs, rhs) }
 }
+/// C++ Scalarバックエンドで`f64`配列の要素を合計します。
+#[must_use]
+pub fn sum_f64_scalar(input: &[f64]) -> f64 {
+    // SAFETY:
+    // ポインターと長さは同じ有効なスライスから取得しています。
+    unsafe { whitebase_cpp_sum_f64_scalar(input.as_ptr(), input.len()) }
+}
 
 /// C++ AVXバックエンドが現在の環境で利用可能か返します。
 #[must_use]
@@ -145,7 +154,6 @@ pub fn add_f64_array_avx(
     output: &mut [f64],
 ) -> Result<bool, ArrayLengthError> {
     validate_lengths(lhs, rhs, output)?;
-
     // SAFETY:
     // 各ポインターは有効なスライスから取得しており、
     // 呼び出し前にすべての長さが一致することを確認しています。
@@ -154,6 +162,20 @@ pub fn add_f64_array_avx(
     };
 
     Ok(executed != 0)
+}
+/// C++ AVXバックエンドで`f64`配列の要素を合計します。
+///
+/// AVXが利用できない場合は`None`を返します。
+#[must_use]
+pub fn sum_f64_avx(input: &[f64]) -> Option<f64> {
+    let mut output = 0.0;
+    // SAFETY:
+    // 入力ポインターと長さは同じ有効なスライスから取得しており、
+    // 出力ポインターは有効な`f64`を指しています。
+    let executed =
+        unsafe { whitebase_cpp_sum_f64_avx(input.as_ptr(), input.len(), &raw mut output) };
+
+    (executed != 0).then_some(output)
 }
 
 fn validate_lengths<T>(lhs: &[T], rhs: &[T], output: &[T]) -> Result<(), ArrayLengthError> {
@@ -185,6 +207,19 @@ mod tests {
 
         assert_eq!(output[0].to_bits(), 0x3fd3_3333_3333_3334);
         assert_eq!(output[1..], [11.0, 22.0, 33.0, 44.0, 55.0]);
+    }
+
+    #[test]
+    fn sums_f64_arrays() {
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
+        assert_eq!(sum_f64_scalar(&input), 55.0);
+        assert_eq!(sum_f64_scalar(&[]), 0.0);
+
+        if is_avx_available() {
+            assert_eq!(sum_f64_avx(&input), Some(55.0));
+            assert_eq!(sum_f64_avx(&[]), Some(0.0));
+        }
     }
 
     #[test]
