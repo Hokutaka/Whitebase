@@ -644,7 +644,7 @@ echo     Check that the WebAssembly crate compiles.
 echo.
 echo   cpp-check
 echo     C++からC APIとCoreを経由して計算バックエンドを呼び出せることを確認します。
-echo     Check C++ -> C API -> Core -> computation backend routing.
+echo     Check C++ to C API to Core to computation backend routing.
 echo.
 echo   cpp-backend-check
 echo     C++計算バックエンドのScalar版とAVX版を確認します。
