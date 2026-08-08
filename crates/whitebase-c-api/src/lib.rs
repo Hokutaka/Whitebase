@@ -299,6 +299,18 @@ mod tests {
     }
 
     #[test]
+    fn cpp_scalar_sum_runs_through_c_api_and_core() {
+        let input = [1.0, 2.0, 3.0, 4.0, 5.0];
+        let mut output = -1.0;
+
+        // SAFETY: all pointers refer to valid storage for the supplied lengths.
+        let status = unsafe { whitebase_sum_f64(2, input.as_ptr(), input.len(), &raw mut output) };
+
+        assert_eq!(status, STATUS_OK);
+        assert_eq!(output, 15.0);
+    }
+
+    #[test]
     fn assembly_scalar_sum_runs_through_c_api_and_core() {
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let mut output = -1.0;
