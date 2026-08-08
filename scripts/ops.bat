@@ -186,6 +186,11 @@ echo [Whitebase] Checking WebAssembly crate...
 cargo check -p %WASM_PACKAGE% --target %WASM_TARGET% || goto error
 
 echo.
+echo [Whitebase] Generating WebAssembly package for frontend check...
+call :wasm_dev_build
+if errorlevel 1 goto error
+
+echo.
 echo [Whitebase] Building frontend...
 call npm --prefix "%APP_DIR%" run build || goto error
 
@@ -295,6 +300,17 @@ if errorlevel 1 (
 )
 
 echo [Whitebase] Assembly smoke test passed.
+exit /b 0
+
+:wasm_dev_build
+rem WebAssemblyの開発用成果物を生成
+echo [Whitebase] Building WebAssembly package (Development)...
+wasm-pack build "%WASM_DIR%" ^
+    --target web ^
+    --dev ^
+    --out-dir "%CD%\%WASM_OUT_DIR%"
+
+if errorlevel 1 exit /b 1
 exit /b 0
 
 :wasm_build
@@ -553,11 +569,7 @@ goto success
 
 :web_dev
 rem WebAssemblyを開発用ビルドしてWeb開発サーバーを起動
-echo [Whitebase] Building WebAssembly package for development...
-wasm-pack build "%WASM_DIR%" ^
-    --target web ^
-    --dev ^
-    --out-dir "%CD%\%WASM_OUT_DIR%"
+call :wasm_dev_build
 if errorlevel 1 goto error
 
 echo.
