@@ -19,52 +19,150 @@ Examples include:
 - WebAssembly
 - Desktop and browser-based user interfaces
 
-## Running Whitebase
+## How to Verify Operation
 
 Whitebase can be tested in the following three ways.
 
-| Method | Server required | Core invocation path |
-|---|---:|---|
-| Tauri application | No | Tauri → Rust → Whitebase Core |
-| GitHub Pages | Yes | Browser → HTTP → Whitebase Server → Core |
-| Local web application | Yes | Browser → HTTP → Whitebase Server → Core |
+| Execution method | Server | Core call path |
+| --- | ---: | --- |
+| Tauri app | Not required | Tauri → Tauri Commands → Runner → Core |
+| GitHub Pages | Optional | Browser → WASM → Runner → Core, or Browser → HTTP → Whitebase Server → Runner → Core |
+| Local web app | Optional | Browser → WASM → Runner → Core, or Browser → HTTP → Whitebase Server → Runner → Core |
 
-### Tauri Application
+In browser environments, the execution route is selected when the application starts.
 
-Start the Whitebase App.
+1. In a Tauri environment, Tauri Commands are used.
+2. In a browser environment, Whitebase checks the Whitebase Server health API.
+3. If the Server is available, the HTTP API is used.
+4. If the Server is unavailable, WebAssembly is used.
 
-The Tauri application does not require Whitebase Server. It calls Whitebase Core directly from the Rust code embedded in the application.
+The selected execution route does not change during the current session.
+Reload the page after starting or stopping the Server to detect the route again.
 
-### GitHub Pages + Whitebase Server
+### Tauri App
 
-Start Whitebase Server, then open the Whitebase App hosted on GitHub Pages.
+Start Whitebase App.
 
-GitHub Pages provides only the static frontend. Computation is performed through the Whitebase Server HTTP API.
+```powershell
+npm --prefix apps\whitebase-app run tauri dev
+```
 
-### Local Web Application + Whitebase Server
+Alternatively, use Whitebase Operations.
 
-Start Whitebase Server and the local frontend development server.
+```powershell
+scripts\ops.bat dev
+```
+
+The Tauri app does not require Whitebase Server.
+
+Computation is routed from Tauri Commands through Runner and Whitebase Core
+to the available native backends.
+
+```text
+Tauri
+→ Tauri Commands
+→ Runner
+→ Whitebase Core
+→ Native backend
+```
+
+### GitHub Pages
+
+Whitebase App on GitHub Pages automatically selects an execution route
+depending on whether Whitebase Server is available.
+
+If Whitebase Server is available, the HTTP API is used.
+
+```text
+Browser
+→ HTTP
+→ Whitebase Server
+→ Runner
+→ Whitebase Core
+→ Native backend
+```
+
+If Whitebase Server is unavailable, WebAssembly is used.
+
+```text
+Browser
+→ WebAssembly
+→ Runner
+→ Whitebase Core
+→ Rust backend
+```
+
+In the WebAssembly environment, Rust Scalar and Rust SIMD backends are available.
+
+On wasm32, the Rust SIMD backend uses WebAssembly SIMD128.
+
+### Local Web App
+
+Start the local frontend development server.
+
+```powershell
+npm --prefix apps\whitebase-app run dev
+```
+
+Alternatively, start it together with a development WebAssembly build.
+
+```powershell
+scripts\ops.bat web-dev
+```
+
+If Whitebase Server is not running, the WebAssembly route is used.
+
+To test the Whitebase Server route, start the Server in another terminal.
 
 ```powershell
 cargo run -p whitebase-server
-npm --prefix apps/whitebase-app run dev
 ```
 
-Open the local URL displayed by the development server in your browser.
+Then reload the local web app.
+
+If the Server is available, the HTTP API route is selected.
+
+### WebAssembly Build Configuration
+
+Development and Release WebAssembly builds are generated into the same
+`apps/whitebase-app/src/wasm` directory, but use different build profiles.
+
+For development, use the Debug WebAssembly build.
+
+```powershell
+scripts\ops.bat web-dev
+```
+
+To generate browser-compatible Release WebAssembly artifacts, use:
+
+```powershell
+scripts\ops.bat wasm-build
+```
+
+To build the web frontend for Release, Whitebase first generates the Release
+WebAssembly artifacts and then builds the frontend.
+
+```powershell
+scripts\ops.bat web-build
+```
 
 ### Differences Between Build Configurations
 
-Development and Release environments may differ in the following areas:
+Development and Release builds may differ in the following areas:
 
-- Rust optimization levels
-- Debug and Release versions of the C++ and Assembly libraries
+- Rust optimization level
+- WebAssembly optimization level
+- C++ and Assembly Debug / Release libraries
 - SIMD performance
 - Benchmark results
-- Output locations for executables and application bundles
+- Executable and bundle output locations
 
-Benchmark results in particular may differ significantly between Debug and Release builds.
+Benchmark results can differ significantly between Debug and Release builds.
+Use Release builds as the baseline when comparing performance.
 
-Calculation results are expected to be validated across backends regardless of the selected build configuration.
+Computation correctness is expected to be validated across backends regardless
+of the build configuration.
+
 
 ## Architecture
 

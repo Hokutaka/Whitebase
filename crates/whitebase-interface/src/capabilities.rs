@@ -40,15 +40,15 @@ impl BackendCapabilities {
         }
     }
 
-    /// 256-bit AVXの`f32`配列加算能力を生成します。
+    /// SIMDによる`f32`配列加算能力を生成します。
     #[must_use]
-    pub const fn avx_add_f32() -> Self {
+    pub const fn simd_add_f32(vector_width_f32: usize) -> Self {
         Self {
             add_f32: true,
             add_f64: false,
             add_scalar_f64: false,
             sum_f64: false,
-            vector_width_f32: 8,
+            vector_width_f32,
             vector_width_f64: 0,
         }
     }

@@ -45,7 +45,7 @@ define_unavailable_backend!(
 define_unavailable_backend!(
     CppAvxBackend,
     BackendKind::CppAvx,
-    BackendCapabilities::avx_add_f32().with_add_f64(4)
+    BackendCapabilities::simd_add_f32(8).with_add_f64(4)
 );
 
 define_unavailable_backend!(
@@ -59,5 +59,5 @@ define_unavailable_backend!(
 define_unavailable_backend!(
     AssemblyAvxBackend,
     BackendKind::AssemblyAvx,
-    BackendCapabilities::avx_add_f32().with_add_f64(4)
+    BackendCapabilities::simd_add_f32(8).with_add_f64(4)
 );

@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::hint::black_box;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
+use web_time::Instant;
 
 use whitebase_core::{BackendKind, ComputeError, Whitebase};
 

@@ -6,3 +6,4 @@ publish = false
 
 [dependencies]
 whitebase-core = { path = "../whitebase-core" }
+web-time = "1.1"

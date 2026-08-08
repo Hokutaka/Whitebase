@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn capabilities_report_supported_operation() {
-        let capabilities = BackendCapabilities::avx_add_f32().with_add_f64(4);
+        let capabilities = BackendCapabilities::simd_add_f32(8).with_add_f64(4);
 
         assert!(capabilities.supports(OperationKind::AddF32));
         assert!(capabilities.supports(OperationKind::AddF64));
