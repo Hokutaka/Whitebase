@@ -115,6 +115,8 @@ const CHECK_ALL_TASKS: &[Task] = &[
     Task::CheckClippy,
     Task::TestWorkspace,
     Task::CheckWasm,
+    // Frontend buildが参照するWasmのJavaScript/TypeScript bindingを生成する。
+    Task::BuildWasm,
     // Frontend buildが参照するTypeScript/Viteをlockfileどおりに準備する。
     Task::InstallFrontendDependencies,
     Task::BuildFrontend,
@@ -1623,13 +1625,26 @@ mod tests {
                 .expect("task must be present")
         }
 
+        assert!(index(CHECK_ALL_TASKS, Task::CheckWasm) < index(CHECK_ALL_TASKS, Task::BuildWasm));
+        assert!(
+            index(CHECK_ALL_TASKS, Task::BuildWasm)
+                < index(CHECK_ALL_TASKS, Task::InstallFrontendDependencies)
+        );
         assert!(
             index(CHECK_ALL_TASKS, Task::InstallFrontendDependencies)
                 < index(CHECK_ALL_TASKS, Task::BuildFrontend)
         );
         assert!(
+            index(BUILD_ALL_TASKS, Task::BuildWasm)
+                < index(BUILD_ALL_TASKS, Task::InstallFrontendDependencies)
+        );
+        assert!(
             index(BUILD_ALL_TASKS, Task::InstallFrontendDependencies)
                 < index(BUILD_ALL_TASKS, Task::BuildFrontend)
+        );
+        assert!(
+            index(RELEASE_ALL_TASKS, Task::BuildWasmRelease)
+                < index(RELEASE_ALL_TASKS, Task::InstallFrontendDependencies)
         );
         assert!(
             index(RELEASE_ALL_TASKS, Task::InstallFrontendDependencies)

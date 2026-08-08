@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import {
+  getApiBaseUrl,
   initializeComputeClient,
   type ExecutionRoute,
 } from "./compute-client";
@@ -94,13 +95,20 @@ function requireElement<T extends Element>(selector: string): T {
   return element;
 }
 
-const API_BASE_URL = "http://127.0.0.1:1430";
+const API_BASE_URL = getApiBaseUrl();
 
 const executionRoute = initializeComputeClient();
 
-void executionRoute.then((route: ExecutionRoute) => {
-  console.log(`[Whitebase] Execution route: ${route}`);
-});
+void executionRoute.then(
+  (route: ExecutionRoute) => {
+    console.log(`[Whitebase] Execution route: ${route}`);
+  },
+  (error: unknown) => {
+    console.error(
+      `[Whitebase] Execution route initialization failed: ${errorMessage(error)}`,
+    );
+  },
+);
 
 const app = requireElement<HTMLDivElement>("#app");
 app.innerHTML = `

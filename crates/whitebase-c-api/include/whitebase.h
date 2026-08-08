@@ -57,6 +57,12 @@ WHITEBASE_API int32_t whitebase_backend_supports(
     uint32_t operation,
     int32_t* supported);
 
+/*
+ * lhsとrhsはそれぞれlength要素を読み取り可能で、
+ * outputはlength要素を書き込み可能である必要があります。
+ * length == 0の場合はnull pointerを許容します。
+ * outputが指す領域はlhsおよびrhsが指す領域と重なってはいけません。
+ */
 WHITEBASE_API int32_t whitebase_add_f32(
     uint32_t backend,
     const float* lhs,
@@ -64,6 +70,12 @@ WHITEBASE_API int32_t whitebase_add_f32(
     float* output,
     size_t length);
 
+/*
+ * lhsとrhsはそれぞれlength要素を読み取り可能で、
+ * outputはlength要素を書き込み可能である必要があります。
+ * length == 0の場合はnull pointerを許容します。
+ * outputが指す領域はlhsおよびrhsが指す領域と重なってはいけません。
+ */
 WHITEBASE_API int32_t whitebase_add_f64(
     uint32_t backend,
     const double* lhs,

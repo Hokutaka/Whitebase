@@ -286,6 +286,17 @@ pub unsafe extern "C" fn whitebase_sum_f64(
 mod tests {
     use super::*;
 
+    fn backend_is_available(backend: u32) -> bool {
+        let mut available = 0;
+
+        // SAFETY: availableは書き込み可能なi32 1要素を指しています。
+        let status = unsafe { whitebase_backend_is_available(backend, &raw mut available) };
+
+        assert_eq!(status, STATUS_OK);
+
+        available != 0
+    }
+
     #[test]
     fn rust_scalar_sum_runs_through_c_api_and_core() {
         let input = [1.0, 2.0, 3.0, 4.0];
@@ -300,6 +311,10 @@ mod tests {
 
     #[test]
     fn cpp_scalar_sum_runs_through_c_api_and_core() {
+        if !backend_is_available(2) {
+            return;
+        }
+
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let mut output = -1.0;
 
@@ -312,10 +327,14 @@ mod tests {
 
     #[test]
     fn assembly_scalar_sum_runs_through_c_api_and_core() {
+        if !backend_is_available(4) {
+            return;
+        }
+
         let input = [1.0, 2.0, 3.0, 4.0, 5.0];
         let mut output = -1.0;
 
-        // SAFETY: all pointers refer to valid storage for the supplied lengths.
+        // SAFETY: inputとoutputは指定した長さに対して有効な領域を指しています。
         let status = unsafe { whitebase_sum_f64(4, input.as_ptr(), input.len(), &raw mut output) };
 
         assert_eq!(status, STATUS_OK);
@@ -327,7 +346,7 @@ mod tests {
         let input = [1.0];
         let mut output = -1234.0;
 
-        // SAFETY: all pointers refer to valid storage for the supplied lengths.
+        // SAFETY: inputとoutputは指定した長さに対して有効な領域を指しています。
         let status =
             unsafe { whitebase_sum_f64(u32::MAX, input.as_ptr(), input.len(), &raw mut output) };
 

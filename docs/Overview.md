@@ -26,15 +26,15 @@ Whitebase can be tested in the following three ways.
 | Execution method | Server | Core call path |
 | --- | ---: | --- |
 | Tauri app | Not required | Tauri → Tauri Commands → Runner → Core |
-| GitHub Pages | Optional | Browser → WASM → Runner → Core, or Browser → HTTP → Whitebase Server → Runner → Core |
+| GitHub Pages | Optional | Browser → WASM → Runner → Core, or, when loopback access is available, Browser → HTTP → Whitebase Server → Runner → Core |
 | Local web app | Optional | Browser → WASM → Runner → Core, or Browser → HTTP → Whitebase Server → Runner → Core |
 
 In browser environments, the execution route is selected when the application starts.
 
 1. In a Tauri environment, Tauri Commands are used.
 2. In a browser environment, Whitebase checks the Whitebase Server health API.
-3. If the Server is available, the HTTP API is used.
-4. If the Server is unavailable, WebAssembly is used.
+3. If the Whitebase Server Health API can be reached, the HTTP API is used.
+4. If the Server cannot be reached, WebAssembly is used.
 
 The selected execution route does not change during the current session.
 Reload the page after starting or stopping the Server to detect the route again.
@@ -68,10 +68,12 @@ Tauri
 
 ### GitHub Pages
 
-Whitebase App on GitHub Pages automatically selects an execution route
-depending on whether Whitebase Server is available.
+Whitebase App on GitHub Pages checks the Whitebase Server Health API at startup
+and automatically selects an execution route.
 
-If Whitebase Server is available, the HTTP API is used.
+If the browser permits loopback HTTP access and the Whitebase Server Health API
+can be reached, the HTTP API is used. If the Server cannot be reached because of
+browser security settings or permissions, the application falls back to WebAssembly.
 
 ```text
 Browser
@@ -82,7 +84,7 @@ Browser
 → Native backend
 ```
 
-If Whitebase Server is unavailable, WebAssembly is used.
+If Whitebase Server is unavailable or cannot be reached, WebAssembly is used.
 
 ```text
 Browser
@@ -148,7 +150,7 @@ scripts\ops.bat web-build
 
 ### Differences Between Build Configurations
 
-Development and Release builds may differ in the following areas:
+Debug and Release builds may differ in the following areas:
 
 - Rust optimization level
 - WebAssembly optimization level
@@ -166,9 +168,10 @@ of the build configuration.
 
 ## Architecture
 
-Tauri uses IPC, while regular web browsers use the HTTP API.
+Tauri uses IPC, while regular web browsers select either the local HTTP API
+or WebAssembly at startup.
 
-Both paths use the same Runner and Core.
+These execution routes share the same Runner and Core layers.
 
 ![Architecture diagram](/docs/diagrams/structure/architecture.svg)
 
@@ -207,8 +210,7 @@ Release builds are recommended instead of Debug builds when comparing performanc
 
 ### Core API
 
-Rust API、演算、バックエンド、エラーについては [Core API](api/Core-API.md) を参照してください。
-
+See [Core API](api/Core-API.md) for the Rust API, operations, backends, and errors.
 ### HTTP API
 
 Whitebase Server exposes a local HTTP/JSON API.

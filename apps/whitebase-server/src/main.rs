@@ -167,6 +167,7 @@ fn map_benchmark_error(error: RunnerError) -> ApiError {
             | RunnerError::WarmupIterationsTooLarge { .. }
             | RunnerError::MeasuredIterationsTooLarge { .. }
             | RunnerError::ZeroMeasuredIterations
+            | RunnerError::BenchmarkWorkloadTooLarge { .. }
             | RunnerError::SumF64RequiresF64
     );
 

@@ -13,7 +13,7 @@ APIや構成は頻繁に変わる予定です。
 - C ABIとFFI
 - Debug / Releaseビルド
 - TauriのIPC
-- Http + JSON
+- HTTP + JSON
 - WebAssembly
 - デスクトップUIとブラウザUI
 
@@ -24,15 +24,15 @@ Whitebaseは、以下の3つの方法で動作を確認できます。
 | 実行方法 | Server | Coreの呼び出し経路 |
 | --- | ---: | --- |
 | Tauriアプリ | 不要 | Tauri → Tauri Commands → Runner → Core |
-| GitHub Pages | 任意 | Browser → WASM → Runner → Core、または Browser → HTTP → Whitebase Server → Runner → Core |
+| GitHub Pages | 任意 | Browser → WASM → Runner → Core、またはloopback接続が利用可能な場合は Browser → HTTP → Whitebase Server → Runner → Core |
 | ローカルWebアプリ | 任意 | Browser → WASM → Runner → Core、または Browser → HTTP → Whitebase Server → Runner → Core |
 
 Browser環境では、アプリ起動時に実行経路を判定します。
 
 1. Tauri環境の場合はTauri Commandsを使用します。
 2. Browser環境ではWhitebase ServerのHealth APIを確認します。
-3. Serverが利用可能な場合はHTTP APIを使用します。
-4. Serverが利用できない場合はWebAssemblyを使用します。
+3. Whitebase ServerのHealth APIへ接続できた場合はHTTP APIを使用します。
+4. Serverへ接続できない場合はWebAssemblyを使用します。
 
 選択された実行経路は、そのセッション中は変更されません。
 Serverの起動・停止後に実行経路を切り替える場合は、ページを再読み込みしてください。
@@ -66,10 +66,12 @@ Tauri
 
 ### GitHub Pages
 
-GitHub Pages上のWhitebase Appは、Whitebase Serverの有無に応じて
-実行経路を自動的に選択します。
+GitHub Pages上のWhitebase Appは、起動時にWhitebase ServerのHealth APIを確認し、
+接続可否に応じて実行経路を自動的に選択します。
 
-Whitebase Serverが利用可能な場合は、HTTP APIを使用します。
+ブラウザがloopback HTTP接続を許可し、Whitebase Serverが利用可能な場合は、
+HTTP APIを使用します。ブラウザのセキュリティ設定や権限によってServerへ
+接続できない場合は、WebAssemblyへフォールバックします。
 
 ```text
 Browser
@@ -80,7 +82,8 @@ Browser
 → Native backend
 ```
 
-Whitebase Serverが利用できない場合は、WebAssemblyを使用します。
+Whitebase Serverが利用できない、または接続できない場合は、
+WebAssemblyを使用します。Whitebase Serverが利用できない場合は、WebAssemblyを使用します。
 
 ```text
 Browser
@@ -90,9 +93,9 @@ Browser
 → Rust backend
 ```
 
-WebAssembly環境では、Rust ScalarおよびRust SIMD backendを利用できます。
+WebAssembly環境では、Rust ScalarおよびRust SIMDバックエンドを利用できます。
 
-Rust SIMDはwasm32環境ではWebAssembly SIMD128を使用します。
+Rust SIMDバックエンドは、wasm32環境ではWebAssembly SIMD128を使用します。
 
 ### ローカルWebアプリ
 
@@ -162,8 +165,11 @@ scripts\ops.bat web-build
 検証されることを前提とします。
 
 ## アーキテクチャ
-TauriではIPC、通常のブラウザではHTTP APIを通して、  
-同じRunnerとCoreを利用します。
+
+TauriではIPCを使用し、通常のブラウザでは起動時に
+HTTP APIまたはWebAssemblyの実行経路を選択します。
+
+どの実行経路でもRunnerとCoreを中心とした共通の構成を利用します。
 
 ![モジュール構成図](/docs/diagrams/structure/architecture.svg)
 
@@ -172,7 +178,7 @@ TauriではIPC、通常のブラウザではHTTP APIを通して、
 ### モジュール構成図
 
 矢印は、モジュール間の依存・利用関係または計算結果の受け渡し方向を示します。  
-破線のモジュールは、将来的な追加を予定しています。
+破線の枠線で示したモジュールは、将来的な追加を予定しています。
 
 ![モジュール構成図](/docs/diagrams/structure//module.svg)
 
@@ -185,20 +191,26 @@ TauriではIPC、通常のブラウザではHTTP APIを通して、
 
 ## 実装済みのベンチマークについて
 ```text
-入力生成→参照BackEndをウォームアップ→複数回実行して時間計測→最小・最大。平均・合計時間の集計→参照結果との誤差を比較→Tauri・ブラウザへレポートを返す
+入力生成
+→ 参照バックエンドをウォームアップ
+→ 複数回実行して時間を計測
+→ 最小・最大・平均・合計時間を集計
+→ 参照結果との誤差を比較
+→ Tauri・ブラウザへレポートを返す
 ```
 
 ※ベンチマーク結果はビルド構成、CPU、キャッシュ、メモリ帯域、OSのスケジューリングなどに影響されます。性能比較ではDebugではなくRelease構成を推奨します。
 
 ### Core API
 
-See [Core API](api/Core-API.ja.md) for the Rust API, operations, backends, and errors.
-
+Rust API、演算、バックエンド、エラーの詳細については、
+[Core API](api/Core-API.ja.md)を参照してください。
 
 ### HTTP API
 
-`Whitebase Server`は`local HTTP/JSON API`を公開しています
+Whitebase ServerはローカルHTTP/JSON APIを公開しています。
 
-See [HTTP API](api/HTTP-API.ja.md) for endpoint and request/response details.
+エンドポイントやリクエスト・レスポンスの詳細については、
+[HTTP API](api/HTTP-API.ja.md)を参照してください。
 
 

@@ -6,6 +6,7 @@ use crate::{
 
 pub const MAX_INPUT_LENGTH: usize = 10_000_000;
 pub const MAX_ITERATIONS: usize = 10_000;
+pub const MAX_TOTAL_ELEMENT_ITERATIONS: usize = 1_000_000_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BenchmarkOperation {
@@ -112,6 +113,25 @@ fn validate_request(request: BenchmarkRequest) -> Result<(), RunnerError> {
         return Err(RunnerError::ZeroMeasuredIterations);
     }
 
+    let total_iterations = request
+        .warmup_iterations
+        .checked_add(request.measured_iterations)
+        .ok_or(RunnerError::BenchmarkWorkloadTooLarge {
+            maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
+        })?;
+
+    let total_element_iterations = request.input_length.checked_mul(total_iterations).ok_or(
+        RunnerError::BenchmarkWorkloadTooLarge {
+            maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
+        },
+    )?;
+
+    if total_element_iterations > MAX_TOTAL_ELEMENT_ITERATIONS {
+        return Err(RunnerError::BenchmarkWorkloadTooLarge {
+            maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
+        });
+    }
+
     Ok(())
 }
 
@@ -193,5 +213,28 @@ impl From<SumF64Report> for BenchmarkReport {
             absolute_tolerance: report.absolute_tolerance,
             results: report.results,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_excessive_total_benchmark_workload() {
+        let request = BenchmarkRequest {
+            operation: BenchmarkOperation::AddArray,
+            precision: BenchmarkPrecision::F32,
+            input_length: MAX_INPUT_LENGTH,
+            warmup_iterations: 100,
+            measured_iterations: 1,
+        };
+
+        assert_eq!(
+            run_benchmark(request),
+            Err(RunnerError::BenchmarkWorkloadTooLarge {
+                maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
+            })
+        );
     }
 }

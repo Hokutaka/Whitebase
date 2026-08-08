@@ -54,6 +54,10 @@ pub enum RunnerError {
     },
 
     SumF64RequiresF64,
+
+    BenchmarkWorkloadTooLarge {
+        maximum: usize,
+    },
 }
 
 impl fmt::Display for RunnerError {
@@ -120,6 +124,13 @@ impl fmt::Display for RunnerError {
 
             Self::SumF64RequiresF64 => {
                 write!(formatter, "sum-f64 benchmark requires f64 precision")
+            }
+
+            Self::BenchmarkWorkloadTooLarge { maximum } => {
+                write!(
+                    formatter,
+                    "benchmark workload must not exceed {maximum} element-iterations"
+                )
             }
         }
     }

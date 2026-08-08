@@ -1,12 +1,17 @@
 flowchart TB
-    subgraph Frontends["Frontend"]
+    subgraph Frontends["Frontend / External Consumers"]
+        direction LR
         Tauri["Tauri WebView"]
         Browser["Browser<br/>(Local / GitHub Pages)"]
+        External["External Applications<br/>C / C++ / C# / other"]
     end
 
     subgraph ApplicationBoundaries["Application Boundary"]
+        direction LR
         TauriCommand["Tauri Commands<br/>IPC / invoke()"]
         HttpServer["whitebase-server<br/>HTTP + JSON"]
+        Wasm["whitebase-wasm<br/>WebAssembly"]
+        CApi["whitebase-c-api<br/>C ABI"]
     end
 
     Runner["whitebase-runner<br/>入力生成・ウォームアップ<br/>計測・結果比較・レポート生成"]
@@ -18,26 +23,55 @@ flowchart TB
     Bridge["whitebase-backend-bridge<br/>各Backendを共通Interfaceへ統合"]
 
     subgraph BackendConnections["Backend Implementations / Bindings"]
-        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD"]
+        direction LR
 
-        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI<br/>Windows x64 / MSVC"]
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / wasm32 SIMD128"]
 
-        AssemblyAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI<br/>Windows x64 / MSVC"]
+        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
+
+        AssemblyAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
+
+        WindowsGnuAdapter["whitebase-windows-gnu-adapter<br/>Windows GNU native binding"]
 
         Unavailable["unavailable<br/>非対応環境用Backend"]
     end
 
-    subgraph NativeLibraries["Native Libraries — Windows x64 / MSVC"]
-        CppLibrary["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
+    subgraph NativeLibraries["Native Libraries"]
+        direction LR
 
-        AssemblyLibrary["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
+        MsvcNative["Windows x64 / MSVC<br/>C++ / MASM<br/>Scalar / AVX"]
+
+        LinuxNative["Linux x86_64 / GNU<br/>GCC / NASM<br/>Scalar / AVX"]
+
+        WindowsGnuNative["Windows x64 / GNU<br/>GCC / NASM<br/>Scalar / AVX"]
     end
 
+    %% --------------------------------------------------------
+    %% Entry routes
+    %% --------------------------------------------------------
+
     Tauri -->|"invoke()"| TauriCommand
-    Browser -->|"fetch()"| HttpServer
+
+    Browser -->|"Server available: HTTP"| HttpServer
+    Browser -->|"Server unavailable: WebAssembly"| Wasm
+
+    External -->|"C ABI"| CApi
+
+    %% --------------------------------------------------------
+    %% Application boundaries
+    %% --------------------------------------------------------
 
     TauriCommand --> Runner
     HttpServer --> Runner
+
+    Wasm -->|"Observation / Benchmark"| Runner
+    Wasm -->|"Primitive compute API"| Core
+
+    CApi --> Core
+
+    %% --------------------------------------------------------
+    %% Common execution path
+    %% --------------------------------------------------------
 
     Runner --> Core
     Core --> Bridge
@@ -45,10 +79,24 @@ flowchart TB
     Core -. "uses contract" .-> Interface
     Bridge -. "implements contract" .-> Interface
 
+    %% --------------------------------------------------------
+    %% Backend routing
+    %% --------------------------------------------------------
+
     Bridge --> RustBackend
     Bridge --> CppAdapter
     Bridge --> AssemblyAdapter
-    Bridge -. "other targets" .-> Unavailable
+    Bridge --> WindowsGnuAdapter
+    Bridge -. "unsupported targets" .-> Unavailable
 
-    CppAdapter --> CppLibrary
-    AssemblyAdapter --> AssemblyLibrary
+    %% --------------------------------------------------------
+    %% Native implementations
+    %% --------------------------------------------------------
+
+    CppAdapter --> MsvcNative
+    CppAdapter --> LinuxNative
+
+    AssemblyAdapter --> MsvcNative
+    AssemblyAdapter --> LinuxNative
+
+    WindowsGnuAdapter --> WindowsGnuNative
