@@ -82,6 +82,7 @@ enum Task {
     CheckAssembly,
     BuildWorkspace,
     BuildWorkspaceRelease,
+    InstallFrontendDependencies,
     BuildFrontend,
     BuildWasm,
     BuildWasmRelease,
@@ -114,6 +115,8 @@ const CHECK_ALL_TASKS: &[Task] = &[
     Task::CheckClippy,
     Task::TestWorkspace,
     Task::CheckWasm,
+    // Frontend buildが参照するTypeScript/Viteをlockfileどおりに準備する。
+    Task::InstallFrontendDependencies,
     Task::BuildFrontend,
     Task::CheckCppClient,
     Task::CheckCppAdapter,
@@ -130,13 +133,16 @@ const BUILD_ALL_TASKS: &[Task] = &[
     Task::BuildWindowsGnuNative,
     Task::BuildWorkspace,
     Task::BuildWasm,
+    // Frontend buildが参照するTypeScript/Viteをlockfileどおりに準備する。
+    Task::InstallFrontendDependencies,
     // Wasm生成物を含んだ状態でFrontendを組み立てる。
     Task::BuildFrontend,
     Task::BuildControlCenterRelease,
 ];
 
 const RELEASE_ALL_TASKS: &[Task] = &[
-    // WindowsのMSVC/MASM Releaseビルドが参照するRust C APIを先に準備する。
+    // C API自身が必要なMSVC/MASM Releaseライブラリを先に準備してからRust側をビルドする。
+    // その後のWindows Native Release全体ビルドではC++ ClientがC APIのimport libraryを参照できる。
     // Linuxでは非対応タスクとしてTaskSequence::release_all()が除外する。
     Task::BuildCApiRelease,
     Task::BuildWindowsNativeRelease,
@@ -149,6 +155,8 @@ const RELEASE_ALL_TASKS: &[Task] = &[
     Task::BuildWorkspaceRelease,
     // TauriのbeforeBuildCommandが参照するWasm成果物をReleaseで生成する。
     Task::BuildWasmRelease,
+    // Tauri CLI/TypeScript/Viteをlockfileどおりに準備する。
+    Task::InstallFrontendDependencies,
     // Tauri ReleaseはFrontendのProductionビルドとBundle生成を含む。
     Task::BuildTauriRelease,
     // 実行中のControl CenterがDebug版など、安全に上書きできる場合だけ実行する。
@@ -193,6 +201,7 @@ impl Task {
             Self::CheckAssembly => "Check Assembly",
             Self::BuildWorkspace => "Build Workspace",
             Self::BuildWorkspaceRelease => "Build Workspace Release",
+            Self::InstallFrontendDependencies => "Install Frontend Dependencies",
             Self::BuildFrontend => "Build Frontend",
             Self::BuildWasm => "Build Wasm",
             Self::BuildWasmRelease => "Build Wasm Release",
@@ -227,6 +236,7 @@ impl Task {
             Self::CheckAssembly => "Checking Assembly...",
             Self::BuildWorkspace => "Building Workspace...",
             Self::BuildWorkspaceRelease => "Building Workspace Release...",
+            Self::InstallFrontendDependencies => "Installing Frontend Dependencies...",
             Self::BuildFrontend => "Building Frontend...",
             Self::BuildWasm => "Building Wasm...",
             Self::BuildWasmRelease => "Building Wasm Release...",
@@ -261,6 +271,7 @@ impl Task {
             Self::CheckAssembly => "Assembly check completed successfully",
             Self::BuildWorkspace => "Workspace build completed successfully",
             Self::BuildWorkspaceRelease => "Workspace Release build completed successfully",
+            Self::InstallFrontendDependencies => "Frontend dependencies installed successfully",
             Self::BuildFrontend => "Frontend build completed successfully",
             Self::BuildWasm => "Wasm build completed successfully",
             Self::BuildWasmRelease => "Wasm Release build completed successfully",
@@ -371,6 +382,17 @@ impl Task {
                     "whitebase-control-center",
                 ],
             },
+            Self::InstallFrontendDependencies => CommandSpec {
+                program: if cfg!(windows) { "npm.cmd" } else { "npm" },
+                args: &[
+                    "--prefix",
+                    "apps/whitebase-app",
+                    "ci",
+                    "--prefer-offline",
+                    "--no-audit",
+                    "--no-fund",
+                ],
+            },
             Self::BuildFrontend => CommandSpec {
                 program: if cfg!(windows) { "npm.cmd" } else { "npm" },
                 args: &["--prefix", "apps/whitebase-app", "run", "build"],
@@ -437,13 +459,22 @@ impl Task {
                     r#"$ErrorActionPreference = 'Stop'; $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'; if (-not (Test-Path $vswhere)) { throw "vswhere.exe was not found: $vswhere" }; $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath; if (-not $installationPath) { throw 'Visual Studio with MSBuild was not found.' }; $msbuild = Join-Path $installationPath 'MSBuild\Current\Bin\MSBuild.exe'; & $msbuild 'native\Whitebase.Cpp\Whitebase.Cpp.slnx' /t:Build /m /p:Configuration=Release /p:Platform=x64 /v:minimal; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"#,
                 ],
             },
-            Self::BuildCApi => CommandSpec {
-                program: "cargo",
-                args: &["build", "-p", "whitebase-c-api"],
-            },
+            Self::BuildCApi => {
+                if cfg!(windows) {
+                    CommandSpec {
+                        program: "cmd.exe",
+                        args: &["/C", "scripts\\ops.bat", "c-api-build"],
+                    }
+                } else {
+                    CommandSpec {
+                        program: "cargo",
+                        args: &["build", "-p", "whitebase-c-api"],
+                    }
+                }
+            }
             Self::BuildCApiRelease => CommandSpec {
-                program: "cargo",
-                args: &["build", "--release", "--locked", "-p", "whitebase-c-api"],
+                program: "cmd.exe",
+                args: &["/C", "scripts\\ops.bat", "c-api-release-build"],
             },
             Self::BuildCppClient => CommandSpec {
                 program: "cmd.exe",
@@ -1189,6 +1220,25 @@ mod tests {
     }
 
     #[test]
+    fn frontend_dependencies_use_clean_lockfile_install() {
+        let spec = Task::InstallFrontendDependencies.command_spec();
+        let expected_program = if cfg!(windows) { "npm.cmd" } else { "npm" };
+
+        assert_eq!(spec.program, expected_program);
+        assert_eq!(
+            spec.args,
+            &[
+                "--prefix",
+                "apps/whitebase-app",
+                "ci",
+                "--prefer-offline",
+                "--no-audit",
+                "--no-fund",
+            ]
+        );
+    }
+
+    #[test]
     fn frontend_build_uses_the_platform_npm_launcher() {
         let spec = Task::BuildFrontend.command_spec();
         let expected_program = if cfg!(windows) { "npm.cmd" } else { "npm" };
@@ -1254,11 +1304,24 @@ mod tests {
     }
 
     #[test]
-    fn c_api_build_uses_c_api_package() {
+    fn c_api_build_uses_platform_appropriate_route() {
         let spec = Task::BuildCApi.command_spec();
 
-        assert_eq!(spec.program, "cargo");
-        assert_eq!(spec.args, ["build", "-p", "whitebase-c-api"]);
+        if cfg!(windows) {
+            assert_eq!(spec.program, "cmd.exe");
+            assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "c-api-build"]);
+        } else {
+            assert_eq!(spec.program, "cargo");
+            assert_eq!(spec.args, ["build", "-p", "whitebase-c-api"]);
+        }
+    }
+
+    #[test]
+    fn c_api_release_build_uses_ops_script() {
+        let spec = Task::BuildCApiRelease.command_spec();
+
+        assert_eq!(spec.program, "cmd.exe");
+        assert_eq!(spec.args, ["/C", "scripts\\ops.bat", "c-api-release-build"]);
     }
 
     #[test]
@@ -1549,6 +1612,29 @@ mod tests {
 
         assert_eq!(Task::BuildCApiRelease.is_supported(), expected);
         assert_eq!(Task::BuildWindowsNativeRelease.is_supported(), expected);
+    }
+
+    #[test]
+    fn frontend_dependencies_precede_frontend_consumers_in_sequences() {
+        fn index(tasks: &[Task], expected: Task) -> usize {
+            tasks
+                .iter()
+                .position(|task| *task == expected)
+                .expect("task must be present")
+        }
+
+        assert!(
+            index(CHECK_ALL_TASKS, Task::InstallFrontendDependencies)
+                < index(CHECK_ALL_TASKS, Task::BuildFrontend)
+        );
+        assert!(
+            index(BUILD_ALL_TASKS, Task::InstallFrontendDependencies)
+                < index(BUILD_ALL_TASKS, Task::BuildFrontend)
+        );
+        assert!(
+            index(RELEASE_ALL_TASKS, Task::InstallFrontendDependencies)
+                < index(RELEASE_ALL_TASKS, Task::BuildTauriRelease)
+        );
     }
 
     #[test]
