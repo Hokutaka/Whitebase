@@ -218,7 +218,7 @@ goto success
 :cpp_check
 rem C++からC ABIとCoreを経由したバックエンド接続確認
 echo.
-echo [Whitebase] Checking C++ -> C API -> Core backend routing...
+echo [Whitebase] Checking C++ to C API to Core backend routing...
 
 call :cpp_build
 if errorlevel 1 exit /b 1
@@ -235,7 +235,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [Whitebase] C++ -> C API -> Core smoke test passed.
+echo [Whitebase] C++ to C API to Core smoke test passed.
 exit /b 0
 
 :cpp_backend_check
