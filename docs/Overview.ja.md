@@ -83,7 +83,7 @@ Browser
 ```
 
 Whitebase Serverが利用できない、または接続できない場合は、
-WebAssemblyを使用します。Whitebase Serverが利用できない場合は、WebAssemblyを使用します。
+WebAssemblyを使用します。
 
 ```text
 Browser
