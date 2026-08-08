@@ -2,12 +2,16 @@
 
 #![forbid(unsafe_code)]
 
+mod benchmark;
 mod config;
 mod decimal;
 mod error;
 mod report;
 mod runner;
 
+pub use benchmark::{
+    BenchmarkOperation, BenchmarkPrecision, BenchmarkReport, BenchmarkRequest, run_benchmark,
+};
 pub use config::RunnerConfig;
 pub use error::RunnerError;
 pub use report::{

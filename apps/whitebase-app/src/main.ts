@@ -1,4 +1,14 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+
+import {
+  initializeComputeClient,
+  type ExecutionRoute,
+} from "./compute-client";
+
+import {
+  observe_add_scalar_f64 as observeAddScalarF64Wasm,
+  run_benchmark as runBenchmarkWasm,
+} from "./wasm/whitebase_wasm";
 
 import "./styles.css";
 
@@ -85,7 +95,12 @@ function requireElement<T extends Element>(selector: string): T {
 }
 
 const API_BASE_URL = "http://127.0.0.1:1430";
-const runningInTauri = isTauri();
+
+const executionRoute = initializeComputeClient();
+
+void executionRoute.then((route: ExecutionRoute) => {
+  console.log(`[Whitebase] Execution route: ${route}`);
+});
 
 const app = requireElement<HTMLDivElement>("#app");
 app.innerHTML = `
@@ -641,8 +656,17 @@ function errorMessage(error: unknown): string {
 async function executeScalarF64Observation(
   request: ScalarF64Request,
 ): Promise<ScalarF64Observation> {
-  if (runningInTauri) {
+  const route = await executionRoute;
+
+  if (route === "tauri") {
     return invoke<ScalarF64Observation>("observe_add_scalar_f64", { request });
+  }
+
+  if (route === "wasm") {
+    return observeAddScalarF64Wasm(
+      request.lhs,
+      request.rhs,
+    ) as ScalarF64Observation;
   }
 
   let response: Response;
@@ -656,11 +680,7 @@ async function executeScalarF64Observation(
       body: JSON.stringify(request),
     });
   } catch {
-    throw new Error(
-      "Whitebase Serverに接続できません。" +
-        " cargo run -p whitebase-server" +
-        " を起動してください。",
-    );
+    throw new Error("Whitebase Serverとの接続が失われました。");
   }
 
   if (!response.ok) {
@@ -678,8 +698,20 @@ async function executeScalarF64Observation(
 async function executeBenchmark(
   request: BenchmarkRequest,
 ): Promise<BenchmarkReport> {
-  if (runningInTauri) {
+  const route = await executionRoute;
+
+  if (route === "tauri") {
     return invoke<BenchmarkReport>("run_benchmark", { request });
+  }
+
+  if (route === "wasm") {
+    return runBenchmarkWasm(
+      request.operation,
+      request.precision,
+      request.inputLength,
+      request.warmupIterations,
+      request.measuredIterations,
+    ) as BenchmarkReport;
   }
 
   let response: Response;
@@ -693,11 +725,7 @@ async function executeBenchmark(
       body: JSON.stringify(request),
     });
   } catch {
-    throw new Error(
-      "Whitebase Serverに接続できません。" +
-        " cargo run -p whitebase-server" +
-        " を起動してください。",
-    );
+    throw new Error("Whitebase Serverとの接続が失われました。");
   }
 
   if (!response.ok) {

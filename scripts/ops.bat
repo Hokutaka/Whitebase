@@ -165,12 +165,6 @@ cargo clippy --workspace --all-targets -- -D warnings
 if errorlevel 1 goto error
 goto success
 
-echo.
-echo [Whitebase] Running Clippy...
-cargo clippy --workspace --all-targets -- -D warnings
-if errorlevel 1 goto error
-goto success
-
 :check
 rem 総合チェック
 echo [Whitebase] Checking Rust formatting...
@@ -190,6 +184,11 @@ cargo test --workspace || goto error
 echo.
 echo [Whitebase] Checking WebAssembly crate...
 cargo check -p %WASM_PACKAGE% --target %WASM_TARGET% || goto error
+
+echo.
+echo [Whitebase] Generating WebAssembly package for frontend check...
+call :wasm_dev_build
+if errorlevel 1 goto error
 
 echo.
 echo [Whitebase] Building frontend...
@@ -303,15 +302,32 @@ if errorlevel 1 (
 echo [Whitebase] Assembly smoke test passed.
 exit /b 0
 
-:wasm_build
-rem WebAssemblyのブラウザ用成果物を生成
-echo [Whitebase] Building WebAssembly package...
+:wasm_dev_build
+rem WebAssemblyの開発用成果物を生成
+echo [Whitebase] Building WebAssembly package (Development)...
 wasm-pack build "%WASM_DIR%" ^
     --target web ^
     --dev ^
     --out-dir "%CD%\%WASM_OUT_DIR%"
+
+if errorlevel 1 exit /b 1
+exit /b 0
+
+:wasm_build
+call :wasm_release_build
 if errorlevel 1 goto error
 goto success
+
+:wasm_release_build
+rem WebAssemblyのブラウザ用Release成果物を生成
+echo [Whitebase] Building WebAssembly package (Release)...
+wasm-pack build "%WASM_DIR%" ^
+    --target web ^
+    --release ^
+    --out-dir "%CD%\%WASM_OUT_DIR%"
+
+if errorlevel 1 exit /b 1
+exit /b 0
 
 :c_api_release_build
 rem Core経由C APIのReleaseビルド前にMSVC/MASM依存を準備
@@ -553,11 +569,7 @@ goto success
 
 :web_dev
 rem WebAssemblyを開発用ビルドしてWeb開発サーバーを起動
-echo [Whitebase] Building WebAssembly package for development...
-wasm-pack build "%WASM_DIR%" ^
-    --target web ^
-    --dev ^
-    --out-dir "%CD%\%WASM_OUT_DIR%"
+call :wasm_dev_build
 if errorlevel 1 goto error
 
 echo.
@@ -567,7 +579,11 @@ if errorlevel 1 goto error
 goto success
 
 :web_build
-rem Webフロントエンドをビルド
+rem WebAssemblyとWebフロントエンドをReleaseビルド
+call :wasm_release_build
+if errorlevel 1 goto error
+
+echo.
 echo [Whitebase] Building frontend...
 call npm --prefix "%APP_DIR%" run build
 if errorlevel 1 goto error
@@ -675,8 +691,8 @@ echo     WebAssemblyを開発用ビルドしてWeb開発サーバーを起動し
 echo     Build WebAssembly for development and start the Web development server.
 echo.
 echo   wasm-build
-echo     WebAssemblyのブラウザ用成果物を生成します。
-echo     Build browser-compatible WebAssembly artifacts.
+echo     WebAssemblyのブラウザ用Release成果物を生成します。
+echo     Build browser-compatible WebAssembly release artifacts.
 echo.
 echo   c-api-release-build
 echo     MSVC/MASMのRelease依存を準備し、Core経由C APIをReleaseビルドします。
@@ -699,8 +715,8 @@ echo     Assemblyライブラリとスモークテストクライアントをビ
 echo     Build the Assembly library and smoke test client.
 echo.
 echo   web-build
-echo     フロントエンドをビルドします。
-echo     Build the frontend.
+echo     WebAssemblyとフロントエンドをReleaseビルドします。
+echo     Build WebAssembly and the frontend for release.
 echo.
 echo   tauri-build
 echo     Tauriデスクトップアプリケーションをビルドします。

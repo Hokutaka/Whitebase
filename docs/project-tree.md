@@ -23,6 +23,7 @@ Whitebase
 │   │   │   │   ├── tauri.svg
 │   │   │   │   ├── typescript.svg
 │   │   │   │   └── vite.svg
+│   │   │   ├── compute-client.ts
 │   │   │   ├── main.ts
 │   │   │   ├── styles.css
 │   │   │   └── vite-env.d.ts
@@ -119,6 +120,7 @@ Whitebase
 │   │   ├── examples
 │   │   │   └── scalar_f64.rs
 │   │   ├── src
+│   │   │   ├── benchmark.rs
 │   │   │   ├── config.rs
 │   │   │   ├── decimal.rs
 │   │   │   ├── error.rs
@@ -154,6 +156,8 @@ Whitebase
 │       └── Cargo.toml
 ├── docs
 │   ├── api
+│   │   ├── Core-API.ja.md
+│   │   ├── Core-API.md
 │   │   ├── HTTP-API.ja.md
 │   │   └── HTTP-API.md
 │   ├── diagrams

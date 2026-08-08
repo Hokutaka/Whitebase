@@ -55,7 +55,7 @@ impl ComputeBackend for CppAvxBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::avx_add_f32()
+        BackendCapabilities::simd_add_f32(8)
             .with_add_f64(4)
             .with_sum_f64()
     }
