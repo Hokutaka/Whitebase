@@ -55,13 +55,23 @@ impl ComputeBackend for RustSimdBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        BackendCapabilities::avx_add_f32()
-            .with_add_f64(4)
-            .with_sum_f64()
+        #[cfg(target_arch = "wasm32")]
+        {
+            BackendCapabilities::simd_add_f32(4)
+                .with_add_f64(2)
+                .with_sum_f64()
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            BackendCapabilities::simd_add_f32(8)
+                .with_add_f64(4)
+                .with_sum_f64()
+        }
     }
 
     fn is_available(&self) -> bool {
-        whitebase_rust_backend::simd::is_avx_available()
+        whitebase_rust_backend::simd::is_simd_available()
     }
 
     fn add_f32(&self, lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), ComputeError> {

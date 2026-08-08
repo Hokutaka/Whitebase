@@ -8,6 +8,6 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-whitebase-rust-backend = {
-    path = "../whitebase-rust-backend"
+whitebase-core = {
+    path = "../whitebase-core"
 }

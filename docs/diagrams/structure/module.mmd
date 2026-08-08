@@ -3,78 +3,113 @@ flowchart TB
         direction LR
         Web["whitebase-app<br/>Web UI<br/>(Browser runtime)"]
         TauriApp["whitebase-app<br/>Tauri Application"]
-        Server["whitebase-server<br/>ローカルHTTP API"]
-        CppClient["Whitebase.CppClient<br/>C ABIスモークテスト"]
-        CppBackendClient["Whitebase.CppBackendClient<br/>C++ Backendスモークテスト"]
-        AssemblyClient["Whitebase.AssemblyClient<br/>Assemblyスモークテスト"]
-        External["External Applications<br/>C#・その他"]
+        Server["whitebase-server<br/>Local HTTP API"]
+        CppClient["Whitebase.CppClient<br/>C ABI smoke test"]
+        CppBackendClient["Whitebase.CppBackendClient<br/>C++ Backend smoke test"]
+        AssemblyClient["Whitebase.AssemblyClient<br/>Assembly smoke test"]
+        External["External Applications<br/>C# / C++ / other"]
     end
 
     subgraph Consumers["Bindings / Entry Points"]
         direction LR
-        Wasm["whitebase-wasm<br/>WebAssembly境界"]
-        TauriCommands["src-tauri<br/>Tauri commands"]
-        CApi["whitebase-c-api<br/>C ABI境界"]
+        Wasm["whitebase-wasm<br/>WebAssembly boundary"]
+        TauriCommands["src-tauri<br/>Tauri Commands"]
+        CApi["whitebase-c-api<br/>C ABI boundary"]
     end
 
-    Interface["whitebase-interface<br/>trait・共通型・エラー・能力情報・演算種別"]
+    Interface["whitebase-interface<br/>trait / common types / errors<br/>capabilities / operation kinds"]
 
-    Runner["whitebase-runner<br/>入力生成・ウォームアップ・計測<br/>結果比較・レポート生成"]
+    Runner["whitebase-runner<br/>input generation / warmup / timing<br/>comparison / report generation"]
 
-    Core["whitebase-core<br/>Backend登録・指定実行<br/>能力・可用性確認・統一計算API"]
+    Core["whitebase-core<br/>backend registration / dispatch<br/>capability / availability / compute API"]
 
-    Bridge["whitebase-backend-bridge<br/>各Backendを共通Interfaceへ接続"]
+    Bridge["whitebase-backend-bridge<br/>connects Backends to common Interface"]
 
     subgraph Backends["Backend implementations / bindings"]
         direction LR
-        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD実装"]
-        CppAdapter["whitebase-cpp-adapter<br/>Rust / C++ FFI境界"]
-        AsmAdapter["whitebase-asm-adapter<br/>Rust / Assembly FFI境界"]
-        Unavailable["unavailable backend<br/>非対応環境用フォールバック"]
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / wasm32 SIMD128"]
+        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
+        AsmAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
+        WindowsGnuAdapter["whitebase-windows-gnu-adapter<br/>Rust → Windows GNU native DLL"]
+        Unavailable["unavailable backend<br/>unsupported-target fallback"]
     end
 
-    subgraph Native["Native libraries — Windows x64 / MSVC"]
-        direction LR
-        CppLib["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
-        AsmLib["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
+    subgraph Native["Native libraries"]
+        direction TB
+
+        subgraph WindowsMsvc["Windows x64 / MSVC"]
+            direction LR
+            CppLib["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
+            AsmLib["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
+        end
+
+        subgraph LinuxGnu["Linux x86_64 / GNU"]
+            direction LR
+            LinuxCppLib["libwhitebase_cpp_backend.a<br/>GCC Scalar / AVX"]
+            LinuxAsmLib["libwhitebase_assembly.a<br/>NASM Scalar / AVX"]
+        end
+
+        subgraph WindowsGnu["Windows x64 / GNU"]
+            direction LR
+            WindowsGnuLib["whitebase_windows_gnu_native.dll<br/>GCC / NASM<br/>Scalar / AVX"]
+        end
     end
 
     subgraph Analysis["Analysis / Output"]
         direction LR
-        Visualization["whitebase-visualization<br/>表・グラフ・描画"]
-        OutputModule["whitebase-output<br/>CSV・JSON出力"]
-        Artifacts["出力データ<br/>CSV・JSON・測定結果"]
-        Python["Python tools<br/>追加分析・可視化"]
+        Visualization["whitebase-visualization<br/>tables / charts / rendering"]
+        OutputModule["whitebase-output<br/>CSV / JSON output"]
+        Artifacts["output data<br/>CSV / JSON / measurements"]
+        Python["Python tools<br/>additional analysis / visualization"]
     end
 
     subgraph Tools["Development tools"]
         direction LR
-        Scripts["scripts / ops.bat<br/>ビルド・テスト・運用"]
 
-        ControlCenter["whitebase-control-center<br/>Rust + egui操作ツール"]
+        Scripts["scripts<br/>ops.bat / linux-native.sh<br/>windows-gnu-native.ps1"]
+
+        ControlCenter["whitebase-control-center<br/>Rust + egui operation tool"]
 
         subgraph Operation["Operation / Control Panel"]
             direction LR
-            ControlPanel["whitebase-control-panel<br/>Windows GUI操作パネル"]
-            WhitebaseWindows["Whitebase.Windows<br/>Win32 API・プロセス制御"]
+            ControlPanel["whitebase-control-panel<br/>Windows GUI operation panel"]
+            WhitebaseWindows["Whitebase.Windows<br/>Win32 API / process control"]
         end
     end
 
-    Web -. "planned: browser-only" .-> Wasm
-    Web -->|"HTTP"| Server
+    %% --------------------------------------------------------
+    %% Application routes
+    %% --------------------------------------------------------
+
+    Web -->|"Server available: HTTP"| Server
+    Web -->|"Server unavailable: WebAssembly"| Wasm
+
     TauriApp -->|"IPC / invoke()"| TauriCommands
-    Server --> Runner
 
     CppClient --> CApi
     External --> CApi
+
     CppBackendClient --> CppLib
     AssemblyClient --> AsmLib
 
-    Wasm -. "current: direct call" .-> RustBackend
-    CApi -. "current: direct call" .-> RustBackend
+    %% --------------------------------------------------------
+    %% Boundaries → Runner / Core
+    %% --------------------------------------------------------
 
+    Server --> Runner
     TauriCommands --> Runner
+
+    Wasm -->|"Observation / Benchmark"| Runner
+    Wasm -->|"Primitive compute API"| Core
+
+    CApi --> Core
+
     Runner --> Core
+
+    %% --------------------------------------------------------
+    %% Core / Interface / Backend routing
+    %% --------------------------------------------------------
+
     Core --> Bridge
     Core -. "uses contract" .-> Interface
     Bridge -. "implements contract" .-> Interface
@@ -82,29 +117,48 @@ flowchart TB
     Bridge --> RustBackend
     Bridge --> CppAdapter
     Bridge --> AsmAdapter
+    Bridge --> WindowsGnuAdapter
     Bridge -. "unsupported targets" .-> Unavailable
 
-    CppAdapter --> CppLib
-    AsmAdapter --> AsmLib
+    %% --------------------------------------------------------
+    %% Native backend bindings
+    %% --------------------------------------------------------
+
+    CppAdapter -->|"Windows MSVC"| CppLib
+    CppAdapter -->|"Linux GNU"| LinuxCppLib
+
+    AsmAdapter -->|"Windows MSVC"| AsmLib
+    AsmAdapter -->|"Linux GNU"| LinuxAsmLib
+
+    WindowsGnuAdapter --> WindowsGnuLib
+
+    %% --------------------------------------------------------
+    %% Planned analysis / output
+    %% --------------------------------------------------------
 
     Runner -. "planned: report" .-> Visualization
     Runner -. "planned: report" .-> OutputModule
     OutputModule -. "planned: generates" .-> Artifacts
     Python -. "planned: reads / analyzes" .-> Artifacts
 
+    %% --------------------------------------------------------
+    %% Development tools
+    %% --------------------------------------------------------
+
     Scripts -. "build / test" .-> Runner
     Scripts -. "build / test" .-> Core
     Scripts -. "build / test" .-> Backends
+    Scripts -. "native build / test" .-> Native
     Scripts -. "smoke test" .-> CppClient
     Scripts -. "smoke test" .-> CppBackendClient
     Scripts -. "smoke test" .-> AssemblyClient
     Scripts -. "run / release" .-> Server
     Scripts -. "build / release" .-> TauriApp
+    Scripts -. "build" .-> Wasm
 
     ControlCenter -. "operation / check / build" .-> Scripts
     ControlPanel -. "operation / check / build" .-> Scripts
     ControlPanel -->|"Win32 interop / process control"| WhitebaseWindows
-
 
     classDef planned stroke-dasharray: 6 4
     class Visualization,OutputModule,Artifacts,Python planned

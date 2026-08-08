@@ -13,10 +13,14 @@ pub enum RunnerError {
     ZeroMeasuredIterations,
 
     /// 絶対誤差の許容値が不正です。
-    InvalidAbsoluteTolerance { value: f64 },
+    InvalidAbsoluteTolerance {
+        value: f64,
+    },
 
     /// 参照バックエンドを現在の環境で利用できません。
-    ReferenceBackendUnavailable { backend: BackendKind },
+    ReferenceBackendUnavailable {
+        backend: BackendKind,
+    },
 
     /// `f64`スカラー観測用の10進入力が不正です。
     InvalidScalarF64Input {
@@ -26,10 +30,34 @@ pub enum RunnerError {
     },
 
     /// 正確な10進参照値を有限の`f64`へ変換できません。
-    ScalarF64ReferenceOutOfRange { value: String },
+    ScalarF64ReferenceOutOfRange {
+        value: String,
+    },
 
     /// Coreによる演算実行に失敗しました。
-    Compute { error: ComputeError },
+    Compute {
+        error: ComputeError,
+    },
+
+    ZeroInputLength,
+
+    InputLengthTooLarge {
+        maximum: usize,
+    },
+
+    WarmupIterationsTooLarge {
+        maximum: usize,
+    },
+
+    MeasuredIterationsTooLarge {
+        maximum: usize,
+    },
+
+    SumF64RequiresF64,
+
+    BenchmarkWorkloadTooLarge {
+        maximum: usize,
+    },
 }
 
 impl fmt::Display for RunnerError {
@@ -76,6 +104,33 @@ impl fmt::Display for RunnerError {
 
             Self::Compute { error } => {
                 write!(formatter, "compute operation failed: {error}")
+            }
+
+            Self::ZeroInputLength => {
+                write!(formatter, "input length must be greater than zero")
+            }
+
+            Self::InputLengthTooLarge { maximum } => {
+                write!(formatter, "input length must not exceed {maximum}")
+            }
+
+            Self::WarmupIterationsTooLarge { maximum } => {
+                write!(formatter, "warmup iterations must not exceed {maximum}")
+            }
+
+            Self::MeasuredIterationsTooLarge { maximum } => {
+                write!(formatter, "measured iterations must not exceed {maximum}")
+            }
+
+            Self::SumF64RequiresF64 => {
+                write!(formatter, "sum-f64 benchmark requires f64 precision")
+            }
+
+            Self::BenchmarkWorkloadTooLarge { maximum } => {
+                write!(
+                    formatter,
+                    "benchmark workload must not exceed {maximum} element-iterations"
+                )
             }
         }
     }

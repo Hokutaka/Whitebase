@@ -8,7 +8,15 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-whitebase-rust-backend = {
-    path = "../whitebase-rust-backend"
+whitebase-core = {
+    path = "../whitebase-core"
+}
+whitebase-runner = {
+    path = "../whitebase-runner"
 }
 wasm-bindgen = "0.2"
+serde = {
+    version = "1",
+    features = ["derive"]
+}
+serde-wasm-bindgen = "0.6"

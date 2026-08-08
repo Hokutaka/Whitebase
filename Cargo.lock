@@ -4230,6 +4230,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "serde_core"
 version = "1.0.229"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6219,9 +6230,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
- "whitebase-core",
  "whitebase-runner",
- "whitebase-rust-backend",
 ]
 
 [[package]]
@@ -6246,7 +6255,7 @@ dependencies = [
 name = "whitebase-c-api"
 version = "0.1.0"
 dependencies = [
- "whitebase-rust-backend",
+ "whitebase-core",
 ]
 
 [[package]]
@@ -6280,6 +6289,7 @@ version = "0.1.0"
 name = "whitebase-runner"
 version = "0.1.0"
 dependencies = [
+ "web-time",
  "whitebase-core",
 ]
 
@@ -6302,8 +6312,11 @@ dependencies = [
 name = "whitebase-wasm"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde-wasm-bindgen",
  "wasm-bindgen",
- "whitebase-rust-backend",
+ "whitebase-core",
+ "whitebase-runner",
 ]
 
 [[package]]
