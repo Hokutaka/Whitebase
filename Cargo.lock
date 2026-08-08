@@ -6246,7 +6246,7 @@ dependencies = [
 name = "whitebase-c-api"
 version = "0.1.0"
 dependencies = [
- "whitebase-rust-backend",
+ "whitebase-core",
 ]
 
 [[package]]

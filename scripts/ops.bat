@@ -19,6 +19,7 @@ set "CPP_EXE=%WHITEBASE_ROOT%\native\Whitebase.Cpp\x64\Debug\Whitebase.CppClient
 
 set "CPP_SOLUTION_DIR=%WHITEBASE_ROOT%\native\Whitebase.Cpp"
 set "ASM_PROJECT=%WHITEBASE_ROOT%\native\Whitebase.Cpp\Whitebase.AssemblyClient\Whitebase.AssemblyClient.vcxproj"
+set "ASM_LIBRARY_PROJECT=%WHITEBASE_ROOT%\native\Whitebase.Cpp\Whitebase.Assembly\Whitebase.Assembly.vcxproj"
 set "ASM_EXE=%WHITEBASE_ROOT%\native\Whitebase.Cpp\x64\Debug\Whitebase.AssemblyClient.exe"
 
 set "CPP_BACKEND_PROJECT=%WHITEBASE_ROOT%\native\Whitebase.Cpp\Whitebase.CppBackend\Whitebase.CppBackend.vcxproj"
@@ -42,6 +43,7 @@ if /i "%~1"=="cpp-backend-check" goto run_cpp_backend_check
 if /i "%~1"=="cpp-adapter-check" goto run_cpp_adapter_check
 if /i "%~1"=="asm-check" goto run_asm_check
 if /i "%~1"=="wasm-build" goto wasm_build
+if /i "%~1"=="c-api-release-build" goto run_c_api_release_build
 if /i "%~1"=="c-api-build" goto run_c_api_build
 if /i "%~1"=="cpp-build" goto run_cpp_build
 if /i "%~1"=="cpp-backend-build" goto run_cpp_backend_build
@@ -54,6 +56,12 @@ if /i "%~1"=="web-build" goto web_build
 if /i "%~1"=="tauri-build" goto tauri_build
 if /i "%~1"=="clean" goto clean
 goto unknown_command
+
+:run_c_api_release_build
+rem Core経由C APIのReleaseビルド
+call :c_api_release_build
+if errorlevel 1 goto error
+goto success
 
 :run_c_api_build
 rem Rust C APIのビルド
@@ -208,9 +216,9 @@ if errorlevel 1 goto error
 goto success
 
 :cpp_check
-rem C++からRust C ABIへの接続確認
+rem C++からC ABIとCoreを経由したバックエンド接続確認
 echo.
-echo [Whitebase] Checking C++ to Rust C ABI connection...
+echo [Whitebase] Checking C++ -> C API -> Core backend routing...
 
 call :cpp_build
 if errorlevel 1 exit /b 1
@@ -222,13 +230,12 @@ if not exist "%CPP_EXE%" (
 )
 
 "%CPP_EXE%"
-
 if errorlevel 1 (
     echo [Whitebase] ERROR: C++ smoke test failed.
     exit /b 1
 )
 
-echo [Whitebase] C++ smoke test passed.
+echo [Whitebase] C++ -> C API -> Core smoke test passed.
 exit /b 0
 
 :cpp_backend_check
@@ -306,17 +313,35 @@ wasm-pack build "%WASM_DIR%" ^
 if errorlevel 1 goto error
 goto success
 
-:c_api_build
-rem Rust C APIのビルド
+:c_api_release_build
+rem Core経由C APIのReleaseビルド前にMSVC/MASM依存を準備
+call :prepare_native_release_dependencies
+if errorlevel 1 exit /b 1
+
 echo.
-echo [Whitebase] Building Rust C API...
+echo [Whitebase] Building Rust C API through Whitebase Core (Release)...
+
+cargo build --release --locked -p whitebase-c-api
+if errorlevel 1 (
+    echo [Whitebase] ERROR: Rust C API Release build failed.
+    exit /b 1
+)
+echo [Whitebase] Rust C API Release build completed.
+exit /b 0
+
+:c_api_build
+rem Core経由のC APIがリンクするネイティブライブラリを準備してビルド
+call :prepare_native_dependencies
+if errorlevel 1 exit /b 1
+
+echo.
+echo [Whitebase] Building Rust C API through Whitebase Core...
 
 cargo build -p whitebase-c-api
 if errorlevel 1 (
     echo [Whitebase] ERROR: Rust C API build failed.
     exit /b 1
 )
-
 echo [Whitebase] Rust C API build completed.
 exit /b 0
 
@@ -350,6 +375,66 @@ if errorlevel 1 (
 )
 
 echo [Whitebase] C++ build completed.
+exit /b 0
+
+:cpp_backend_release_build
+rem Rust AdapterがリンクするC++計算バックエンドをReleaseでビルド
+echo.
+echo [Whitebase] Building C++ computation backend (Release)...
+
+call :find_msbuild
+if errorlevel 1 exit /b 1
+
+if not exist "%CPP_BACKEND_PROJECT%" (
+    echo [Whitebase] ERROR: C++ backend project was not found.
+    echo [Whitebase] Expected: %CPP_BACKEND_PROJECT%
+    exit /b 1
+)
+
+"%MSBUILD%" "%CPP_BACKEND_PROJECT%" ^
+    /t:Build ^
+    /m ^
+    /p:Configuration=Release ^
+    /p:Platform=x64 ^
+    /p:SolutionDir=%CPP_SOLUTION_DIR%\ ^
+    /v:minimal
+
+if errorlevel 1 (
+    echo [Whitebase] ERROR: C++ backend Release build failed.
+    exit /b 1
+)
+
+echo [Whitebase] C++ backend Release build completed.
+exit /b 0
+
+:asm_release_build
+rem Rust AdapterがリンクするAssembly静的ライブラリをReleaseでビルド
+echo.
+echo [Whitebase] Building Assembly library (Release)...
+
+call :find_msbuild
+if errorlevel 1 exit /b 1
+
+if not exist "%ASM_LIBRARY_PROJECT%" (
+    echo [Whitebase] ERROR: Assembly library project was not found.
+    echo [Whitebase] Expected: %ASM_LIBRARY_PROJECT%
+    exit /b 1
+)
+
+"%MSBUILD%" "%ASM_LIBRARY_PROJECT%" ^
+    /t:Build ^
+    /m ^
+    /p:Configuration=Release ^
+    /p:Platform=x64 ^
+    /p:SolutionDir=%CPP_SOLUTION_DIR%\ ^
+    /v:minimal
+
+if errorlevel 1 (
+    echo [Whitebase] ERROR: Assembly library Release build failed.
+    exit /b 1
+)
+
+echo [Whitebase] Assembly library Release build completed.
 exit /b 0
 
 :cpp_backend_build
@@ -558,8 +643,8 @@ echo     WebAssemblyクレートのコンパイルを確認します。
 echo     Check that the WebAssembly crate compiles.
 echo.
 echo   cpp-check
-echo     C++からRust C ABIを呼び出せることを確認します。
-echo     Check the C++ to Rust C ABI connection.
+echo     C++からC APIとCoreを経由して計算バックエンドを呼び出せることを確認します。
+echo     Check C++ -> C API -> Core -> computation backend routing.
 echo.
 echo   cpp-backend-check
 echo     C++計算バックエンドのScalar版とAVX版を確認します。
@@ -593,9 +678,13 @@ echo   wasm-build
 echo     WebAssemblyのブラウザ用成果物を生成します。
 echo     Build browser-compatible WebAssembly artifacts.
 echo.
+echo   c-api-release-build
+echo     MSVC/MASMのRelease依存を準備し、Core経由C APIをReleaseビルドします。
+echo     Prepare MSVC/MASM Release dependencies and build the Core-routed C API.
+echo.
 echo   c-api-build
-echo     Rust C APIのDLLとインポートライブラリをビルドします。
-echo     Build the Rust C API DLL and import library.
+echo     Native依存を準備し、Core経由C APIのDLLとインポートライブラリをビルドします。
+echo     Prepare native dependencies and build the Core-routed C API DLL and import library.
 echo.
 echo   cpp-build
 echo     C++スモークテストクライアントをビルドします。
@@ -651,6 +740,19 @@ if not exist "%MSBUILD%" (
     exit /b 1
 )
 
+exit /b 0
+
+:prepare_native_release_dependencies
+rem Rust AdapterがReleaseでリンクするMSVC/MASMネイティブライブラリを準備
+echo.
+echo [Whitebase] Preparing Release native libraries for Rust adapters...
+call :cpp_backend_release_build
+if errorlevel 1 exit /b 1
+
+call :asm_release_build
+if errorlevel 1 exit /b 1
+
+echo [Whitebase] Release native libraries are ready.
 exit /b 0
 
 :prepare_native_dependencies
