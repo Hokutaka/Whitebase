@@ -1,4 +1,4 @@
-use whitebase_interface::{BackendCapabilities, BackendKind, ComputeBackend, ComputeError};
+use whitebase_backend_contract::{BackendCapabilities, BackendKind, ComputeBackend, ComputeError};
 
 macro_rules! define_unavailable_backend {
     ($name:ident, $kind:expr, $capabilities:expr) => {

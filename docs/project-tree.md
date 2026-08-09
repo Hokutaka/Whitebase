@@ -87,6 +87,14 @@ Whitebase
 │   │   ├── tests
 │   │   │   └── backend_bridge_smoke.rs
 │   │   └── Cargo.toml
+│   ├── whitebase-backend-contract
+│   │   ├── src
+│   │   │   ├── backend.rs
+│   │   │   ├── capabilities.rs
+│   │   │   ├── error.rs
+│   │   │   ├── lib.rs
+│   │   │   └── operation.rs
+│   │   └── Cargo.toml
 │   ├── whitebase-c-api
 │   │   ├── include
 │   │   │   └── whitebase.h
@@ -107,14 +115,6 @@ Whitebase
 │   │   ├── tests
 │   │   │   └── cpp_backend_smoke.rs
 │   │   ├── build.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-interface
-│   │   ├── src
-│   │   │   ├── backend.rs
-│   │   │   ├── capabilities.rs
-│   │   │   ├── error.rs
-│   │   │   ├── lib.rs
-│   │   │   └── operation.rs
 │   │   └── Cargo.toml
 │   ├── whitebase-runner
 │   │   ├── examples
@@ -161,6 +161,15 @@ Whitebase
 │   │   ├── HTTP-API.ja.md
 │   │   └── HTTP-API.md
 │   ├── diagrams
+│   │   ├── Layer
+│   │   │   ├── Applied-Compute.mmd
+│   │   │   ├── Applied-Compute.svg
+│   │   │   ├── Backend-Contract.mmd
+│   │   │   ├── Backend-Contract.svg
+│   │   │   ├── FFI-Boundary.mmd
+│   │   │   ├── FFI-Boundary.svg
+│   │   │   ├── Pure-Compute.mmd
+│   │   │   └── Pure-Compute.svg
 │   │   └── structure
 │   │       ├── architecture.mmd
 │   │       ├── architecture.svg
@@ -171,6 +180,8 @@ Whitebase
 │   ├── images
 │   │   ├── image.png
 │   │   └── whitebase-control-center.png
+│   ├── Layer
+│   │   └── Layer-Overview.md
 │   ├── planning
 │   │   └── plan.md
 │   ├── tools

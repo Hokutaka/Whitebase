@@ -1,6 +1,6 @@
 use crate::backend_failure;
 
-use whitebase_interface::{BackendCapabilities, BackendKind, ComputeBackend, ComputeError};
+use whitebase_backend_contract::{BackendCapabilities, BackendKind, ComputeBackend, ComputeError};
 
 /// AssemblyによるScalar計算バックエンドです。
 #[derive(Debug, Clone, Copy, Default)]

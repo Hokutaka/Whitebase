@@ -12,7 +12,7 @@ use whitebase_backend_bridge::{
     WindowsGnuAssemblyAvxBackend, WindowsGnuAssemblyScalarBackend, WindowsGnuCppAvxBackend,
     WindowsGnuCppScalarBackend,
 };
-pub use whitebase_interface::{
+pub use whitebase_backend_contract::{
     BackendCapabilities, BackendKind, ComputeBackend, ComputeError, OperationKind,
 };
 
@@ -197,6 +197,6 @@ impl Default for Whitebase {
     }
 }
 
-pub use whitebase_interface::{
+pub use whitebase_backend_contract::{
     BackendCapabilities as Capabilities, BackendKind as Backend, ComputeError as Error,
 };
