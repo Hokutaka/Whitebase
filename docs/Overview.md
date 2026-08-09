@@ -208,6 +208,29 @@ Benchmark results are affected by the build configuration, CPU, cache, memory ba
 
 Release builds are recommended instead of Debug builds when comparing performance.
 
+### Timing Measurement
+
+Whitebase Runner measures each measured iteration individually.
+
+If any measured iteration produces `Duration::ZERO`, that value is not treated
+as an actual execution time of `0 ns`.
+
+This means the operation completed faster than the current timer resolution can
+reliably observe as an individual execution. In that case, Runner reports the
+timing as `TooFastToMeasure`.
+
+`TooFastToMeasure` does not mean that backend execution failed.
+
+- Backend status: `Completed`
+- Result comparison: still performed normally
+- Timing: `TooFastToMeasure`
+- Mean / Minimum / Maximum / Total: not reported
+- Fastest / Speedup: excluded from calculation
+
+Whitebase does not replace timing values below timer resolution with estimated
+values. The inability to observe the individual execution time is reported as
+part of the benchmark result.
+
 ### Core API
 
 See [Core API](api/Core-API.md) for the Rust API, operations, backends, and errors.
