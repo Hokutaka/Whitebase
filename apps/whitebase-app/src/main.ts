@@ -67,17 +67,19 @@ interface BackendResult {
   backend: string;
   status: "completed" | "unavailable" | "failed";
 
-  iterations: number | null;
-  totalNanoseconds: number | null;
-  minimumNanoseconds: number | null;
-  maximumNanoseconds: number | null;
-  meanNanoseconds: number | null;
+  timingStatus: "measured" | "too-fast-to-measure" | null | undefined;
 
-  matchesReference: boolean | null;
-  mismatchCount: number | null;
-  maximumAbsoluteError: number | null;
+  iterations: number | null | undefined;
+  totalNanoseconds: number | null | undefined;
+  minimumNanoseconds: number | null | undefined;
+  maximumNanoseconds: number | null | undefined;
+  meanNanoseconds: number | null | undefined;
 
-  error: string | null;
+  matchesReference: boolean | null | undefined;
+  mismatchCount: number | null | undefined;
+  maximumAbsoluteError: number | null | undefined;
+
+  error: string | null | undefined;
 }
 
 interface ApiError {
@@ -464,7 +466,10 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
       result,
     ): result is BackendResult & {
       meanNanoseconds: number;
-    } => result.status === "completed" && result.meanNanoseconds !== null,
+    } =>
+      result.status === "completed" &&
+      result.timingStatus === "measured" &&
+      typeof result.meanNanoseconds === "number",
   );
 
   const baseline =
@@ -507,8 +512,28 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
         `;
       }
 
+      if (result.timingStatus === "too-fast-to-measure") {
+        const matches = result.matchesReference === true;
+
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(result.backend)}</td>
+            <td><span class="badge badge-ok">COMPLETED</span></td>
+            <td colspan="3">
+              <span class="badge badge-warn">TOO FAST TO MEASURE</span>
+            </td>
+            <td>—</td>
+            <td>
+              <span class="badge ${matches ? "badge-ok" : "badge-error"}">
+                ${matches ? "MATCH" : "MISMATCH"}
+              </span>
+            </td>
+          </tr>
+        `;
+      }
+
       const speedup =
-        baseline !== null && result.meanNanoseconds !== null
+        baseline !== null && typeof result.meanNanoseconds === "number"
           ? baseline / result.meanNanoseconds
           : null;
 
@@ -635,8 +660,10 @@ function setText(id: string, value: string): void {
   element.textContent = value;
 }
 
-function formatDuration(nanoseconds: number | null): string {
-  if (nanoseconds === null) {
+function formatDuration(
+  nanoseconds: number | null | undefined,
+): string {
+  if (nanoseconds == null) {
     return "—";
   }
 

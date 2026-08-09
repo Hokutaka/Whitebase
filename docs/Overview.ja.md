@@ -201,6 +201,28 @@ HTTP APIまたはWebAssemblyの実行経路を選択します。
 
 ※ベンチマーク結果はビルド構成、CPU、キャッシュ、メモリ帯域、OSのスケジューリングなどに影響されます。性能比較ではDebugではなくRelease構成を推奨します。
 
+### 時間計測の扱い
+
+Whitebase Runnerは、各measured iterationを個別に計測します。
+
+1回でも計測時間が`Duration::ZERO`になった場合、その値を
+`0 ns`の実行時間として扱いません。
+
+この状態は、演算が現在のタイマー分解能より短く、
+単発実行時間を正しく観測できなかったことを意味するため、
+Timingを`TooFastToMeasure`として報告します。
+
+`TooFastToMeasure`はBackendの実行失敗ではありません。
+
+- Backend Status: `Completed`
+- Result comparison: 通常どおり実行
+- Timing: `TooFastToMeasure`
+- Mean / Minimum / Maximum / Total: 報告しない
+- Fastest / Speedup: 計算対象外
+
+Whitebaseは、タイマー分解能未満の実行時間を推定値へ置き換えず、
+観測不能であることをそのまま結果として扱います。
+
 ### Core API
 
 Rust API、演算、バックエンド、エラーの詳細については、

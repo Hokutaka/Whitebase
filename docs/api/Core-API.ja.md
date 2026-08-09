@@ -343,4 +343,4 @@ HTTP API と Core API は同じ計算系を利用しますが、1対1の transpo
 
 HTTP Benchmark API は入力配列を Server 側で生成し、Runner による Warmup・複数回計測・Backend 比較を行います。Core API は利用側から配列を直接受け取り、指定 Backend の演算を1回実行します。
 
-See [HTTP API](HTTP-API.ja.md) for HTTP endpoint and request/response details.
+HTTP Endpoint や Request / Response の詳細については、[HTTP API](HTTP-API.ja.md) を参照してください。
