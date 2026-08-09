@@ -1,0 +1,13 @@
+flowchart TB
+    L7["L7 Presentation"]
+    L6["L6 Interface"]
+    L5["L5 Runner<br/>Applied Compute"]
+    L4["L4 Core<br/>Pure Compute"]
+    L3["L3 Backend Integration"]
+    L2["L2 Backend Implementation"]
+
+    L7 --> L6
+    L6 --> L5
+    L5 --> L4
+    L4 --> L3
+    L3 --> L2

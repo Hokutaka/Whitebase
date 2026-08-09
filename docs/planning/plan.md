@@ -1,87 +1,137 @@
 # Plan
 
 今後の方向性と、実装予定・拡張候補をまとめる。
-思いつきもかいていく。
+
+Whitebaseでは、一度に多くの機能を追加するのではなく、
+現在の構成を整理しながら、Operation・Backend・実行環境を段階的に拡張する。
 
 ## 直近の予定
 
-1. Tauri Visualizationへの接続
-2. Python Tools置き場の作成
+1. Layer構成の整理
+2. Tauri Visualizationへの接続
+3. Python Tools置き場の作成
 
-## 拡張候補
+## 1. Layer構成の整理
 
-### 1. ワークロードの追加
+現在のWhitebaseの責務と接続関係を整理する。
 
-現在の浮動小数点演算に加え、特性の異なる処理を追加する。
+- Layer Overviewの作成
+- Backend Contractの整理
+- Backend Implementationの整理
+- Backend Integrationの整理
+- Core / Pure Computeの整理
+- Runner / Applied Computeの整理
+- HTTP / Tauri / WASM Interfaceの整理
+- C APIの位置づけ整理
+- Operations Planeの整理
+- READMEからLayer Overviewへの導線追加
 
-* 四則演算
-* 行列積
-* ソート
-* 文字列処理
+実際の実装と設計意図がずれない状態を先に作る。
 
-演算内容によって、言語・最適化・呼び出し経路の差がどのように現れるかを観察する。
+## 2. Visualization
 
-### 2. 比較軸の拡張
+現在取得できる実行結果・比較結果を、
+TauriおよびBrowser UIから確認できるようにする。
 
-同一演算について、以下の条件を横断した結果・速度マトリクスを自動生成する。
+- Backendごとの実行結果
+- Benchmark結果
+- 計測時間
+- 結果比較
+- 数値表現の観察結果
+- 使用された実行経路
 
-* Debug / Release
-* Scalar / SIMD / AVX-512
-* MSVC / Clang / GCC
+## 3. Python Tools
 
-一度にすべてを組み合わせるのではなく、ビルド構成、命令セット、コンパイラの順に比較軸を増やす。
+Whitebaseから出力した結果を、
+外部から集計・可視化するためのToolsを用意する。
 
-### 3. 可視化・レポートの強化
+- JSON出力
+- CSV出力
+- pandasによる集計・比較
+- matplotlibによるグラフ生成
+- 実行環境ごとの結果レポート
 
-TauriおよびHTTP APIから、計測結果をJSONまたはCSVとして出力する。
+## 4. Operationの拡張
 
-出力したデータをPython Toolsから読み込み、以下の処理を行う。
+現在のAdd中心の構成を段階的に拡張する。
 
-* pandasによる集計・比較
-* matplotlibによるグラフ生成
-* 実行環境ごとの結果レポート作成
+最初に四則演算を対象とする。
 
-### 4. 新しい実行環境の追加
+- Add
+- Sub
+- Mul
+- Div
 
-新しい比較軸として、異なる実行環境や呼び出し経路を追加する。
+以下の形について整理する。
 
-候補：
+- scalar + scalar
+- array + array
+- array + scalar
+- f32
+- f64
 
-* GPU（wgpu / CUDA）
-* WASIによるブラウザ外でのWasm実行
-* Clang / LLVM IRを経由した実行
+一度にすべて実装するのではなく、
+Operationを1つずつ追加しながら既存のContract / Core / Runner / Backend構成を確認する。
 
-### 5. 数値表現の観察
+## 5. 数値表現の観察
 
-IEEE 754に由来する代表的な挙動を、実装ごとに観察・比較できるようにする。
+IEEE 754に由来する代表的な挙動を、
+実装・Backend・実行方式ごとに観察・比較できるようにする。
 
 ```text
 0.1 + 0.2                    表現誤差
 (1e16 + 1.0) - 1e16          情報落ち
+近い値同士の減算             桁落ち
 (a + b) + c と a + (b + c)   非結合性
-1.0 / 0.0                    無限大
+1.0 / 0.0                    Infinity
 0.0 / 0.0                    NaN
 -0.0                         符号付きゼロ
-極小値                       アンダーフロー
+極小値                       Underflow / Subnormal
+最大値付近の演算             Overflow
 mul_add と a * b + c         FMAによる差
 ```
 
-## 実験案
+将来的には以下も比較する。
 
-Whitebaseの中心的な比較軸からは少し離れるが、以下も実験対象として面白そう。
+- Scalar / SIMDによる演算順序の差
+- Reduction順序による結果の差
+- Debug / Releaseによる差
+- Compiler / optimizationによる差
 
-* Rust製量子シミュレーターを経由した計算
-* Qiskitなどによる結果との比較
-* LLVM IRレベルでの実装差・最適化結果の観察
+## 6. 比較軸の拡張
 
-## Control Center
+同一Operationについて、比較可能な条件を増やす。
 
-現在不足しているもの：
+- Debug / Release
+- Scalar / SIMD
+- MSVC / GCC
+- Windows / Linux
 
-* Doctor機能
-* TauriおよびFrontend開発サーバーの起動
-* 子プロセスツリーの安全な停止
-* 無効化されたボタンの理由表示
-* 増加したTask定義の整理
-* READMEとスクリーンショットの更新
-* Linux実機での動作確認
+既存環境で比較軸を整理してから、
+新しい命令セットやToolchainを検討する。
+
+## 7. ワークロードの追加
+
+四則演算の構成が安定した後、
+性質の異なるOperationを少数追加する。
+
+候補:
+
+- 行列積
+- ソート
+- 文字列処理
+
+目的は機能数を増やすことではなく、
+現在のWhitebaseの構成が異なる処理にも適用できるか確認すること。
+
+## 8. Control Center
+
+現在不足しているもの:
+
+- Doctor機能
+- TauriおよびFrontend開発サーバーの起動
+- 子プロセスツリーの安全な停止
+- 無効化されたボタンの理由表示
+- Task定義の整理
+- READMEとスクリーンショットの更新
+- Linux実機での動作確認

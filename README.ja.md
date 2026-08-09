@@ -21,6 +21,7 @@ Coreを中心としたモノレポ構成を採用しています。
 
 - [詳しい説明](/docs/Overview.ja.md)
 - [プロジェクト構成](docs/project-tree.md)
+- [レイヤーの説明](docs/Layer/Layer-Overview.md)
 
 ### Tools
 
