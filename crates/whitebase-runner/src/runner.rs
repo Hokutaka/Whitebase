@@ -12,6 +12,16 @@ use crate::{
     ScalarF64ObservationReport, SumF64Report, TimingSummary, decimal::ExactDecimal,
 };
 
+#[cfg(target_arch = "wasm32")]
+/// ブラウザのタイマーは、粗い分解能（例えば役100μs)を持つ場合がある
+/// 複数の操作をまとめて計測することでサンプル時間が十分に長くなり、
+/// 計測時間がゼロになるのを防ぐことが出来ます。
+const WASM_MIN_MEASUREMENT_WINDOW: Duration = Duration::from_millis(1);
+
+/// 暴走しないでほしい。キャリブレーションによる過剰な実行回数を防ぐための上限。
+#[cfg(target_arch = "wasm32")]
+const WASM_MAX_MEASUREMENT_BATCH_SIZE: u32 = 1024;
+
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
 pub struct Runner {
     whitebase: Whitebase,
@@ -245,23 +255,32 @@ impl Runner {
             }
         }
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
-
-        for _ in 0..config.measured_iterations {
-            let started_at = Instant::now();
-            let result = self.whitebase.add_f32(
+        let batch_size = match calibrate_measurement_batch_size(|| {
+            self.whitebase.add_f32(
                 backend,
                 black_box(lhs),
                 black_box(rhs),
                 black_box(output.as_mut_slice()),
-            );
-            let elapsed = started_at.elapsed();
+            )
+        }) {
+            Ok(batch_size) => batch_size,
+            Err(error) => return failed_backend_result(backend, error),
+        };
 
-            if let Err(error) = result {
-                return failed_backend_result(backend, error);
+        let mut durations = Vec::with_capacity(config.measured_iterations);
+
+        for _ in 0..config.measured_iterations {
+            match measure_batched(batch_size, || {
+                self.whitebase.add_f32(
+                    backend,
+                    black_box(lhs),
+                    black_box(rhs),
+                    black_box(output.as_mut_slice()),
+                )
+            }) {
+                Ok((elapsed, ())) => durations.push(elapsed),
+                Err(error) => return failed_backend_result(backend, error),
             }
-
-            durations.push(elapsed);
         }
 
         BackendRunResult {
@@ -307,23 +326,32 @@ impl Runner {
             }
         }
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
-
-        for _ in 0..config.measured_iterations {
-            let started_at = Instant::now();
-            let result = self.whitebase.add_f64(
+        let batch_size = match calibrate_measurement_batch_size(|| {
+            self.whitebase.add_f64(
                 backend,
                 black_box(lhs),
                 black_box(rhs),
                 black_box(output.as_mut_slice()),
-            );
-            let elapsed = started_at.elapsed();
+            )
+        }) {
+            Ok(batch_size) => batch_size,
+            Err(error) => return failed_backend_result(backend, error),
+        };
 
-            if let Err(error) = result {
-                return failed_backend_result(backend, error);
+        let mut durations = Vec::with_capacity(config.measured_iterations);
+
+        for _ in 0..config.measured_iterations {
+            match measure_batched(batch_size, || {
+                self.whitebase.add_f64(
+                    backend,
+                    black_box(lhs),
+                    black_box(rhs),
+                    black_box(output.as_mut_slice()),
+                )
+            }) {
+                Ok((elapsed, ())) => durations.push(elapsed),
+                Err(error) => return failed_backend_result(backend, error),
             }
-
-            durations.push(elapsed);
         }
 
         BackendRunResult {
@@ -361,20 +389,26 @@ impl Runner {
             }
         }
 
+        let batch_size = match calibrate_measurement_batch_size(|| {
+            self.whitebase.sum_f64(backend, black_box(input))
+        }) {
+            Ok(batch_size) => batch_size,
+            Err(error) => return failed_backend_result(backend, error),
+        };
+
         let mut durations = Vec::with_capacity(config.measured_iterations);
         let mut output = None;
 
         for _ in 0..config.measured_iterations {
-            let started_at = Instant::now();
-            let result = self.whitebase.sum_f64(backend, black_box(input));
-            let elapsed = started_at.elapsed();
-
-            match result {
-                Ok(value) => output = Some(black_box(value)),
+            match measure_batched(batch_size, || {
+                self.whitebase.sum_f64(backend, black_box(input))
+            }) {
+                Ok((elapsed, value)) => {
+                    durations.push(elapsed);
+                    output = Some(black_box(value));
+                }
                 Err(error) => return failed_backend_result(backend, error),
             }
-
-            durations.push(elapsed);
         }
 
         let output = output.expect("measured iterations are validated");
@@ -494,6 +528,55 @@ fn failed_backend_result(backend: BackendKind, error: ComputeError) -> BackendRu
         backend,
         status: BackendRunStatus::Failed { error },
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn calibrate_measurement_batch_size<T>(
+    mut operation: impl FnMut() -> Result<T, ComputeError>,
+) -> Result<u32, ComputeError> {
+    let mut batch_size = 1_u32;
+
+    loop {
+        let started_at = Instant::now();
+
+        for _ in 0..batch_size {
+            black_box(operation()?);
+        }
+
+        let elapsed = started_at.elapsed();
+
+        if elapsed >= WASM_MIN_MEASUREMENT_WINDOW || batch_size >= WASM_MAX_MEASUREMENT_BATCH_SIZE {
+            return Ok(batch_size);
+        }
+
+        batch_size = (batch_size * 2).min(WASM_MAX_MEASUREMENT_BATCH_SIZE);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn calibrate_measurement_batch_size<T>(
+    _operation: impl FnMut() -> Result<T, ComputeError>,
+) -> Result<u32, ComputeError> {
+    Ok(1)
+}
+
+fn measure_batched<T>(
+    batch_size: u32,
+    mut operation: impl FnMut() -> Result<T, ComputeError>,
+) -> Result<(Duration, T), ComputeError> {
+    debug_assert!(batch_size > 0);
+
+    let started_at = Instant::now();
+    let mut last_result = None;
+
+    for _ in 0..batch_size {
+        last_result = Some(black_box(operation()?));
+    }
+
+    let elapsed = started_at.elapsed();
+    let result = last_result.expect("batch size is always at least one");
+
+    Ok((elapsed / batch_size, result))
 }
 
 fn summarize_timings(durations: &[Duration]) -> TimingSummary {
