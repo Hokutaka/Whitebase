@@ -121,6 +121,7 @@ Backend一覧は実行PlatformとBackendの利用可否によって変化しま�
     {
       "backend": "<backend display name>",
       "status": "completed",
+      "timingStatus": "measured",
       "iterations": 100,
       "totalNanoseconds": 1234567,
       "minimumNanoseconds": 12000,
@@ -136,6 +137,19 @@ Backend一覧は実行PlatformとBackendの利用可否によって変化しま�
 ```
 
 上記の時間値はResponse形式を示すための例です。実際の結果はBuild構成、CPU、cache、memory bandwidth、OS schedulingなどの影響を受けます。
+
+### Timing Status
+
+`completed`のBackendは、次の`timingStatus`を持ちます。
+
+| timingStatus | 意味 |
+| --- | --- |
+| `measured` | 全iterationの実行時間を計測できました。 |
+| `too-fast-to-measure` | 1回以上のiterationがタイマー分解能未満でした。 |
+
+`too-fast-to-measure`の場合もBackend Statusは`completed`です。
+演算結果と参照結果の比較は有効ですが、時間値は`null`となり、
+性能比較やSpeedupの対象にはなりません。
 
 ### Backend Result Status
 

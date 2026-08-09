@@ -9,7 +9,8 @@ use whitebase_core::{BackendKind, ComputeError, Whitebase};
 use crate::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
     ComparisonSummary, F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation,
-    ScalarF64ObservationReport, SumF64Report, TimingSummary, decimal::ExactDecimal,
+    ScalarF64ObservationReport, SumF64Report, TimingMeasurement, TimingSummary,
+    decimal::ExactDecimal,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -496,7 +497,11 @@ fn failed_backend_result(backend: BackendKind, error: ComputeError) -> BackendRu
     }
 }
 
-fn summarize_timings(durations: &[Duration]) -> TimingSummary {
+fn summarize_timings(durations: &[Duration]) -> TimingMeasurement {
+    if durations.iter().any(Duration::is_zero) {
+        return TimingMeasurement::TooFastToMeasure;
+    }
+
     let total = durations.iter().copied().sum::<Duration>();
     let minimum = durations
         .iter()
@@ -510,13 +515,13 @@ fn summarize_timings(durations: &[Duration]) -> TimingSummary {
         .expect("measured iterations are validated");
     let total_nanoseconds = total.as_nanos();
 
-    TimingSummary {
+    TimingMeasurement::Measured(TimingSummary {
         iterations: durations.len(),
         total_nanoseconds,
         minimum_nanoseconds: minimum.as_nanos(),
         maximum_nanoseconds: maximum.as_nanos(),
         mean_nanoseconds: total_nanoseconds as f64 / durations.len() as f64,
-    }
+    })
 }
 
 fn compare_outputs_f32(actual: &[f32], reference: &[f32], tolerance: f32) -> ComparisonSummary {
@@ -651,5 +656,31 @@ mod tests {
             error,
             RunnerError::InvalidScalarF64Input { name: "lhs", .. }
         ));
+    }
+
+    #[test]
+    fn reports_timing_as_too_fast_when_any_sample_is_zero() {
+        let durations = [
+            Duration::from_micros(100),
+            Duration::ZERO,
+            Duration::from_micros(200),
+        ];
+
+        assert_eq!(
+            summarize_timings(&durations),
+            TimingMeasurement::TooFastToMeasure
+        );
+    }
+
+    #[test]
+    fn summarizes_timings_when_all_samples_are_measurable() {
+        let durations = [Duration::from_micros(100), Duration::from_micros(200)];
+
+        let TimingMeasurement::Measured(summary) = summarize_timings(&durations) else {
+            panic!("timing must be measurable");
+        };
+
+        assert_eq!(summary.minimum_nanoseconds, 100_000);
+        assert_eq!(summary.maximum_nanoseconds, 200_000);
     }
 }

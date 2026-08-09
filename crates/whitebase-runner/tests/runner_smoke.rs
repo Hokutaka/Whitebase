@@ -1,5 +1,5 @@
 use whitebase_core::BackendKind;
-use whitebase_runner::{BackendRunStatus, Runner, RunnerConfig};
+use whitebase_runner::{BackendRunStatus, Runner, RunnerConfig, TimingMeasurement};
 
 #[test]
 fn measures_and_compares_standard_backends() {
@@ -23,24 +23,37 @@ fn measures_and_compares_standard_backends() {
     for result in report.results {
         match result.status {
             BackendRunStatus::Completed { timing, comparison } => {
-                println!(
-                    "{}: mean {:.2} ns, match={}",
-                    result.backend.display_name(),
-                    timing.mean_nanoseconds,
-                    comparison.matches_reference,
-                );
+                match timing {
+                    TimingMeasurement::Measured(timing) => {
+                        println!(
+                            "{}: mean {:.2} ns, match={}",
+                            result.backend.display_name(),
+                            timing.mean_nanoseconds,
+                            comparison.matches_reference,
+                        );
 
-                assert_eq!(timing.iterations, 3);
+                        assert_eq!(timing.iterations, 3);
+                    }
+
+                    TimingMeasurement::TooFastToMeasure => {
+                        println!(
+                            "{}: too fast to measure, match={}",
+                            result.backend.display_name(),
+                            comparison.matches_reference,
+                        );
+                    }
+                }
+
                 assert!(comparison.matches_reference);
                 assert_eq!(comparison.mismatch_count, 0);
             }
 
             BackendRunStatus::Unavailable => {
-                println!("{}: unavailable", result.backend.display_name(),);
+                println!("{}: unavailable", result.backend.display_name());
             }
 
             BackendRunStatus::Failed { error } => {
-                panic!("{} failed: {error}", result.backend.display_name(),);
+                panic!("{} failed: {error}", result.backend.display_name());
             }
         }
     }
@@ -67,14 +80,27 @@ fn measures_and_compares_standard_f64_backends() {
     for result in report.results {
         match result.status {
             BackendRunStatus::Completed { timing, comparison } => {
-                println!(
-                    "{}: mean {:.2} ns, match={}",
-                    result.backend.display_name(),
-                    timing.mean_nanoseconds,
-                    comparison.matches_reference,
-                );
+                match timing {
+                    TimingMeasurement::Measured(timing) => {
+                        println!(
+                            "{}: mean {:.2} ns, match={}",
+                            result.backend.display_name(),
+                            timing.mean_nanoseconds,
+                            comparison.matches_reference,
+                        );
 
-                assert_eq!(timing.iterations, 3);
+                        assert_eq!(timing.iterations, 3);
+                    }
+
+                    TimingMeasurement::TooFastToMeasure => {
+                        println!(
+                            "{}: too fast to measure, match={}",
+                            result.backend.display_name(),
+                            comparison.matches_reference,
+                        );
+                    }
+                }
+
                 assert!(comparison.matches_reference);
                 assert_eq!(comparison.mismatch_count, 0);
             }
@@ -94,6 +120,7 @@ fn measures_and_compares_standard_f64_backends() {
 fn measures_and_compares_rust_and_cpp_sum_f64_backends() {
     let runner = Runner::new();
     let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+
     let config = RunnerConfig {
         backends: vec![
             BackendKind::RustScalar,
@@ -116,22 +143,38 @@ fn measures_and_compares_rust_and_cpp_sum_f64_backends() {
     for result in report.results {
         match result.status {
             BackendRunStatus::Completed { timing, comparison } => {
-                println!(
-                    "{}: mean {:.2} ns, match={}",
-                    result.backend.display_name(),
-                    timing.mean_nanoseconds,
-                    comparison.matches_reference,
-                );
-                assert_eq!(timing.iterations, 3);
+                match timing {
+                    TimingMeasurement::Measured(timing) => {
+                        println!(
+                            "{}: mean {:.2} ns, match={}",
+                            result.backend.display_name(),
+                            timing.mean_nanoseconds,
+                            comparison.matches_reference,
+                        );
+
+                        assert_eq!(timing.iterations, 3);
+                    }
+
+                    TimingMeasurement::TooFastToMeasure => {
+                        println!(
+                            "{}: too fast to measure, match={}",
+                            result.backend.display_name(),
+                            comparison.matches_reference,
+                        );
+                    }
+                }
+
                 assert!(comparison.matches_reference);
                 assert_eq!(comparison.mismatch_count, 0);
             }
+
             BackendRunStatus::Unavailable => {
                 assert!(matches!(
                     result.backend,
                     BackendKind::RustSimd | BackendKind::CppAvx
                 ));
             }
+
             BackendRunStatus::Failed { error } => {
                 panic!("{} failed: {error}", result.backend.display_name());
             }

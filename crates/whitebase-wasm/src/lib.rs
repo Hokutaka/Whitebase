@@ -8,7 +8,7 @@ use whitebase_runner::{
     BackendRunResult, BackendRunStatus, BenchmarkOperation as RunnerBenchmarkOperation,
     BenchmarkPrecision as RunnerBenchmarkPrecision, BenchmarkReport as RunnerBenchmarkReport,
     BenchmarkRequest as RunnerBenchmarkRequest, F64Value, Runner, ScalarF64BackendObservation,
-    ScalarF64ObservationReport, run_benchmark as run_runner_benchmark,
+    ScalarF64ObservationReport, TimingMeasurement, run_benchmark as run_runner_benchmark,
 };
 
 #[derive(Serialize)]
@@ -29,6 +29,7 @@ struct BenchmarkReportDto {
 struct BackendResultDto {
     backend: String,
     status: String,
+    timing_status: Option<String>,
 
     iterations: Option<usize>,
     total_nanoseconds: Option<f64>,
@@ -197,29 +198,60 @@ impl From<BackendRunResult> for BackendResultDto {
         let backend = result.backend.display_name().to_owned();
 
         match result.status {
-            BackendRunStatus::Completed { timing, comparison } => Self {
-                backend,
-                status: "completed".to_owned(),
+            BackendRunStatus::Completed { timing, comparison } => {
+                let (
+                    timing_status,
+                    iterations,
+                    total_nanoseconds,
+                    minimum_nanoseconds,
+                    maximum_nanoseconds,
+                    mean_nanoseconds,
+                ) = match timing {
+                    TimingMeasurement::Measured(timing) => (
+                        Some("measured".to_owned()),
+                        Some(timing.iterations),
+                        Some(timing.total_nanoseconds as f64),
+                        Some(timing.minimum_nanoseconds as f64),
+                        Some(timing.maximum_nanoseconds as f64),
+                        Some(timing.mean_nanoseconds),
+                    ),
 
-                iterations: Some(timing.iterations),
-                total_nanoseconds: Some(timing.total_nanoseconds as f64),
-                minimum_nanoseconds: Some(timing.minimum_nanoseconds as f64),
-                maximum_nanoseconds: Some(timing.maximum_nanoseconds as f64),
-                mean_nanoseconds: Some(timing.mean_nanoseconds),
+                    TimingMeasurement::TooFastToMeasure => (
+                        Some("too-fast-to-measure".to_owned()),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                    ),
+                };
 
-                matches_reference: Some(comparison.matches_reference),
-                mismatch_count: Some(comparison.mismatch_count),
-                maximum_absolute_error: comparison
-                    .maximum_absolute_error
-                    .is_finite()
-                    .then_some(comparison.maximum_absolute_error),
+                Self {
+                    backend,
+                    status: "completed".to_owned(),
+                    timing_status,
 
-                error: None,
-            },
+                    iterations,
+                    total_nanoseconds,
+                    minimum_nanoseconds,
+                    maximum_nanoseconds,
+                    mean_nanoseconds,
+
+                    matches_reference: Some(comparison.matches_reference),
+                    mismatch_count: Some(comparison.mismatch_count),
+                    maximum_absolute_error: comparison
+                        .maximum_absolute_error
+                        .is_finite()
+                        .then_some(comparison.maximum_absolute_error),
+
+                    error: None,
+                }
+            }
 
             BackendRunStatus::Unavailable => Self {
                 backend,
                 status: "unavailable".to_owned(),
+                timing_status: None,
 
                 iterations: None,
                 total_nanoseconds: None,
@@ -237,6 +269,7 @@ impl From<BackendRunResult> for BackendResultDto {
             BackendRunStatus::Failed { error } => Self {
                 backend,
                 status: "failed".to_owned(),
+                timing_status: None,
 
                 iterations: None,
                 total_nanoseconds: None,

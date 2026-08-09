@@ -121,6 +121,7 @@ The exact backend list depends on the platform and backend availability.
     {
       "backend": "<backend display name>",
       "status": "completed",
+      "timingStatus": "measured",
       "iterations": 100,
       "totalNanoseconds": 1234567,
       "minimumNanoseconds": 12000,
@@ -143,9 +144,26 @@ Each item in `results` has one of the following statuses.
 
 | Status | Meaning |
 | --- | --- |
-| `completed` | The backend ran successfully. Timing and comparison fields are populated. |
+| `completed` | The backend ran successfully. Comparison fields are populated. Timing fields depend on `timingStatus`. |
 | `unavailable` | The backend is not available on the current platform or CPU. Timing and comparison fields are `null`. |
 | `failed` | The backend was available but execution failed. The `error` field contains the failure message. |
+
+### Timing Status
+
+A completed backend result has one of the following `timingStatus` values.
+
+| Timing status | Meaning |
+| --- | --- |
+| `measured` | Every measured iteration produced an observable execution time. |
+| `too-fast-to-measure` | One or more measured iterations were below the current timer resolution. |
+
+When `timingStatus` is `too-fast-to-measure`, the backend status remains
+`completed`. The computation and reference comparison are still valid, but the
+timing values are not reported and the result is excluded from fastest and
+speedup calculations.
+
+In this state, `iterations`, `totalNanoseconds`, `minimumNanoseconds`,
+`maximumNanoseconds`, and `meanNanoseconds` are `null`.
 
 For a completed result:
 
