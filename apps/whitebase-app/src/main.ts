@@ -406,8 +406,6 @@ benchmarkForm.addEventListener("submit", async (event) => {
   try {
     const report = await executeBenchmark(request);
 
-    console.log(report.results);
-
     renderBenchmarkReport(report);
     statusElement.textContent = "Completed";
   } catch (error) {
