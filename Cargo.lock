@@ -6245,11 +6245,15 @@ name = "whitebase-backend-bridge"
 version = "0.1.0"
 dependencies = [
  "whitebase-asm-adapter",
+ "whitebase-backend-contract",
  "whitebase-cpp-adapter",
- "whitebase-interface",
  "whitebase-rust-backend",
  "whitebase-windows-gnu-adapter",
 ]
+
+[[package]]
+name = "whitebase-backend-contract"
+version = "0.1.0"
 
 [[package]]
 name = "whitebase-c-api"
@@ -6271,7 +6275,7 @@ name = "whitebase-core"
 version = "0.1.0"
 dependencies = [
  "whitebase-backend-bridge",
- "whitebase-interface",
+ "whitebase-backend-contract",
 ]
 
 [[package]]
@@ -6280,10 +6284,6 @@ version = "0.1.0"
 dependencies = [
  "whitebase-rust-backend",
 ]
-
-[[package]]
-name = "whitebase-interface"
-version = "0.1.0"
 
 [[package]]
 name = "whitebase-runner"

@@ -52,7 +52,7 @@ Layer番号は単純な実行順序を示すものではありません。
     <tr>
       <td>L1<br>Backend Contract</td>
       <td>共通契約のベース</td>
-      <td><code>whitebase-interface</code></td>
+      <td><code>whitebase-backend-contract</code></td>
       <td>Backend共通の型・Capability・Operation・Backend Contractを定義する</td>
       <td>L3 Backend Integration / L4 Coreから参照される</td>
     </tr>

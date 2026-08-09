@@ -2,7 +2,7 @@ use whitebase_backend_bridge::{
     AssemblyAvxBackend, AssemblyScalarBackend, CppAvxBackend, CppScalarBackend, RustScalarBackend,
     RustSimdBackend,
 };
-use whitebase_interface::ComputeBackend;
+use whitebase_backend_contract::ComputeBackend;
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
 use whitebase_backend_bridge::{

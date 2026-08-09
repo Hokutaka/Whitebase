@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-whitebase-interface = { path = "../whitebase-interface" }
+whitebase-backend-contract = { path = "../whitebase-backend-contract" }
 whitebase-rust-backend = {
     path = "../whitebase-rust-backend"
 }

@@ -6,7 +6,7 @@ members = [
     "crates/whitebase-c-api",
     "crates/whitebase-cpp-adapter",
     "crates/whitebase-windows-gnu-adapter",
-    "crates/whitebase-interface",
+    "crates/whitebase-backend-contract",
     "crates/whitebase-backend-bridge",
     "crates/whitebase-asm-adapter",
     "crates/whitebase-core",
