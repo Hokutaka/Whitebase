@@ -19,6 +19,19 @@ pub struct TimingSummary {
     pub mean_nanoseconds: f64,
 }
 
+/// ベンチマークの時間計測結果です。
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TimingMeasurement {
+    /// 全iterationの実行時間を計測できました。
+    Measured(TimingSummary),
+
+    /// 1つ以上のiterationがタイマー分解能未満でした。
+    ///
+    /// 演算自体は成功していますが、現在のタイマーでは
+    /// 単発実行時間を正しく表現できません。
+    TooFastToMeasure,
+}
+
 /// 参照結果との比較結果です。
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ComparisonSummary {
@@ -37,7 +50,7 @@ pub struct ComparisonSummary {
 pub enum BackendRunStatus {
     /// 計測と結果比較に成功しました。
     Completed {
-        timing: TimingSummary,
+        timing: TimingMeasurement,
         comparison: ComparisonSummary,
     },
 

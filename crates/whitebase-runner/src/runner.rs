@@ -9,18 +9,9 @@ use whitebase_core::{BackendKind, ComputeError, Whitebase};
 use crate::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
     ComparisonSummary, F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation,
-    ScalarF64ObservationReport, SumF64Report, TimingSummary, decimal::ExactDecimal,
+    ScalarF64ObservationReport, SumF64Report, TimingMeasurement, TimingSummary,
+    decimal::ExactDecimal,
 };
-
-#[cfg(target_arch = "wasm32")]
-/// ブラウザのタイマーは、粗い分解能（例えば役100μs)を持つ場合がある
-/// 複数の操作をまとめて計測することでサンプル時間が十分に長くなり、
-/// 計測時間がゼロになるのを防ぐことが出来ます。
-const WASM_MIN_MEASUREMENT_WINDOW: Duration = Duration::from_millis(1);
-
-/// 暴走しないでほしい。キャリブレーションによる過剰な実行回数を防ぐための上限。
-#[cfg(target_arch = "wasm32")]
-const WASM_MAX_MEASUREMENT_BATCH_SIZE: u32 = 1024;
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
 pub struct Runner {
@@ -255,32 +246,23 @@ impl Runner {
             }
         }
 
-        let batch_size = match calibrate_measurement_batch_size(|| {
-            self.whitebase.add_f32(
+        let mut durations = Vec::with_capacity(config.measured_iterations);
+
+        for _ in 0..config.measured_iterations {
+            let started_at = Instant::now();
+            let result = self.whitebase.add_f32(
                 backend,
                 black_box(lhs),
                 black_box(rhs),
                 black_box(output.as_mut_slice()),
-            )
-        }) {
-            Ok(batch_size) => batch_size,
-            Err(error) => return failed_backend_result(backend, error),
-        };
+            );
+            let elapsed = started_at.elapsed();
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
-
-        for _ in 0..config.measured_iterations {
-            match measure_batched(batch_size, || {
-                self.whitebase.add_f32(
-                    backend,
-                    black_box(lhs),
-                    black_box(rhs),
-                    black_box(output.as_mut_slice()),
-                )
-            }) {
-                Ok((elapsed, ())) => durations.push(elapsed),
-                Err(error) => return failed_backend_result(backend, error),
+            if let Err(error) = result {
+                return failed_backend_result(backend, error);
             }
+
+            durations.push(elapsed);
         }
 
         BackendRunResult {
@@ -326,32 +308,23 @@ impl Runner {
             }
         }
 
-        let batch_size = match calibrate_measurement_batch_size(|| {
-            self.whitebase.add_f64(
+        let mut durations = Vec::with_capacity(config.measured_iterations);
+
+        for _ in 0..config.measured_iterations {
+            let started_at = Instant::now();
+            let result = self.whitebase.add_f64(
                 backend,
                 black_box(lhs),
                 black_box(rhs),
                 black_box(output.as_mut_slice()),
-            )
-        }) {
-            Ok(batch_size) => batch_size,
-            Err(error) => return failed_backend_result(backend, error),
-        };
+            );
+            let elapsed = started_at.elapsed();
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
-
-        for _ in 0..config.measured_iterations {
-            match measure_batched(batch_size, || {
-                self.whitebase.add_f64(
-                    backend,
-                    black_box(lhs),
-                    black_box(rhs),
-                    black_box(output.as_mut_slice()),
-                )
-            }) {
-                Ok((elapsed, ())) => durations.push(elapsed),
-                Err(error) => return failed_backend_result(backend, error),
+            if let Err(error) = result {
+                return failed_backend_result(backend, error);
             }
+
+            durations.push(elapsed);
         }
 
         BackendRunResult {
@@ -389,26 +362,20 @@ impl Runner {
             }
         }
 
-        let batch_size = match calibrate_measurement_batch_size(|| {
-            self.whitebase.sum_f64(backend, black_box(input))
-        }) {
-            Ok(batch_size) => batch_size,
-            Err(error) => return failed_backend_result(backend, error),
-        };
-
         let mut durations = Vec::with_capacity(config.measured_iterations);
         let mut output = None;
 
         for _ in 0..config.measured_iterations {
-            match measure_batched(batch_size, || {
-                self.whitebase.sum_f64(backend, black_box(input))
-            }) {
-                Ok((elapsed, value)) => {
-                    durations.push(elapsed);
-                    output = Some(black_box(value));
-                }
+            let started_at = Instant::now();
+            let result = self.whitebase.sum_f64(backend, black_box(input));
+            let elapsed = started_at.elapsed();
+
+            match result {
+                Ok(value) => output = Some(black_box(value)),
                 Err(error) => return failed_backend_result(backend, error),
             }
+
+            durations.push(elapsed);
         }
 
         let output = output.expect("measured iterations are validated");
@@ -530,56 +497,11 @@ fn failed_backend_result(backend: BackendKind, error: ComputeError) -> BackendRu
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-fn calibrate_measurement_batch_size<T>(
-    mut operation: impl FnMut() -> Result<T, ComputeError>,
-) -> Result<u32, ComputeError> {
-    let mut batch_size = 1_u32;
-
-    loop {
-        let started_at = Instant::now();
-
-        for _ in 0..batch_size {
-            black_box(operation()?);
-        }
-
-        let elapsed = started_at.elapsed();
-
-        if elapsed >= WASM_MIN_MEASUREMENT_WINDOW || batch_size >= WASM_MAX_MEASUREMENT_BATCH_SIZE {
-            return Ok(batch_size);
-        }
-
-        batch_size = (batch_size * 2).min(WASM_MAX_MEASUREMENT_BATCH_SIZE);
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn calibrate_measurement_batch_size<T>(
-    _operation: impl FnMut() -> Result<T, ComputeError>,
-) -> Result<u32, ComputeError> {
-    Ok(1)
-}
-
-fn measure_batched<T>(
-    batch_size: u32,
-    mut operation: impl FnMut() -> Result<T, ComputeError>,
-) -> Result<(Duration, T), ComputeError> {
-    debug_assert!(batch_size > 0);
-
-    let started_at = Instant::now();
-    let mut last_result = None;
-
-    for _ in 0..batch_size {
-        last_result = Some(black_box(operation()?));
+fn summarize_timings(durations: &[Duration]) -> TimingMeasurement {
+    if durations.iter().any(Duration::is_zero) {
+        return TimingMeasurement::TooFastToMeasure;
     }
 
-    let elapsed = started_at.elapsed();
-    let result = last_result.expect("batch size is always at least one");
-
-    Ok((elapsed / batch_size, result))
-}
-
-fn summarize_timings(durations: &[Duration]) -> TimingSummary {
     let total = durations.iter().copied().sum::<Duration>();
     let minimum = durations
         .iter()
@@ -593,13 +515,13 @@ fn summarize_timings(durations: &[Duration]) -> TimingSummary {
         .expect("measured iterations are validated");
     let total_nanoseconds = total.as_nanos();
 
-    TimingSummary {
+    TimingMeasurement::Measured(TimingSummary {
         iterations: durations.len(),
         total_nanoseconds,
         minimum_nanoseconds: minimum.as_nanos(),
         maximum_nanoseconds: maximum.as_nanos(),
         mean_nanoseconds: total_nanoseconds as f64 / durations.len() as f64,
-    }
+    })
 }
 
 fn compare_outputs_f32(actual: &[f32], reference: &[f32], tolerance: f32) -> ComparisonSummary {
@@ -734,5 +656,31 @@ mod tests {
             error,
             RunnerError::InvalidScalarF64Input { name: "lhs", .. }
         ));
+    }
+
+    #[test]
+    fn reports_timing_as_too_fast_when_any_sample_is_zero() {
+        let durations = [
+            Duration::from_micros(100),
+            Duration::ZERO,
+            Duration::from_micros(200),
+        ];
+
+        assert_eq!(
+            summarize_timings(&durations),
+            TimingMeasurement::TooFastToMeasure
+        );
+    }
+
+    #[test]
+    fn summarizes_timings_when_all_samples_are_measurable() {
+        let durations = [Duration::from_micros(100), Duration::from_micros(200)];
+
+        let TimingMeasurement::Measured(summary) = summarize_timings(&durations) else {
+            panic!("timing must be measurable");
+        };
+
+        assert_eq!(summary.minimum_nanoseconds, 100_000);
+        assert_eq!(summary.maximum_nanoseconds, 200_000);
     }
 }
