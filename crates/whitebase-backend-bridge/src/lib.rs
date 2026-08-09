@@ -26,7 +26,7 @@ mod unavailable;
 
 use std::fmt;
 
-use whitebase_interface::{BackendKind, ComputeError};
+use whitebase_backend_contract::{BackendKind, ComputeError};
 
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
