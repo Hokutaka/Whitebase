@@ -86,7 +86,8 @@ IEEE 754に由来する代表的な挙動を、
 1.0 / 0.0                    Infinity
 0.0 / 0.0                    NaN
 -0.0                         符号付きゼロ
-極小値                       Underflow / Subnormal
+極小値                       Underflow
+Subnormal値　　　　　　　　　Subnormal
 最大値付近の演算             Overflow
 mul_add と a * b + c         FMAによる差
 ```
