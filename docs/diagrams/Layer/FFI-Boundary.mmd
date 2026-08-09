@@ -1,0 +1,7 @@
+flowchart TB
+    Consumer["C / C++ / External Native Consumer"]
+    CApi["whitebase-c-api<br/>FFI Boundary"]
+    Core["Whitebase Core"]
+
+    Consumer --> CApi
+    CApi --> Core

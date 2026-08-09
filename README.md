@@ -21,6 +21,7 @@ For more details, see the sections below.
 
 - [Detailed documentation](/docs//Overview.md)
 - [Project structure](docs/project-tree.md)
+- [Layer Overview(Ja)](docs/Layer/Layer-Overview.md)
 
 ### Operation Tools
 

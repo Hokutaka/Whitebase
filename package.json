@@ -3,11 +3,18 @@
     "diagram:architecture": "mmdc -i docs/diagrams/structure/architecture.mmd -o docs/diagrams/structure/architecture.svg",
     "diagram:module": "mmdc -i docs/diagrams/structure/module.mmd -o docs/diagrams/structure/module.svg",
     "diagram:usage": "mmdc -i docs/diagrams/structure/usage.mmd -o docs/diagrams/structure/usage.svg",
-    "diagram": "npm run diagram:architecture && npm run diagram:module && npm run diagram:usage"
+
+    "diagram:backend-contract": "mmdc -i docs/diagrams/Layer/Backend-Contract.mmd -o docs/diagrams/Layer/Backend-Contract.svg",
+    "diagram:pure-compute": "mmdc -i docs/diagrams/Layer/Pure-Compute.mmd -o docs/diagrams/Layer/Pure-Compute.svg",
+    "diagram:applied-compute": "mmdc -i docs/diagrams/Layer/Applied-Compute.mmd -o docs/diagrams/Layer/Applied-Compute.svg",
+    "diagram:ffi-boundary": "mmdc -i docs/diagrams/Layer/FFI-Boundary.mmd -o docs/diagrams/Layer/FFI-Boundary.svg",
+
+    "diagram:structure": "npm run diagram:architecture && npm run diagram:module && npm run diagram:usage",
+    "diagram:layer": "npm run diagram:backend-contract && npm run diagram:pure-compute && npm run diagram:applied-compute && npm run diagram:ffi-boundary",
+
+    "diagram": "npm run diagram:structure && npm run diagram:layer"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.16.0"
   }
 }
-
-
