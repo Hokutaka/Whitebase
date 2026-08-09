@@ -148,8 +148,11 @@ Backend一覧は実行PlatformとBackendの利用可否によって変化しま�
 | `too-fast-to-measure` | 1回以上のiterationがタイマー分解能未満でした。 |
 
 `too-fast-to-measure`の場合もBackend Statusは`completed`です。
-演算結果と参照結果の比較は有効ですが、時間値は`null`となり、
+演算結果と参照結果の比較は有効ですが、時間値は報告されず、
 性能比較やSpeedupの対象にはなりません。
+
+この場合、`iterations`、`totalNanoseconds`、`minimumNanoseconds`、
+`maximumNanoseconds`、`meanNanoseconds`は`null`になります。
 
 ### Backend Result Status
 
@@ -157,7 +160,7 @@ Backend一覧は実行PlatformとBackendの利用可否によって変化しま�
 
 | Status | 意味 |
 | --- | --- |
-| `completed` | Backendの実行に成功。時間・比較情報が設定されます。 |
+| `completed` | Backendの実行に成功。比較情報が設定され、時間値は`timingStatus`に依存します。 |
 | `unavailable` | 現在のPlatformまたはCPUでBackendを利用できません。時間・比較情報は`null`です。 |
 | `failed` | Backendは利用対象ですが実行に失敗しました。`error`に失敗内容が入ります。 |
 
