@@ -27,7 +27,7 @@ Coreを中心としたモノレポ構成を採用しています。
 
 | 名称 | 実装内容 |
 | --- | --- |
-| [Whitebase Operations](docs/tools/Whitebase%20Operations.md) | Windows Batch |
+| [Whitebase Operations](docs/tools/Whitebase%20Operations.md) | Windows Batch / Linux Native Shell |
 | [Whitebase Control Center](docs/tools/Whitebase%20Control%20Center.md) | Rust + egui / Windows and Linux |
 | [Whitebase Control Panel](docs/tools/Whitebase%20Control%20Panel.md) | C# + WPF / Windows |
 

@@ -43,6 +43,11 @@ impl BackendCapabilities {
     /// SIMDによる`f32`配列加算能力を生成します。
     #[must_use]
     pub const fn simd_add_f32(vector_width_f32: usize) -> Self {
+        assert!(
+            vector_width_f32 > 0,
+            "f32 vector width must be greater than zero"
+        );
+
         Self {
             add_f32: true,
             add_f64: false,
@@ -56,6 +61,11 @@ impl BackendCapabilities {
     /// `f64`配列加算能力を追加します。
     #[must_use]
     pub const fn with_add_f64(mut self, vector_width_f64: usize) -> Self {
+        assert!(
+            vector_width_f64 > 0,
+            "f64 vector width must be greater than zero"
+        );
+
         self.add_f64 = true;
         self.vector_width_f64 = vector_width_f64;
         self
@@ -84,5 +94,30 @@ impl BackendCapabilities {
             OperationKind::AddScalarF64 => self.add_scalar_f64,
             OperationKind::SumF64 => self.sum_f64,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "f32 vector width must be greater than zero")]
+    fn simd_add_f32_rejects_zero_vector_width() {
+        let _ = BackendCapabilities::simd_add_f32(0);
+    }
+
+    #[test]
+    #[should_panic(expected = "f64 vector width must be greater than zero")]
+    fn add_f64_rejects_zero_vector_width() {
+        let _ = BackendCapabilities::scalar_add_f32().with_add_f64(0);
+    }
+
+    #[test]
+    fn positive_vector_width_is_preserved() {
+        let capabilities = BackendCapabilities::simd_add_f32(8).with_add_f64(4);
+
+        assert_eq!(capabilities.vector_width_f32, 8);
+        assert_eq!(capabilities.vector_width_f64, 4);
     }
 }
