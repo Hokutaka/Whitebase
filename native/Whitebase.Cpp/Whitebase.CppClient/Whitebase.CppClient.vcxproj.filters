@@ -20,7 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\crates\whitebase-c-api\include\whitebase.h">
+    <ClInclude Include="..\..\..\crates\ffi\whitebase-c-api\include\whitebase.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

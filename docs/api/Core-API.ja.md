@@ -19,7 +19,7 @@
 
 ```toml
 [dependencies]
-whitebase-core = { path = "crates/whitebase-core" }
+whitebase-core = { path = "crates/compute/whitebase-core" }
 ```
 
 現在の crate version は `0.1.0` で、workspace 内部利用を前提として `publish = false` です。

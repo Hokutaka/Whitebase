@@ -5,9 +5,9 @@ edition = "2024"
 publish = false
 
 [dependencies]
-whitebase-backend-contract = { path = "../whitebase-backend-contract" }
+whitebase-backend-contract = { path = "../../whitebase-backend-contract" }
 whitebase-rust-backend = {
-    path = "../whitebase-rust-backend"
+    path = "../../whitebase-rust-backend"
 }
 
 [target.x86_64-pc-windows-msvc.dependencies]

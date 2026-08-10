@@ -23,5 +23,5 @@ tower-http = {
 }
 
 whitebase-runner = {
-    path = "../../crates/whitebase-runner"
+    path = "../../crates/compute/whitebase-runner"
 }

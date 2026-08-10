@@ -9,12 +9,15 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 whitebase-core = {
-    path = "../whitebase-core"
+    path = "../../compute/whitebase-core"
 }
+
 whitebase-runner = {
-    path = "../whitebase-runner"
+    path = "../../compute/whitebase-runner"
 }
+
 wasm-bindgen = "0.2"
+
 serde = {
     version = "1",
     features = ["derive"]

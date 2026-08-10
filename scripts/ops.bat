@@ -11,7 +11,7 @@ pushd "%WHITEBASE_ROOT%" || exit /b 1
 set "APP_DIR=apps\whitebase-app"
 set "WASM_PACKAGE=whitebase-wasm"
 set "WASM_TARGET=wasm32-unknown-unknown"
-set "WASM_DIR=crates\whitebase-wasm"
+set "WASM_DIR=crates\interface\whitebase-wasm"
 set "WASM_OUT_DIR=%APP_DIR%\src\wasm"
 
 set "CPP_SOLUTION=%WHITEBASE_ROOT%\native\Whitebase.Cpp\Whitebase.Cpp.slnx"
