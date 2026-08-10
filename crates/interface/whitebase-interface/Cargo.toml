@@ -1,0 +1,16 @@
+[package]
+name = "whitebase-interface"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+whitebase-core = {
+    path = "../../compute/whitebase-core"
+}
+
+whitebase-runner = {
+    path = "../../compute/whitebase-runner"
+}

@@ -22,6 +22,6 @@ tower-http = {
     features = ["cors"],
 }
 
-whitebase-runner = {
-    path = "../../crates/compute/whitebase-runner"
+whitebase-interface = {
+    path = "../../crates/interface/whitebase-interface"
 }

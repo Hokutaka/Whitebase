@@ -9,6 +9,7 @@ members = [
     "crates/backend/integration/whitebase-windows-gnu-adapter",
     "crates/compute/whitebase-core",
     "crates/compute/whitebase-runner",
+    "crates/interface/whitebase-interface",
     "crates/interface/whitebase-wasm",
     "crates/ffi/whitebase-c-api",
     "apps/whitebase-app/src-tauri",

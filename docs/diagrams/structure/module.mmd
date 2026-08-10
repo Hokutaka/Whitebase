@@ -10,24 +10,26 @@ flowchart TB
         External["External Applications<br/>C# / C++ / other"]
     end
 
-    subgraph Consumers["Bindings / Entry Points"]
+    subgraph Consumers["User Faces / Entry Points"]
         direction LR
         Wasm["whitebase-wasm<br/>WebAssembly boundary"]
         TauriCommands["src-tauri<br/>Tauri Commands"]
         CApi["whitebase-c-api<br/>C ABI boundary"]
     end
 
-    Interface["whitebase-backend-contract<br/>trait / common types / errors<br/>capabilities / operation kinds"]
+    ApplicationInterface["whitebase-interface<br/>Application Boundary<br/>Pure Compute / Applied Compute<br/>Request / Response / InterfaceError"]
+
+    BackendContract["whitebase-backend-contract<br/>trait / common types / errors<br/>capabilities / operation kinds"]
 
     Runner["whitebase-runner<br/>input generation / warmup / timing<br/>comparison / report generation"]
 
     Core["whitebase-core<br/>backend registration / dispatch<br/>capability / availability / compute API"]
 
-    Bridge["whitebase-backend-bridge<br/>connects Backends to common Interface"]
+    Bridge["whitebase-backend-bridge<br/>connects Backends to common Backend Contract"]
 
     subgraph Backends["Backend implementations / bindings"]
         direction LR
-        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / wasm32 SIMD128"]
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / AArch64 NEON / wasm32 SIMD128"]
         CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
         AsmAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
         WindowsGnuAdapter["whitebase-windows-gnu-adapter<br/>Rust → Windows GNU native DLL"]
@@ -93,26 +95,31 @@ flowchart TB
     AssemblyClient --> AsmLib
 
     %% --------------------------------------------------------
-    %% Boundaries → Runner / Core
+    %% User Faces → Application Boundary
     %% --------------------------------------------------------
 
-    Server --> Runner
-    TauriCommands --> Runner
+    Server --> ApplicationInterface
+    TauriCommands --> ApplicationInterface
+    Wasm --> ApplicationInterface
 
-    Wasm -->|"Observation / Benchmark"| Runner
-    Wasm -->|"Primitive compute API"| Core
+    %% --------------------------------------------------------
+    %% Application Boundary → Runner / Core
+    %% --------------------------------------------------------
+
+    ApplicationInterface -->|"Applied Compute"| Runner
+    ApplicationInterface -->|"Pure Compute"| Core
 
     CApi --> Core
 
     Runner --> Core
 
     %% --------------------------------------------------------
-    %% Core / Interface / Backend routing
+    %% Core / Backend Contract / Backend routing
     %% --------------------------------------------------------
 
     Core --> Bridge
-    Core -. "uses contract" .-> Interface
-    Bridge -. "implements contract" .-> Interface
+    Core -. "uses contract" .-> BackendContract
+    Bridge -. "implements contract" .-> BackendContract
 
     Bridge --> RustBackend
     Bridge --> CppAdapter
@@ -145,6 +152,7 @@ flowchart TB
     %% Development tools
     %% --------------------------------------------------------
 
+    Scripts -. "build / test" .-> ApplicationInterface
     Scripts -. "build / test" .-> Runner
     Scripts -. "build / test" .-> Core
     Scripts -. "build / test" .-> Backends
