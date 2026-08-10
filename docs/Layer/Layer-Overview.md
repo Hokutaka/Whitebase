@@ -105,36 +105,37 @@ Layer番号は単純な実行順序を示すものではありません。
       <td>L4 Coreを利用し、L6 Interfaceから利用される</td>
     </tr>
     <tr>
-  <td rowspan="4">L6<br>Interface</td>
-  <td rowspan="4">Application Boundary</td>
-  <td><code>whitebase-interface</code></td>
-  <td>
-    Core / Runnerを利用する共通Application API、
-    Request / Response、Interface Errorを提供する
-  </td>
-  <td rowspan="4">
-    Pure ComputeはL4 Core、Applied ComputeはL5 Runnerを利用し、
-    各Interface AdapterへWhitebaseの機能を公開する
-  </td>
-  </tr>
   <tr>
-    <td>HTTP API<br><code>whitebase-server</code></td>
-    <td>
-      whitebase-interfaceをHTTP / JSONへ変換して公開する
-    </td>
-  </tr>
-  <tr>
-    <td>Tauri Command API</td>
-    <td>
-      whitebase-interfaceをTauri IPCへ公開する
-    </td>
-  </tr>
-  <tr>
-    <td>WASM API<br><code>whitebase-wasm</code></td>
-    <td>
-      whitebase-interfaceをWebAssembly / JavaScriptへ公開する
-    </td>
-  </tr>
+      <td rowspan="4">L6<br>Interface</td>
+      <td rowspan="4">Application Boundary / Interface Adapter</td>
+      <td><code>whitebase-interface</code></td>
+      <td>
+        Core / Runnerを利用するtransport非依存のApplication API、
+        Request / Response、Interface Errorを提供する
+      </td>
+      <td rowspan="4">
+        <code>whitebase-interface</code>を共通Application Boundaryとし、
+        transport固有のInterface AdapterからWhitebaseの機能を公開する
+      </td>
+    </tr>
+    <tr>
+      <td>HTTP API<br><code>whitebase-http-api</code></td>
+      <td>
+        whitebase-interfaceをHTTP / JSONへ変換するAxum Interface Adapter
+      </td>
+    </tr>
+    <tr>
+      <td>Tauri Command API</td>
+      <td>
+        whitebase-interfaceをTauri IPCへ変換するInterface Adapter
+      </td>
+    </tr>
+    <tr>
+      <td>WASM API<br><code>whitebase-wasm</code></td>
+      <td>
+        whitebase-interfaceをWebAssembly / JavaScriptへ変換するInterface Adapter
+      </td>
+    </tr>
     <tr>
       <td>L7<br>Presentation</td>
       <td>User Facing</td>
@@ -176,14 +177,25 @@ Runnerを利用する場合は、CoreのPure Computeを応用処理として利�
 
 ### Interfaceからの接続
 
-Interfaceは、公開する機能によってCoreまたはRunnerを利用します。
+`whitebase-interface`は、公開する機能によってCoreまたはRunnerを利用します。
 
 - Pure Computeを公開する場合はCoreを利用する
 - Applied Computeを公開する場合はRunnerを利用する
 
-HTTP API、Tauri Command API、WASM APIは、
-それぞれ異なる実行環境へWhitebaseの機能を公開しますが、
-Whitebase内部で担当する責務は同じInterface Layerとして扱います。
+HTTP、Tauri IPC、WebAssembly / JavaScriptなどのtransport固有処理は、
+それぞれのInterface Adapterが担当します。
+
+現在の主な構成は以下です。
+
+- `whitebase-http-api`: HTTP / JSON / Axum Interface Adapter
+- Tauri Command API: Tauri IPC Interface Adapter
+- `whitebase-wasm`: WebAssembly / JavaScript Interface Adapter
+
+各Interface Adapterは`whitebase-interface`を共通Application Boundaryとして利用し、
+Core / Runner固有のApplication処理をtransport側へ重複させない構成とします。
+
+`whitebase-server`などの実行HostはInterface Adapterを起動する役割のみを持ち、
+Application Boundaryそのものには含めません。
 
 ## Layer外の構成要素
 

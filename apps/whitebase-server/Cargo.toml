@@ -6,7 +6,6 @@ publish = false
 
 [dependencies]
 axum = "0.8"
-serde = { version = "1", features = ["derive"] }
 
 tokio = {
     version = "1",
@@ -17,11 +16,6 @@ tokio = {
     ],
 }
 
-tower-http = {
-    version = "0.7",
-    features = ["cors"],
-}
-
-whitebase-interface = {
-    path = "../../crates/interface/whitebase-interface"
+whitebase-http-api = {
+    path = "../../crates/interface/whitebase-http-api"
 }
