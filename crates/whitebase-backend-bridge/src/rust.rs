@@ -45,7 +45,7 @@ impl ComputeBackend for RustScalarBackend {
     }
 }
 
-/// RustによるAVX計算バックエンドです。
+/// RustによるSIMD計算バックエンドです。
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RustSimdBackend;
 
@@ -55,14 +55,14 @@ impl ComputeBackend for RustSimdBackend {
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
         {
             BackendCapabilities::simd_add_f32(4)
                 .with_add_f64(2)
                 .with_sum_f64()
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
         {
             BackendCapabilities::simd_add_f32(8)
                 .with_add_f64(4)

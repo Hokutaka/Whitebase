@@ -1,5 +1,8 @@
 use crate::ArrayLengthError;
 
+#[cfg(target_arch = "aarch64")]
+mod aarch64;
+
 #[cfg(target_arch = "wasm32")]
 mod wasm32;
 
@@ -33,7 +36,16 @@ pub fn is_simd_available() -> bool {
         wasm32::is_available()
     }
 
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "wasm32")))]
+    #[cfg(target_arch = "aarch64")]
+    {
+        aarch64::is_neon_available()
+    }
+
+    #[cfg(not(any(
+        target_arch = "x86_64",
+        target_arch = "wasm32",
+        target_arch = "aarch64"
+    )))]
     {
         false
     }
@@ -80,6 +92,20 @@ pub fn add_f32(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), Array
             }
         }
 
+        #[cfg(target_arch = "aarch64")]
+        {
+            if aarch64::is_neon_available() {
+                // SAFETY:
+                // 実行前にNEON対応を確認しており、
+                // 配列長も検証済みです。
+                unsafe {
+                    aarch64::add_f32(lhs, rhs, output);
+                }
+
+                return Ok(());
+            }
+        }
+
         crate::scalar::add_f32(lhs, rhs, output)
     }
 }
@@ -120,6 +146,17 @@ pub fn add_f64_array(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(),
             }
         }
 
+        #[cfg(target_arch = "aarch64")]
+        {
+            if aarch64::is_neon_available() {
+                unsafe {
+                    aarch64::add_f64(lhs, rhs, output);
+                }
+
+                return Ok(());
+            }
+        }
+
         crate::scalar::add_f64_array(lhs, rhs, output)
     }
 }
@@ -143,6 +180,15 @@ pub fn sum_f64(input: &[f64]) -> f64 {
             if x86_64::is_avx_available() {
                 unsafe {
                     return x86_64::sum_f64(input);
+                }
+            }
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            if aarch64::is_neon_available() {
+                unsafe {
+                    return aarch64::sum_f64(input);
                 }
             }
         }
