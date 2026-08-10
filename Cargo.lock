@@ -6230,7 +6230,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
- "whitebase-runner",
+ "whitebase-interface",
 ]
 
 [[package]]
@@ -6286,6 +6286,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "whitebase-interface"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "whitebase-core",
+ "whitebase-runner",
+]
+
+[[package]]
 name = "whitebase-runner"
 version = "0.1.0"
 dependencies = [
@@ -6305,7 +6314,7 @@ dependencies = [
  "serde",
  "tokio",
  "tower-http 0.7.0",
- "whitebase-runner",
+ "whitebase-interface",
 ]
 
 [[package]]
@@ -6316,7 +6325,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "wasm-bindgen",
  "whitebase-core",
- "whitebase-runner",
+ "whitebase-interface",
 ]
 
 [[package]]

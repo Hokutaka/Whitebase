@@ -21,11 +21,11 @@ APIや構成は頻繁に変わる予定です。
 
 Whitebaseは、以下の3つの方法で動作を確認できます。
 
-| 実行方法 | Server | Coreの呼び出し経路 |
+| 実行方法 | Server | Whitebaseの呼び出し経路 |
 | --- | ---: | --- |
-| Tauriアプリ | 不要 | Tauri → Tauri Commands → Runner → Core |
-| GitHub Pages | 任意 | Browser → WASM → Runner → Core、またはloopback接続が利用可能な場合は Browser → HTTP → Whitebase Server → Runner → Core |
-| ローカルWebアプリ | 任意 | Browser → WASM → Runner → Core、または Browser → HTTP → Whitebase Server → Runner → Core |
+| Tauriアプリ | 不要 | Tauri → Tauri Commands → Interface → Runner / Core |
+| GitHub Pages | 任意 | Browser → WASM → Interface → Runner / Core、またはloopback接続が利用可能な場合は Browser → HTTP → Whitebase Server → Interface → Runner / Core |
+| ローカルWebアプリ | 任意 | Browser → WASM → Interface → Runner / Core、または Browser → HTTP → Whitebase Server → Interface → Runner / Core |
 
 Browser環境では、アプリ起動時に実行経路を判定します。
 
@@ -169,7 +169,13 @@ scripts\ops.bat web-build
 TauriではIPCを使用し、通常のブラウザでは起動時に
 HTTP APIまたはWebAssemblyの実行経路を選択します。
 
-どの実行経路でもRunnerとCoreを中心とした共通の構成を利用します。
+どのApplication Interfaceからも`whitebase-interface`を共通の境界として利用します。
+
+`whitebase-interface`は、Pure ComputeではWhitebase Coreを直接利用し、
+比較・計測・観測などのApplied ComputeではRunnerを利用します。
+
+HTTP、Tauri、WebAssemblyはWhitebase内部のCore / Runnerを直接公開せず、
+それぞれの実行環境に合わせて`whitebase-interface`を公開します。
 
 ![モジュール構成図](/docs/diagrams/structure/architecture.svg)
 

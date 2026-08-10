@@ -159,6 +159,14 @@ Whitebase
 │   │       │   └── lib.rs
 │   │       └── Cargo.toml
 │   └── interface
+│       ├── whitebase-interface
+│       │   ├── src
+│       │   │   ├── benchmark.rs
+│       │   │   ├── compute.rs
+│       │   │   ├── error.rs
+│       │   │   ├── lib.rs
+│       │   │   └── scalar_f64.rs
+│       │   └── Cargo.toml
 │       └── whitebase-wasm
 │           ├── src
 │           │   └── lib.rs

@@ -23,11 +23,11 @@ Examples include:
 
 Whitebase can be tested in the following three ways.
 
-| Execution method | Server | Core call path |
+| Runtime | Server | Whitebase call path |
 | --- | ---: | --- |
-| Tauri app | Not required | Tauri → Tauri Commands → Runner → Core |
-| GitHub Pages | Optional | Browser → WASM → Runner → Core, or, when loopback access is available, Browser → HTTP → Whitebase Server → Runner → Core |
-| Local web app | Optional | Browser → WASM → Runner → Core, or Browser → HTTP → Whitebase Server → Runner → Core |
+| Tauri app | Not required | Tauri → Tauri Commands → Interface → Runner / Core |
+| GitHub Pages | Optional | Browser → WASM → Interface → Runner / Core, or when loopback access is available: Browser → HTTP → Whitebase Server → Interface → Runner / Core |
+| Local web app | Optional | Browser → WASM → Interface → Runner / Core, or Browser → HTTP → Whitebase Server → Interface → Runner / Core |
 
 In browser environments, the execution route is selected when the application starts.
 
