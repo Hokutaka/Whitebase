@@ -1,77 +1,112 @@
 flowchart TB
-    subgraph Frontends["Frontend / External Consumers"]
+    subgraph Apps["Applications"]
         direction LR
-        Tauri["Tauri WebView"]
-        Browser["Browser<br/>(Local / GitHub Pages)"]
-        External["External Applications<br/>C / C++ / C# / other"]
+        Web["whitebase-app<br/>Web UI<br/>(Browser runtime)"]
+        TauriApp["whitebase-app<br/>Tauri Application Host"]
+        Server["whitebase-server<br/>HTTP Server Host"]
+        CppClient["Whitebase.CppClient<br/>C ABI smoke test"]
+        CppBackendClient["Whitebase.CppBackendClient<br/>C++ Backend smoke test"]
+        AssemblyClient["Whitebase.AssemblyClient<br/>Assembly smoke test"]
+        External["External Applications<br/>C# / C++ / other"]
     end
 
-    subgraph UserFaces["User Faces / Transport Adapters"]
+    subgraph Consumers["Interface Adapters / Entry Points"]
         direction LR
-        TauriCommand["Tauri Commands<br/>IPC / invoke()"]
-        HttpServer["whitebase-server<br/>HTTP + JSON"]
-        Wasm["whitebase-wasm<br/>WebAssembly"]
+        HttpApi["whitebase-http-api<br/>HTTP / JSON / Axum Adapter"]
+        TauriApi["whitebase-tauri-api<br/>Tauri Command / IPC Adapter"]
+        Wasm["whitebase-wasm<br/>WebAssembly boundary"]
+        CApi["whitebase-c-api<br/>C ABI boundary"]
     end
 
     ApplicationInterface["whitebase-interface<br/>Application Boundary<br/>Pure Compute / Applied Compute<br/>Request / Response / InterfaceError"]
 
-    subgraph FfiBoundary["FFI Boundary"]
-        CApi["whitebase-c-api<br/>C ABI"]
-    end
+    BackendContract["whitebase-backend-contract<br/>trait / common types / errors<br/>capabilities / operation kinds"]
 
-    Runner["whitebase-runner<br/>入力生成・ウォームアップ<br/>計測・結果比較・レポート生成"]
+    Runner["whitebase-runner<br/>input generation / warmup / timing<br/>comparison / report generation"]
 
-    Core["whitebase-core<br/>Backend登録・指定実行<br/>能力・可用性確認・統一計算API"]
+    Core["whitebase-core<br/>backend registration / dispatch<br/>capability / availability / compute API"]
 
-    BackendContract["whitebase-backend-contract<br/>BackendKind / Capabilities<br/>ComputeBackend / Error"]
+    Bridge["whitebase-backend-bridge<br/>connects Backends to common Backend Contract"]
 
-    Bridge["whitebase-backend-bridge<br/>各Backendを共通Backend Contractへ統合"]
-
-    subgraph BackendConnections["Backend Implementations / Bindings"]
+    subgraph Backends["Backend implementations / bindings"]
         direction LR
-
         RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / AArch64 NEON / wasm32 SIMD128"]
-
         CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
-
-        AssemblyAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
-
-        WindowsGnuAdapter["whitebase-windows-gnu-adapter<br/>Windows GNU native binding"]
-
-        Unavailable["unavailable<br/>非対応環境用Backend"]
+        AsmAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
+        WindowsGnuAdapter["whitebase-windows-gnu-adapter<br/>Rust → Windows GNU native DLL"]
+        Unavailable["unavailable backend<br/>unsupported-target fallback"]
     end
 
-    subgraph NativeLibraries["Native Libraries"]
+    subgraph Native["Native libraries"]
+        direction TB
+
+        subgraph WindowsMsvc["Windows x64 / MSVC"]
+            direction LR
+            CppLib["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
+            AsmLib["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
+        end
+
+        subgraph LinuxGnu["Linux x86_64 / GNU"]
+            direction LR
+            LinuxCppLib["libwhitebase_cpp_backend.a<br/>GCC Scalar / AVX"]
+            LinuxAsmLib["libwhitebase_assembly.a<br/>NASM Scalar / AVX"]
+        end
+
+        subgraph WindowsGnu["Windows x64 / GNU"]
+            direction LR
+            WindowsGnuLib["whitebase_windows_gnu_native.dll<br/>GCC / NASM<br/>Scalar / AVX"]
+        end
+    end
+
+    subgraph Analysis["Analysis / Output"]
+        direction LR
+        Visualization["whitebase-visualization<br/>tables / charts / rendering"]
+        OutputModule["whitebase-output<br/>CSV / JSON output"]
+        Artifacts["output data<br/>CSV / JSON / measurements"]
+        Python["Python tools<br/>additional analysis / visualization"]
+    end
+
+    subgraph Tools["Development tools"]
         direction LR
 
-        MsvcNative["Windows x64 / MSVC<br/>C++ / MASM<br/>Scalar / AVX"]
+        Scripts["scripts<br/>ops.bat / linux-native.sh<br/>windows-gnu-native.ps1"]
 
-        LinuxNative["Linux x86_64 / GNU<br/>GCC / NASM<br/>Scalar / AVX"]
+        ControlCenter["whitebase-control-center<br/>Rust + egui operation tool"]
 
-        WindowsGnuNative["Windows x64 / GNU<br/>GCC / NASM<br/>Scalar / AVX"]
+        subgraph Operation["Operation / Control Panel"]
+            direction LR
+            ControlPanel["whitebase-control-panel<br/>Windows GUI operation panel"]
+            WhitebaseWindows["Whitebase.Windows<br/>Win32 API / process control"]
+        end
     end
 
     %% --------------------------------------------------------
-    %% Entry routes
+    %% Application routes
     %% --------------------------------------------------------
 
-    Tauri -->|"invoke()"| TauriCommand
+    Web -->|"Server available: HTTP"| Server
+    Web -->|"Server unavailable: WebAssembly"| Wasm
 
-    Browser -->|"Server available: HTTP"| HttpServer
-    Browser -->|"Server unavailable: WebAssembly"| Wasm
+    TauriApp -->|"IPC / invoke()"| TauriApi
 
-    External -->|"C ABI"| CApi
+    CppClient --> CApi
+    External --> CApi
+
+    CppBackendClient --> CppLib
+    AssemblyClient --> AsmLib
 
     %% --------------------------------------------------------
-    %% User faces → Application Boundary
+    %% Interface Adapters → Application Boundary
     %% --------------------------------------------------------
 
-    TauriCommand --> ApplicationInterface
-    HttpServer --> ApplicationInterface
+    Server --> HttpApi
+
+    HttpApi --> ApplicationInterface
+    TauriApi --> ApplicationInterface
     Wasm --> ApplicationInterface
 
     %% --------------------------------------------------------
-    %% Application Boundary → Compute layers
+    %% Application Boundary → Runner / Core
     %% --------------------------------------------------------
 
     ApplicationInterface -->|"Applied Compute"| Runner
@@ -79,34 +114,62 @@ flowchart TB
 
     CApi --> Core
 
-    %% --------------------------------------------------------
-    %% Common execution path
-    %% --------------------------------------------------------
-
     Runner --> Core
-    Core --> Bridge
 
+    %% --------------------------------------------------------
+    %% Core / Backend Contract / Backend routing
+    %% --------------------------------------------------------
+
+    Core --> Bridge
     Core -. "uses contract" .-> BackendContract
     Bridge -. "implements contract" .-> BackendContract
 
-    %% --------------------------------------------------------
-    %% Backend routing
-    %% --------------------------------------------------------
-
     Bridge --> RustBackend
     Bridge --> CppAdapter
-    Bridge --> AssemblyAdapter
+    Bridge --> AsmAdapter
     Bridge --> WindowsGnuAdapter
     Bridge -. "unsupported targets" .-> Unavailable
 
     %% --------------------------------------------------------
-    %% Native implementations
+    %% Native backend bindings
     %% --------------------------------------------------------
 
-    CppAdapter --> MsvcNative
-    CppAdapter --> LinuxNative
+    CppAdapter -->|"Windows MSVC"| CppLib
+    CppAdapter -->|"Linux GNU"| LinuxCppLib
 
-    AssemblyAdapter --> MsvcNative
-    AssemblyAdapter --> LinuxNative
+    AsmAdapter -->|"Windows MSVC"| AsmLib
+    AsmAdapter -->|"Linux GNU"| LinuxAsmLib
 
-    WindowsGnuAdapter --> WindowsGnuNative
+    WindowsGnuAdapter --> WindowsGnuLib
+
+    %% --------------------------------------------------------
+    %% Planned analysis / output
+    %% --------------------------------------------------------
+
+    Runner -. "planned: report" .-> Visualization
+    Runner -. "planned: report" .-> OutputModule
+    OutputModule -. "planned: generates" .-> Artifacts
+    Python -. "planned: reads / analyzes" .-> Artifacts
+
+    %% --------------------------------------------------------
+    %% Development tools
+    %% --------------------------------------------------------
+
+    Scripts -. "build / test" .-> ApplicationInterface
+    Scripts -. "build / test" .-> Runner
+    Scripts -. "build / test" .-> Core
+    Scripts -. "build / test" .-> Backends
+    Scripts -. "native build / test" .-> Native
+    Scripts -. "smoke test" .-> CppClient
+    Scripts -. "smoke test" .-> CppBackendClient
+    Scripts -. "smoke test" .-> AssemblyClient
+    Scripts -. "run / release" .-> Server
+    Scripts -. "build / release" .-> TauriApp
+    Scripts -. "build" .-> Wasm
+
+    ControlCenter -. "operation / check / build" .-> Scripts
+    ControlPanel -. "operation / check / build" .-> Scripts
+    ControlPanel -->|"Win32 interop / process control"| WhitebaseWindows
+
+    classDef planned stroke-dasharray: 6 4
+    class Visualization,OutputModule,Artifacts,Python planned

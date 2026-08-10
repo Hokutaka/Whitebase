@@ -24,8 +24,8 @@ Whitebaseは、以下の3つの方法で動作を確認できます。
 | 実行方法 | Server | Whitebaseの呼び出し経路 |
 | --- | ---: | --- |
 | Tauriアプリ | 不要 | Tauri → Tauri Commands → Interface → Runner / Core |
-| GitHub Pages | 任意 | Browser → WASM → Interface → Runner / Core、またはloopback接続が利用可能な場合は Browser → HTTP → Whitebase Server → Interface → Runner / Core |
-| ローカルWebアプリ | 任意 | Browser → WASM → Interface → Runner / Core、または Browser → HTTP → Whitebase Server → Interface → Runner / Core |
+| GitHub Pages | 任意 | Browser → WASM → Interface → Runner / Core、またはloopback接続が利用可能な場合は Browser → HTTP → Whitebase Server → HTTP API Adapter → Interface → Runner / Core |
+| ローカルWebアプリ | 任意 | Browser → WASM → Interface → Runner / Core、または Browser → HTTP → Whitebase Server → HTTP API Adapter → Interface → Runner / Core |
 
 Browser環境では、アプリ起動時に実行経路を判定します。
 
@@ -58,8 +58,10 @@ TauriアプリはWhitebase Serverを必要としません。
 利用可能なNative backendへルーティングされます。
 
 ```text
-Tauri
-→ Tauri Commands
+Tauri WebView
+→ Tauri IPC / invoke()
+→ Tauri Host (src-tauri)
+→ whitebase-tauri-api
 → whitebase-interface
 → Runner / Whitebase Core
 → Native backend
@@ -78,6 +80,7 @@ HTTP APIを使用します。ブラウザのセキュリティ設定や権限に
 Browser
 → HTTP
 → Whitebase Server
+→ whitebase-http-api
 → whitebase-interface
 → Runner / Whitebase Core
 → Native backend
@@ -174,13 +177,17 @@ scripts\ops.bat web-build
 TauriではIPCを使用し、通常のブラウザでは起動時に
 HTTP APIまたはWebAssemblyの実行経路を選択します。
 
-どのApplication Interfaceからも`whitebase-interface`を共通の境界として利用します。
+各Application Interfaceは`whitebase-interface`を共通のApplication Boundaryとして利用します。
 
-`whitebase-interface`は、Pure ComputeではWhitebase Coreを直接利用し、
+`whitebase-interface`はtransportに依存せず、
+Pure ComputeではWhitebase Coreを直接利用し、
 比較・計測・観測などのApplied ComputeではRunnerを利用します。
 
-HTTP、Tauri、WebAssemblyはWhitebase内部のCore / Runnerを直接公開せず、
-それぞれの実行環境に合わせて`whitebase-interface`を公開します。
+HTTPでは`whitebase-http-api`がHTTP / JSON / Axum固有処理を担当し、
+`whitebase-server`はそのInterface Adapterを起動するHostとして扱います。
+
+Tauri CommandsとWebAssemblyもWhitebase内部のCore / Runnerを直接公開せず、
+それぞれの実行環境に合わせて`whitebase-interface`を利用します。
 
 ![モジュール構成図](/docs/diagrams/structure/architecture.svg)
 
@@ -241,9 +248,11 @@ Rust API、演算、バックエンド、エラーの詳細については、
 
 ### HTTP API
 
-Whitebase ServerはローカルHTTP/JSON APIを公開しています。
+`whitebase-http-api`はローカルHTTP / JSON向けのInterface Adapterを提供します。
 
-エンドポイントやリクエスト・レスポンスの詳細については、
+`whitebase-server`はそのAdapterを起動するHostとして扱います。
+
+エンドポイント、Request / Responseの詳細については、
 [HTTP API](api/HTTP-API.ja.md)を参照してください。
 
 

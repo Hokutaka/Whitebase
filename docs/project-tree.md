@@ -160,10 +160,21 @@ Whitebase
 │   │       │   └── lib.rs
 │   │       └── Cargo.toml
 │   └── interface
+│       ├── whitebase-http-api
+│       │   ├── src
+│       │   │   └── lib.rs
+│       │   └── Cargo.toml
 │       ├── whitebase-interface
 │       │   ├── src
 │       │   │   ├── benchmark.rs
 │       │   │   ├── compute.rs
+│       │   │   ├── error.rs
+│       │   │   ├── lib.rs
+│       │   │   └── scalar_f64.rs
+│       │   └── Cargo.toml
+│       ├── whitebase-tauri-api
+│       │   ├── src
+│       │   │   ├── benchmark.rs
 │       │   │   ├── error.rs
 │       │   │   ├── lib.rs
 │       │   │   └── scalar_f64.rs

@@ -1,0 +1,23 @@
+[package]
+name = "whitebase-http-api"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+axum = "0.8"
+serde = { version = "1", features = ["derive"] }
+
+tokio = {
+    version = "1",
+    features = ["rt"]
+}
+
+tower-http = {
+    version = "0.7",
+    features = ["cors"]
+}
+
+whitebase-interface = {
+    path = "../whitebase-interface"
+}

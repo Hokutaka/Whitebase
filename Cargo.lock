@@ -6225,12 +6225,10 @@ dependencies = [
 name = "whitebase-app"
 version = "0.1.0"
 dependencies = [
- "serde",
- "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
- "whitebase-interface",
+ "whitebase-tauri-api",
 ]
 
 [[package]]
@@ -6286,6 +6284,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "whitebase-http-api"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde",
+ "tokio",
+ "tower-http 0.7.0",
+ "whitebase-interface",
+]
+
+[[package]]
 name = "whitebase-interface"
 version = "0.1.0"
 dependencies = [
@@ -6311,9 +6320,16 @@ name = "whitebase-server"
 version = "0.1.0"
 dependencies = [
  "axum",
- "serde",
  "tokio",
- "tower-http 0.7.0",
+ "whitebase-http-api",
+]
+
+[[package]]
+name = "whitebase-tauri-api"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
  "whitebase-interface",
 ]
 

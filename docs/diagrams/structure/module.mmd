@@ -3,18 +3,19 @@ flowchart TB
         direction LR
         Web["whitebase-app<br/>Web UI<br/>(Browser runtime)"]
         TauriApp["whitebase-app<br/>Tauri Application"]
-        Server["whitebase-server<br/>Local HTTP API"]
+        Server["whitebase-server<br/>HTTP Server Host"]
         CppClient["Whitebase.CppClient<br/>C ABI smoke test"]
         CppBackendClient["Whitebase.CppBackendClient<br/>C++ Backend smoke test"]
         AssemblyClient["Whitebase.AssemblyClient<br/>Assembly smoke test"]
         External["External Applications<br/>C# / C++ / other"]
     end
 
-    subgraph Consumers["User Faces / Entry Points"]
+    subgraph Consumers["Interface Adapters / Entry Points"]
         direction LR
-        Wasm["whitebase-wasm<br/>WebAssembly boundary"]
-        TauriCommands["src-tauri<br/>Tauri Commands"]
-        CApi["whitebase-c-api<br/>C ABI boundary"]
+            HttpApi["whitebase-http-api<br/>HTTP / JSON / Axum Adapter"]
+            Wasm["whitebase-wasm<br/>WebAssembly boundary"]
+            TauriApi["whitebase-tauri-api<br/>Tauri Command / IPC Adapter"]
+            CApi["whitebase-c-api<br/>C ABI boundary"]
     end
 
     ApplicationInterface["whitebase-interface<br/>Application Boundary<br/>Pure Compute / Applied Compute<br/>Request / Response / InterfaceError"]
@@ -86,7 +87,8 @@ flowchart TB
     Web -->|"Server available: HTTP"| Server
     Web -->|"Server unavailable: WebAssembly"| Wasm
 
-    TauriApp -->|"IPC / invoke()"| TauriCommands
+    TauriApp -->|"IPC / invoke()"| TauriApi
+    TauriApi --> ApplicationInterface
 
     CppClient --> CApi
     External --> CApi
@@ -95,10 +97,12 @@ flowchart TB
     AssemblyClient --> AsmLib
 
     %% --------------------------------------------------------
-    %% User Faces → Application Boundary
+    %% Interface Adapters → Application Boundary
     %% --------------------------------------------------------
 
-    Server --> ApplicationInterface
+    Server --> HttpApi
+
+    HttpApi --> ApplicationInterface
     TauriCommands --> ApplicationInterface
     Wasm --> ApplicationInterface
 
