@@ -2,7 +2,7 @@ use serde::Serialize;
 use whitebase_interface::InterfaceError;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct CommandError {
+pub struct CommandError {
     code: &'static str,
     message: String,
 }

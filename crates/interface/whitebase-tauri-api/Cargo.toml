@@ -1,0 +1,13 @@
+[package]
+name = "whitebase-tauri-api"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2", features = [] }
+
+whitebase-interface = {
+    path = "../whitebase-interface"
+}
