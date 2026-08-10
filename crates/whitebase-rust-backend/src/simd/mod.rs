@@ -1,16 +1,10 @@
 use crate::ArrayLengthError;
 
-#[cfg(target_arch = "x86_64")]
-const AVX_F32_LANES: usize = 8;
-
-#[cfg(target_arch = "x86_64")]
-const AVX_F64_LANES: usize = 4;
-
 #[cfg(target_arch = "wasm32")]
-const WASM_F32_LANES: usize = 4;
+mod wasm32;
 
-#[cfg(target_arch = "wasm32")]
-const WASM_F64_LANES: usize = 2;
+#[cfg(target_arch = "x86_64")]
+mod x86_64;
 
 /// 現在の実行環境でAVXが利用できるかを返します。
 #[must_use]
@@ -31,12 +25,12 @@ pub fn is_avx_available() -> bool {
 pub fn is_simd_available() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
-        is_avx_available()
+        x86_64::is_avx_available()
     }
 
     #[cfg(target_arch = "wasm32")]
     {
-        true
+        wasm32::is_available()
     }
 
     #[cfg(not(any(target_arch = "x86_64", target_arch = "wasm32")))]
@@ -64,7 +58,7 @@ pub fn add_f32(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), Array
         // SAFETY:
         // WASM版はsimd128を有効化した専用関数内で実行します。
         unsafe {
-            add_f32_wasm_simd(lhs, rhs, output);
+            wasm32::add_f32(lhs, rhs, output);
         }
 
         Ok(())
@@ -74,12 +68,12 @@ pub fn add_f32(lhs: &[f32], rhs: &[f32], output: &mut [f32]) -> Result<(), Array
     {
         #[cfg(target_arch = "x86_64")]
         {
-            if is_avx_available() {
+            if x86_64::is_avx_available() {
                 // SAFETY:
                 // 実行前にAVX対応を確認しており、
-                // 配列の長さも検証済みです。
+                // 配列長も検証済みです。
                 unsafe {
-                    add_f32_avx(lhs, rhs, output);
+                    x86_64::add_f32(lhs, rhs, output);
                 }
 
                 return Ok(());
@@ -106,10 +100,8 @@ pub fn add_f64_array(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(),
 
     #[cfg(target_arch = "wasm32")]
     {
-        // SAFETY:
-        // WASM版はsimd128を有効化した専用関数内で実行します。
         unsafe {
-            add_f64_wasm_simd(lhs, rhs, output);
+            wasm32::add_f64(lhs, rhs, output);
         }
 
         Ok(())
@@ -119,11 +111,9 @@ pub fn add_f64_array(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(),
     {
         #[cfg(target_arch = "x86_64")]
         {
-            if is_avx_available() {
-                // SAFETY:
-                // 実行前にAVX対応を確認しています。
+            if x86_64::is_avx_available() {
                 unsafe {
-                    add_f64_avx(lhs, rhs, output);
+                    x86_64::add_f64(lhs, rhs, output);
                 }
 
                 return Ok(());
@@ -143,213 +133,22 @@ pub fn add_f64_array(lhs: &[f64], rhs: &[f64], output: &mut [f64]) -> Result<(),
 pub fn sum_f64(input: &[f64]) -> f64 {
     #[cfg(target_arch = "wasm32")]
     {
-        // SAFETY:
-        // WASM版はsimd128を有効化した専用関数内で実行します。
-        unsafe { sum_f64_wasm_simd(input) }
+        unsafe { wasm32::sum_f64(input) }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     {
         #[cfg(target_arch = "x86_64")]
         {
-            if is_avx_available() {
-                // SAFETY:
-                // 実行前にAVX対応を確認しています。
+            if x86_64::is_avx_available() {
                 unsafe {
-                    return sum_f64_avx(input);
+                    return x86_64::sum_f64(input);
                 }
             }
         }
 
         crate::scalar::sum_f64(input)
     }
-}
-
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx")]
-unsafe fn sum_f64_avx(input: &[f64]) -> f64 {
-    use std::arch::x86_64::{_mm256_add_pd, _mm256_loadu_pd, _mm256_setzero_pd, _mm256_storeu_pd};
-
-    let vectorized_len = input.len() / AVX_F64_LANES * AVX_F64_LANES;
-    let mut accumulator = _mm256_setzero_pd();
-    let mut index = 0;
-
-    while index < vectorized_len {
-        // SAFETY:
-        // vectorized_lenは4要素単位に切り下げられているため、
-        // indexから4要素分の読み込みがinputの範囲内に収まります。
-        unsafe {
-            let values = _mm256_loadu_pd(input.as_ptr().add(index));
-            accumulator = _mm256_add_pd(accumulator, values);
-        }
-        index += AVX_F64_LANES;
-    }
-
-    let mut lanes = [0.0; AVX_F64_LANES];
-    // SAFETY:
-    // lanesは4要素のf64配列であり、storeuはアラインメントを要求しません。
-    unsafe {
-        _mm256_storeu_pd(lanes.as_mut_ptr(), accumulator);
-    }
-
-    let mut sum = lanes[0] + lanes[1] + lanes[2] + lanes[3];
-
-    while index < input.len() {
-        sum += input[index];
-        index += 1;
-    }
-
-    sum
-}
-
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx")]
-unsafe fn add_f32_avx(lhs: &[f32], rhs: &[f32], output: &mut [f32]) {
-    use std::arch::x86_64::{_mm256_add_ps, _mm256_loadu_ps, _mm256_storeu_ps};
-
-    let vectorized_len = lhs.len() / AVX_F32_LANES * AVX_F32_LANES;
-
-    let mut index = 0;
-
-    while index < vectorized_len {
-        // SAFETY:
-        // vectorized_lenは8要素単位に切り下げられているため、
-        // indexから8要素分の読み書きが各スライスの範囲内に収まります。
-        // loadu/storeuはメモリアドレスのアラインメントを要求しません。
-        unsafe {
-            let lhs_values = _mm256_loadu_ps(lhs.as_ptr().add(index));
-            let rhs_values = _mm256_loadu_ps(rhs.as_ptr().add(index));
-
-            let result = _mm256_add_ps(lhs_values, rhs_values);
-
-            _mm256_storeu_ps(output.as_mut_ptr().add(index), result);
-        }
-
-        index += AVX_F32_LANES;
-    }
-
-    // 8要素に満たなかった末尾部分をScalarで処理します。
-    while index < lhs.len() {
-        output[index] = lhs[index] + rhs[index];
-        index += 1;
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx")]
-unsafe fn add_f64_avx(lhs: &[f64], rhs: &[f64], output: &mut [f64]) {
-    use std::arch::x86_64::{_mm256_add_pd, _mm256_loadu_pd, _mm256_storeu_pd};
-
-    let vectorized_len = lhs.len() / AVX_F64_LANES * AVX_F64_LANES;
-
-    let mut index = 0;
-
-    while index < vectorized_len {
-        // SAFETY:
-        // vectorized_lenは4要素単位に切り下げられているため、
-        // indexから4要素分の読み書きが各スライスの範囲内に収まります。
-        // loadu/storeuはメモリアドレスのアラインメントを要求しません。
-        unsafe {
-            let lhs_values = _mm256_loadu_pd(lhs.as_ptr().add(index));
-            let rhs_values = _mm256_loadu_pd(rhs.as_ptr().add(index));
-
-            let result = _mm256_add_pd(lhs_values, rhs_values);
-
-            _mm256_storeu_pd(output.as_mut_ptr().add(index), result);
-        }
-
-        index += AVX_F64_LANES;
-    }
-
-    // 4要素に満たなかった末尾部分をScalarで処理します。
-    while index < lhs.len() {
-        output[index] = lhs[index] + rhs[index];
-        index += 1;
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[target_feature(enable = "simd128")]
-unsafe fn add_f32_wasm_simd(lhs: &[f32], rhs: &[f32], output: &mut [f32]) {
-    use std::arch::wasm32::{f32x4_add, v128, v128_load, v128_store};
-
-    let vectorized_len = lhs.len() / WASM_F32_LANES * WASM_F32_LANES;
-    let mut index = 0;
-
-    while index < vectorized_len {
-        unsafe {
-            let lhs_values = v128_load(lhs.as_ptr().add(index).cast::<v128>());
-            let rhs_values = v128_load(rhs.as_ptr().add(index).cast::<v128>());
-
-            let result = f32x4_add(lhs_values, rhs_values);
-
-            v128_store(output.as_mut_ptr().add(index).cast::<v128>(), result);
-        }
-
-        index += WASM_F32_LANES;
-    }
-
-    while index < lhs.len() {
-        output[index] = lhs[index] + rhs[index];
-        index += 1;
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[target_feature(enable = "simd128")]
-unsafe fn add_f64_wasm_simd(lhs: &[f64], rhs: &[f64], output: &mut [f64]) {
-    use std::arch::wasm32::{f64x2_add, v128, v128_load, v128_store};
-
-    let vectorized_len = lhs.len() / WASM_F64_LANES * WASM_F64_LANES;
-    let mut index = 0;
-
-    while index < vectorized_len {
-        unsafe {
-            let lhs_values = v128_load(lhs.as_ptr().add(index).cast::<v128>());
-            let rhs_values = v128_load(rhs.as_ptr().add(index).cast::<v128>());
-
-            let result = f64x2_add(lhs_values, rhs_values);
-
-            v128_store(output.as_mut_ptr().add(index).cast::<v128>(), result);
-        }
-
-        index += WASM_F64_LANES;
-    }
-
-    while index < lhs.len() {
-        output[index] = lhs[index] + rhs[index];
-        index += 1;
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-#[target_feature(enable = "simd128")]
-unsafe fn sum_f64_wasm_simd(input: &[f64]) -> f64 {
-    use std::arch::wasm32::{f64x2, f64x2_add, f64x2_extract_lane, v128, v128_load};
-
-    let vectorized_len = input.len() / WASM_F64_LANES * WASM_F64_LANES;
-
-    let mut accumulator = f64x2(0.0, 0.0);
-    let mut index = 0;
-
-    while index < vectorized_len {
-        unsafe {
-            let values = v128_load(input.as_ptr().add(index).cast::<v128>());
-
-            accumulator = f64x2_add(accumulator, values);
-        }
-
-        index += WASM_F64_LANES;
-    }
-
-    let mut sum = f64x2_extract_lane::<0>(accumulator) + f64x2_extract_lane::<1>(accumulator);
-
-    while index < input.len() {
-        sum += input[index];
-        index += 1;
-    }
-
-    sum
 }
 
 #[cfg(test)]
@@ -476,7 +275,7 @@ mod tests {
         // SAFETY:
         // このテストでは事前にAVX対応を確認しています。
         unsafe {
-            add_f32_avx(&lhs, &rhs, &mut output);
+            x86_64::add_f32(&lhs, &rhs, &mut output);
         }
 
         assert_eq!(output, [3.0; 8]);
@@ -496,7 +295,7 @@ mod tests {
         // SAFETY:
         // このテストでは事前にAVX対応を確認しています。
         unsafe {
-            add_f64_avx(&lhs, &rhs, &mut output);
+            x86_64::add_f64(&lhs, &rhs, &mut output);
         }
 
         assert_eq!(output, [3.0; 4]);
