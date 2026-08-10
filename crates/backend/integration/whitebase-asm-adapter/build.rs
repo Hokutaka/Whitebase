@@ -15,7 +15,7 @@ fn main() {
         WINDOWS_TARGET => link_windows_library(&manifest_dir, configuration),
         LINUX_TARGET => link_linux_library(&manifest_dir, configuration),
         _ => {
-            println!("cargo:warning=whitebase-cpp-adapter is unavailable for target {target}");
+            println!("cargo:warning=whitebase-asm-adapter is unavailable for target {target}");
         }
     }
 
@@ -38,18 +38,18 @@ fn link_windows_library(manifest_dir: &Path, configuration: &str) {
         .join("Whitebase.Cpp")
         .join("x64")
         .join(configuration);
-    let library_file = library_directory.join("Whitebase.CppBackend.lib");
+    let library_file = library_directory.join("Whitebase.Assembly.lib");
 
     require_library(
         &library_file,
-        &format!("Build Whitebase.CppBackend for x64/{configuration} first."),
+        &format!("Build Whitebase.Assembly for x64/{configuration} first."),
     );
 
     println!(
         "cargo:rustc-link-search=native={}",
         library_directory.display()
     );
-    println!("cargo:rustc-link-lib=static:-bundle=Whitebase.CppBackend");
+    println!("cargo:rustc-link-lib=static=Whitebase.Assembly");
     println!("cargo:rerun-if-changed={}", library_file.display());
 }
 
@@ -59,7 +59,7 @@ fn link_linux_library(manifest_dir: &Path, configuration: &str) {
         .join("Whitebase.Linux")
         .join("build")
         .join(configuration);
-    let library_file = library_directory.join("libwhitebase_cpp_backend.a");
+    let library_file = library_directory.join("libwhitebase_assembly.a");
 
     require_library(
         &library_file,
@@ -73,19 +73,22 @@ fn link_linux_library(manifest_dir: &Path, configuration: &str) {
         "cargo:rustc-link-search=native={}",
         library_directory.display()
     );
-    println!("cargo:rustc-link-lib=static=whitebase_cpp_backend");
-    println!("cargo:rustc-link-lib=dylib=stdc++");
+    println!("cargo:rustc-link-lib=static=whitebase_assembly");
     println!("cargo:rerun-if-changed={}", library_file.display());
 }
 
 fn repository_root(manifest_dir: &Path) -> PathBuf {
-    manifest_dir.join("..").join("..")
+    manifest_dir
+        .join("..")
+        .join("..")
+        .join("..")
+        .join("..")
 }
 
 fn require_library(library_file: &Path, instruction: &str) {
     if !library_file.exists() {
         panic!(
-            "C++ backend library was not found at {}. {instruction}",
+            "Assembly library was not found at {}. {instruction}",
             library_file.display()
         );
     }

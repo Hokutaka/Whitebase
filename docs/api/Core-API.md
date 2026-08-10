@@ -19,7 +19,7 @@ Timing, warmup, cross-backend comparison, and benchmark report generation belong
 
 ```toml
 [dependencies]
-whitebase-core = { path = "crates/whitebase-core" }
+whitebase-core = { path = "crates/compute/whitebase-core" }
 ```
 
 The current crate version is `0.1.0`. It is intended for workspace-internal use and has `publish = false`.

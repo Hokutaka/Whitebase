@@ -6,5 +6,5 @@ publish = false
 
 [dependencies]
 whitebase-rust-backend = {
-    path = "../whitebase-rust-backend"
+    path = "../../whitebase-rust-backend"
 }
