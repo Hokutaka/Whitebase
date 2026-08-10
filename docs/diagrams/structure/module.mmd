@@ -14,7 +14,7 @@ flowchart TB
         direction LR
             HttpApi["whitebase-http-api<br/>HTTP / JSON / Axum Adapter"]
             Wasm["whitebase-wasm<br/>WebAssembly boundary"]
-            TauriCommands["src-tauri<br/>Tauri Commands"]
+            TauriApi["whitebase-tauri-api<br/>Tauri Command / IPC Adapter"]
             CApi["whitebase-c-api<br/>C ABI boundary"]
     end
 
@@ -87,7 +87,8 @@ flowchart TB
     Web -->|"Server available: HTTP"| Server
     Web -->|"Server unavailable: WebAssembly"| Wasm
 
-    TauriApp -->|"IPC / invoke()"| TauriCommands
+    TauriApp -->|"IPC / invoke()"| TauriApi
+    TauriApi --> ApplicationInterface
 
     CppClient --> CApi
     External --> CApi

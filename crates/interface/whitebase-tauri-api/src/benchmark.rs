@@ -1,5 +1,7 @@
-use crate::error::CommandError;
-use whitebase_interface::benchmark::{execute_benchmark, BenchmarkReportDto, BenchmarkRequest};
+use crate::CommandError;
+use whitebase_interface::benchmark::{
+    execute_benchmark, BenchmarkReportDto, BenchmarkRequest,
+};
 
 /// 選択された演算をバックグラウンドでベンチマークします。
 #[tauri::command]

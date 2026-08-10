@@ -172,6 +172,13 @@ Whitebase
 │       │   │   ├── lib.rs
 │       │   │   └── scalar_f64.rs
 │       │   └── Cargo.toml
+│       ├── whitebase-tauri-api
+│       │   ├── src
+│       │   │   ├── benchmark.rs
+│       │   │   ├── error.rs
+│       │   │   ├── lib.rs
+│       │   │   └── scalar_f64.rs
+│       │   └── Cargo.toml
 │       └── whitebase-wasm
 │           ├── src
 │           │   └── lib.rs

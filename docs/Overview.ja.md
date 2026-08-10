@@ -58,8 +58,10 @@ TauriアプリはWhitebase Serverを必要としません。
 利用可能なNative backendへルーティングされます。
 
 ```text
-Tauri
-→ Tauri Commands
+Tauri WebView
+→ Tauri IPC / invoke()
+→ Tauri Host (src-tauri)
+→ whitebase-tauri-api
 → whitebase-interface
 → Runner / Whitebase Core
 → Native backend
