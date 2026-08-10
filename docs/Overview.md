@@ -55,14 +55,15 @@ scripts\ops.bat dev
 
 The Tauri app does not require Whitebase Server.
 
-Computation is routed from Tauri Commands through Runner and Whitebase Core
+Computation is routed from Tauri Commands through `whitebase-interface`,
+which uses Runner or Whitebase Core depending on the operation,
 to the available native backends.
 
 ```text
 Tauri
 → Tauri Commands
-→ Runner
-→ Whitebase Core
+→ whitebase-interface
+→ Runner / Whitebase Core
 → Native backend
 ```
 
@@ -79,8 +80,8 @@ browser security settings or permissions, the application falls back to WebAssem
 Browser
 → HTTP
 → Whitebase Server
-→ Runner
-→ Whitebase Core
+→ whitebase-interface
+→ Runner / Whitebase Core
 → Native backend
 ```
 
@@ -89,14 +90,18 @@ If Whitebase Server is unavailable or cannot be reached, WebAssembly is used.
 ```text
 Browser
 → WebAssembly
-→ Runner
-→ Whitebase Core
+→ whitebase-interface
+→ Runner / Whitebase Core
 → Rust backend
 ```
 
 In the WebAssembly environment, Rust Scalar and Rust SIMD backends are available.
 
+The current Whitebase WebAssembly artifact requires a runtime with WebAssembly
+SIMD128 support.
+
 On wasm32, the Rust SIMD backend uses WebAssembly SIMD128.
+A baseline artifact for runtimes without SIMD128 support is not currently provided.
 
 ### Local Web App
 

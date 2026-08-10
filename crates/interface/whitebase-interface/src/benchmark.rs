@@ -15,11 +15,29 @@ pub enum BenchmarkOperation {
     SumF64,
 }
 
+impl BenchmarkOperation {
+    pub fn parse_wire(value: &str) -> Result<Self, String> {
+        let deserializer = serde::de::value::StrDeserializer::<serde::de::value::Error>::new(value);
+
+        Self::deserialize(deserializer)
+            .map_err(|_| format!("unsupported benchmark operation: {value}"))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BenchmarkPrecision {
     F32,
     F64,
+}
+
+impl BenchmarkPrecision {
+    pub fn parse_wire(value: &str) -> Result<Self, String> {
+        let deserializer = serde::de::value::StrDeserializer::<serde::de::value::Error>::new(value);
+
+        Self::deserialize(deserializer)
+            .map_err(|_| format!("unsupported benchmark precision: {value}"))
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -45,12 +63,27 @@ pub struct BenchmarkReportDto {
     pub results: Vec<BackendResultDto>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum BackendResultStatus {
+    Completed,
+    Unavailable,
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TimingStatus {
+    Measured,
+    TooFastToMeasure,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BackendResultDto {
     pub backend: String,
-    pub status: String,
-    pub timing_status: Option<String>,
+    pub status: BackendResultStatus,
+    pub timing_status: Option<TimingStatus>,
 
     pub iterations: Option<usize>,
     pub total_nanoseconds: Option<f64>,
@@ -123,7 +156,7 @@ impl From<BackendRunResult> for BackendResultDto {
                     mean_nanoseconds,
                 ) = match timing {
                     TimingMeasurement::Measured(timing) => (
-                        Some("measured".to_owned()),
+                        Some(TimingStatus::Measured),
                         Some(timing.iterations),
                         Some(timing.total_nanoseconds as f64),
                         Some(timing.minimum_nanoseconds as f64),
@@ -132,7 +165,7 @@ impl From<BackendRunResult> for BackendResultDto {
                     ),
 
                     TimingMeasurement::TooFastToMeasure => (
-                        Some("too-fast-to-measure".to_owned()),
+                        Some(TimingStatus::TooFastToMeasure),
                         None,
                         None,
                         None,
@@ -143,7 +176,7 @@ impl From<BackendRunResult> for BackendResultDto {
 
                 Self {
                     backend,
-                    status: "completed".to_owned(),
+                    status: BackendResultStatus::Completed,
                     timing_status,
 
                     iterations,
@@ -165,7 +198,7 @@ impl From<BackendRunResult> for BackendResultDto {
 
             BackendRunStatus::Unavailable => Self {
                 backend,
-                status: "unavailable".to_owned(),
+                status: BackendResultStatus::Unavailable,
                 timing_status: None,
                 iterations: None,
                 total_nanoseconds: None,
@@ -180,7 +213,7 @@ impl From<BackendRunResult> for BackendResultDto {
 
             BackendRunStatus::Failed { error } => Self {
                 backend,
-                status: "failed".to_owned(),
+                status: BackendResultStatus::Failed,
                 timing_status: None,
                 iterations: None,
                 total_nanoseconds: None,

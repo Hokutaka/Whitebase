@@ -49,6 +49,7 @@ Whitebase
 │   │   │   │   └── StoreLogo.png
 │   │   │   ├── src
 │   │   │   │   ├── benchmark.rs
+│   │   │   │   ├── error.rs
 │   │   │   │   ├── lib.rs
 │   │   │   │   ├── main.rs
 │   │   │   │   └── scalar_f64.rs

@@ -30,6 +30,31 @@ macro_rules! define_unavailable_backend {
                     backend: self.kind(),
                 })
             }
+
+            fn add_f64(
+                &self,
+                lhs: &[f64],
+                rhs: &[f64],
+                output: &mut [f64],
+            ) -> Result<(), ComputeError> {
+                ComputeError::validate_lengths(lhs.len(), rhs.len(), output.len())?;
+
+                Err(ComputeError::BackendUnavailable {
+                    backend: self.kind(),
+                })
+            }
+
+            fn add_scalar_f64(&self, _lhs: f64, _rhs: f64) -> Result<f64, ComputeError> {
+                Err(ComputeError::BackendUnavailable {
+                    backend: self.kind(),
+                })
+            }
+
+            fn sum_f64(&self, _input: &[f64]) -> Result<f64, ComputeError> {
+                Err(ComputeError::BackendUnavailable {
+                    backend: self.kind(),
+                })
+            }
         }
     };
 }
@@ -40,12 +65,15 @@ define_unavailable_backend!(
     BackendCapabilities::scalar_add_f32()
         .with_add_f64(1)
         .with_add_scalar_f64()
+        .with_sum_f64()
 );
 
 define_unavailable_backend!(
     CppAvxBackend,
     BackendKind::CppAvx,
-    BackendCapabilities::simd_add_f32(8).with_add_f64(4)
+    BackendCapabilities::simd_add_f32(8)
+        .with_add_f64(4)
+        .with_sum_f64()
 );
 
 define_unavailable_backend!(
@@ -54,10 +82,13 @@ define_unavailable_backend!(
     BackendCapabilities::scalar_add_f32()
         .with_add_f64(1)
         .with_add_scalar_f64()
+        .with_sum_f64()
 );
 
 define_unavailable_backend!(
     AssemblyAvxBackend,
     BackendKind::AssemblyAvx,
-    BackendCapabilities::simd_add_f32(8).with_add_f64(4)
+    BackendCapabilities::simd_add_f32(8)
+        .with_add_f64(4)
+        .with_sum_f64()
 );

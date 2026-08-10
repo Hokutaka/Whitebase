@@ -76,25 +76,11 @@ pub fn run_benchmark(
     warmup_iterations: u32,
     measured_iterations: u32,
 ) -> Result<JsValue, JsValue> {
-    let operation = match operation {
-        "add-array" => BenchmarkOperation::AddArray,
-        "sum-f64" => BenchmarkOperation::SumF64,
-        value => {
-            return Err(JsValue::from_str(&format!(
-                "unsupported benchmark operation: {value}"
-            )));
-        }
-    };
+    let operation =
+        BenchmarkOperation::parse_wire(operation).map_err(|error| JsValue::from_str(&error))?;
 
-    let precision = match precision {
-        "f32" => BenchmarkPrecision::F32,
-        "f64" => BenchmarkPrecision::F64,
-        value => {
-            return Err(JsValue::from_str(&format!(
-                "unsupported benchmark precision: {value}"
-            )));
-        }
-    };
+    let precision =
+        BenchmarkPrecision::parse_wire(precision).map_err(|error| JsValue::from_str(&error))?;
 
     let report = execute_benchmark(BenchmarkRequest {
         operation,

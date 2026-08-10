@@ -221,6 +221,48 @@ mod tests {
     use super::*;
 
     #[test]
+    fn rejects_zero_input_length() {
+        let request = BenchmarkRequest {
+            operation: BenchmarkOperation::AddArray,
+            precision: BenchmarkPrecision::F32,
+            input_length: 0,
+            warmup_iterations: 0,
+            measured_iterations: 1,
+        };
+
+        assert_eq!(run_benchmark(request), Err(RunnerError::ZeroInputLength));
+    }
+
+    #[test]
+    fn rejects_zero_measured_iterations() {
+        let request = BenchmarkRequest {
+            operation: BenchmarkOperation::AddArray,
+            precision: BenchmarkPrecision::F32,
+            input_length: 1,
+            warmup_iterations: 0,
+            measured_iterations: 0,
+        };
+
+        assert_eq!(
+            run_benchmark(request),
+            Err(RunnerError::ZeroMeasuredIterations)
+        );
+    }
+
+    #[test]
+    fn rejects_sum_f64_with_f32_precision() {
+        let request = BenchmarkRequest {
+            operation: BenchmarkOperation::SumF64,
+            precision: BenchmarkPrecision::F32,
+            input_length: 1,
+            warmup_iterations: 0,
+            measured_iterations: 1,
+        };
+
+        assert_eq!(run_benchmark(request), Err(RunnerError::SumF64RequiresF64));
+    }
+
+    #[test]
     fn rejects_excessive_total_benchmark_workload() {
         let request = BenchmarkRequest {
             operation: BenchmarkOperation::AddArray,

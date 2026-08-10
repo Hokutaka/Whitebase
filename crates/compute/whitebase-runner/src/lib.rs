@@ -10,7 +10,8 @@ mod report;
 mod runner;
 
 pub use benchmark::{
-    BenchmarkOperation, BenchmarkPrecision, BenchmarkReport, BenchmarkRequest, run_benchmark,
+    BenchmarkOperation, BenchmarkPrecision, BenchmarkReport, BenchmarkRequest, MAX_INPUT_LENGTH,
+    MAX_ITERATIONS, MAX_TOTAL_ELEMENT_ITERATIONS, run_benchmark,
 };
 pub use config::RunnerConfig;
 pub use error::RunnerError;

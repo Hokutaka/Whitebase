@@ -366,6 +366,24 @@ mod tests {
     }
 
     #[test]
+    fn subtracts_with_long_borrow_chain() {
+        let result = parse("1000").add(&parse("-0.001"));
+
+        assert_eq!(result.to_canonical_string(), "999.999");
+    }
+
+    #[test]
+    fn rejects_excessive_expanded_decimal_length() {
+        let error =
+            ExactDecimal::parse("lhs", "1e5000").expect_err("expanded value must be rejected");
+
+        assert!(matches!(
+            error,
+            RunnerError::InvalidScalarF64Input { name: "lhs", .. }
+        ));
+    }
+
+    #[test]
     fn normalizes_decimal_zeroes() {
         assert_eq!(parse("000.3000").to_canonical_string(), "0.3");
         assert_eq!(parse("-0.000").to_canonical_string(), "0");

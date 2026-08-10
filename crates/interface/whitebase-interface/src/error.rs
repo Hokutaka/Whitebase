@@ -40,16 +40,22 @@ impl fmt::Display for InterfaceError {
 impl Error for InterfaceError {}
 
 pub(crate) fn benchmark_error(error: RunnerError) -> InterfaceError {
-    let invalid_request = matches!(
-        &error,
+    let invalid_request = match &error {
         RunnerError::ZeroInputLength
-            | RunnerError::InputLengthTooLarge { .. }
-            | RunnerError::WarmupIterationsTooLarge { .. }
-            | RunnerError::MeasuredIterationsTooLarge { .. }
-            | RunnerError::ZeroMeasuredIterations
-            | RunnerError::BenchmarkWorkloadTooLarge { .. }
-            | RunnerError::SumF64RequiresF64
-    );
+        | RunnerError::InputLengthTooLarge { .. }
+        | RunnerError::WarmupIterationsTooLarge { .. }
+        | RunnerError::MeasuredIterationsTooLarge { .. }
+        | RunnerError::ZeroMeasuredIterations
+        | RunnerError::BenchmarkWorkloadTooLarge { .. }
+        | RunnerError::SumF64RequiresF64 => true,
+
+        RunnerError::NoBackends
+        | RunnerError::InvalidAbsoluteTolerance { .. }
+        | RunnerError::ReferenceBackendUnavailable { .. }
+        | RunnerError::InvalidScalarF64Input { .. }
+        | RunnerError::ScalarF64ReferenceOutOfRange { .. }
+        | RunnerError::Compute { .. } => false,
+    };
 
     if invalid_request {
         InterfaceError::InvalidRequest {
@@ -65,11 +71,22 @@ pub(crate) fn benchmark_error(error: RunnerError) -> InterfaceError {
 }
 
 pub(crate) fn scalar_f64_error(error: RunnerError) -> InterfaceError {
-    let invalid_request = matches!(
-        &error,
+    let invalid_request = match &error {
         RunnerError::InvalidScalarF64Input { .. }
-            | RunnerError::ScalarF64ReferenceOutOfRange { .. }
-    );
+        | RunnerError::ScalarF64ReferenceOutOfRange { .. } => true,
+
+        RunnerError::NoBackends
+        | RunnerError::ZeroMeasuredIterations
+        | RunnerError::InvalidAbsoluteTolerance { .. }
+        | RunnerError::ReferenceBackendUnavailable { .. }
+        | RunnerError::Compute { .. }
+        | RunnerError::ZeroInputLength
+        | RunnerError::InputLengthTooLarge { .. }
+        | RunnerError::WarmupIterationsTooLarge { .. }
+        | RunnerError::MeasuredIterationsTooLarge { .. }
+        | RunnerError::SumF64RequiresF64
+        | RunnerError::BenchmarkWorkloadTooLarge { .. } => false,
+    };
 
     if invalid_request {
         InterfaceError::InvalidRequest {
@@ -85,8 +102,18 @@ pub(crate) fn scalar_f64_error(error: RunnerError) -> InterfaceError {
 }
 
 pub(crate) fn compute_error(error: ComputeError) -> InterfaceError {
-    InterfaceError::Internal {
-        code: "compute_failed",
-        message: error.to_string(),
+    match &error {
+        ComputeError::LengthMismatch { .. } => InterfaceError::InvalidRequest {
+            code: "invalid_compute_request",
+            message: error.to_string(),
+        },
+
+        ComputeError::BackendNotRegistered { .. }
+        | ComputeError::BackendUnavailable { .. }
+        | ComputeError::OperationUnsupported { .. }
+        | ComputeError::BackendFailure { .. } => InterfaceError::Internal {
+            code: "compute_failed",
+            message: error.to_string(),
+        },
     }
 }

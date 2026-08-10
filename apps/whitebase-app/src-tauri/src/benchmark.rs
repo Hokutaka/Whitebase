@@ -1,19 +1,25 @@
+use crate::error::CommandError;
 use whitebase_interface::benchmark::{execute_benchmark, BenchmarkReportDto, BenchmarkRequest};
 
 /// 選択された演算をバックグラウンドでベンチマークします。
 #[tauri::command]
-pub async fn run_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReportDto, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        execute_benchmark(request).map_err(|error| error.to_string())
-    })
-    .await
-    .map_err(|error| format!("benchmark task failed: {error}"))?
+pub async fn run_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReportDto, CommandError> {
+    tauri::async_runtime::spawn_blocking(move || execute_benchmark(request).map_err(Into::into))
+        .await
+        .map_err(|error| {
+            CommandError::internal(
+                "benchmark_task_failed",
+                format!("benchmark task failed: {error}"),
+            )
+        })?
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use whitebase_interface::benchmark::{BenchmarkOperation, BenchmarkPrecision};
+    use whitebase_interface::benchmark::{
+        BackendResultStatus, BenchmarkOperation, BenchmarkPrecision,
+    };
 
     #[test]
     fn f64_add_benchmark_reports_selected_operation_and_precision() {
@@ -31,7 +37,8 @@ mod tests {
         assert_eq!(report.input_length, 17);
 
         assert!(report.results.iter().all(|result| {
-            result.status == "unavailable" || result.matches_reference == Some(true)
+            result.status == BackendResultStatus::Unavailable
+                || result.matches_reference == Some(true)
         }));
     }
 
@@ -51,7 +58,8 @@ mod tests {
         assert_eq!(report.input_length, 17);
 
         assert!(report.results.iter().all(|result| {
-            result.status == "unavailable" || result.matches_reference == Some(true)
+            result.status == BackendResultStatus::Unavailable
+                || result.matches_reference == Some(true)
         }));
     }
 }

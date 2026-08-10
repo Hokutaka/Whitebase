@@ -14,7 +14,10 @@ fn observes_scalar_f64_values_and_bits() {
     assert_eq!(0.3_f64.to_bits(), 0x3fd3_3333_3333_3333);
 }
 
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[cfg(any(
+    all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+))]
 #[test]
 fn observes_cpp_scalar_f64_result() {
     let report = Runner::new()
@@ -25,7 +28,10 @@ fn observes_cpp_scalar_f64_result() {
     assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
 }
 
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
+#[cfg(any(
+    all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
+))]
 #[test]
 fn observes_assembly_scalar_f64_result() {
     let report = Runner::new()

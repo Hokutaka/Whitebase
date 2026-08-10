@@ -1,6 +1,10 @@
+use std::sync::OnceLock;
+
 use crate::error::{InterfaceError, scalar_f64_error};
 use serde::{Deserialize, Serialize};
 use whitebase_runner::{F64Value, Runner, ScalarF64BackendObservation, ScalarF64ObservationReport};
+
+static RUNNER: OnceLock<Runner> = OnceLock::new();
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,7 +45,8 @@ pub struct ScalarF64ObservationDto {
 pub fn execute_scalar_f64_observation(
     request: ScalarF64Request,
 ) -> Result<ScalarF64ObservationDto, InterfaceError> {
-    Runner::new()
+    RUNNER
+        .get_or_init(Runner::new)
         .observe_add_scalar_f64(&request.lhs, &request.rhs)
         .map(Into::into)
         .map_err(scalar_f64_error)

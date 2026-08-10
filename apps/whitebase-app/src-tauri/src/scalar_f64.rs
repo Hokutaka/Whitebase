@@ -1,3 +1,4 @@
+use crate::error::CommandError;
 use whitebase_interface::scalar_f64::{
     execute_scalar_f64_observation, ScalarF64ObservationDto, ScalarF64Request,
 };
@@ -6,12 +7,17 @@ use whitebase_interface::scalar_f64::{
 #[tauri::command]
 pub async fn observe_add_scalar_f64(
     request: ScalarF64Request,
-) -> Result<ScalarF64ObservationDto, String> {
+) -> Result<ScalarF64ObservationDto, CommandError> {
     tauri::async_runtime::spawn_blocking(move || {
-        execute_scalar_f64_observation(request).map_err(|error| error.to_string())
+        execute_scalar_f64_observation(request).map_err(Into::into)
     })
     .await
-    .map_err(|error| format!("scalar f64 observation task failed: {error}"))?
+    .map_err(|error| {
+        CommandError::internal(
+            "scalar_f64_observation_task_failed",
+            format!("scalar f64 observation task failed: {error}"),
+        )
+    })?
 }
 
 #[cfg(test)]

@@ -114,7 +114,7 @@ Layer番号は単純な実行順序を示すものではありません。
   </td>
   <td rowspan="4">
     Pure ComputeはL4 Core、Applied ComputeはL5 Runnerを利用し、
-    各User FaceへWhitebaseの機能を公開する
+    各Interface AdapterへWhitebaseの機能を公開する
   </td>
   </tr>
   <tr>

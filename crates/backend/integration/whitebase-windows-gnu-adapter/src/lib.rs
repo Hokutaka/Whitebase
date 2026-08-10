@@ -242,6 +242,8 @@ fn dll_candidates() -> Vec<PathBuf> {
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
+        .and_then(Path::parent)
+        .and_then(Path::parent)
         .expect("adapter crate must be inside the repository");
     let native_build_root = repository_root
         .join("native")
@@ -547,23 +549,20 @@ mod tests {
     fn repository_candidates_include_both_build_profiles() {
         let candidates = dll_candidates();
 
-        assert!(candidates.iter().any(|path| {
-            path.ends_with(
-                Path::new("native")
-                    .join("Whitebase.Windows.Gnu")
-                    .join("build")
-                    .join("Debug")
-                    .join(DLL_NAME),
-            )
-        }));
-        assert!(candidates.iter().any(|path| {
-            path.ends_with(
-                Path::new("native")
-                    .join("Whitebase.Windows.Gnu")
-                    .join("build")
-                    .join("Release")
-                    .join(DLL_NAME),
-            )
-        }));
+        let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .and_then(Path::parent)
+            .and_then(Path::parent)
+            .expect("adapter crate must be inside the repository");
+
+        let native_build_root = repository_root
+            .join("native")
+            .join("Whitebase.Windows.Gnu")
+            .join("build");
+
+        assert!(candidates.contains(&native_build_root.join("Debug").join(DLL_NAME)));
+
+        assert!(candidates.contains(&native_build_root.join("Release").join(DLL_NAME)));
     }
 }

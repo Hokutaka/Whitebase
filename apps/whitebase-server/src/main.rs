@@ -140,16 +140,12 @@ fn execute_benchmark(request: InterfaceBenchmarkRequest) -> Result<BenchmarkRepo
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct HttpBenchmarkRequest {
-    #[serde(default = "default_benchmark_operation")]
+    #[serde(default)]
     operation: BenchmarkOperation,
     precision: BenchmarkPrecision,
     input_length: usize,
     warmup_iterations: usize,
     measured_iterations: usize,
-}
-
-fn default_benchmark_operation() -> BenchmarkOperation {
-    BenchmarkOperation::AddArray
 }
 
 impl From<HttpBenchmarkRequest> for InterfaceBenchmarkRequest {
@@ -242,6 +238,7 @@ struct ApiErrorBody {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use whitebase_interface::benchmark::BackendResultStatus;
 
     #[test]
     fn scalar_f64_observation_generates_decimal_reference() {
@@ -282,7 +279,8 @@ mod tests {
         assert_eq!(report.precision, BenchmarkPrecision::F64);
         assert_eq!(report.input_length, 17);
         assert!(report.results.iter().all(|result| {
-            result.status == "unavailable" || result.matches_reference == Some(true)
+            result.status == BackendResultStatus::Unavailable
+                || result.matches_reference == Some(true)
         }));
     }
 
@@ -301,7 +299,8 @@ mod tests {
         assert_eq!(report.precision, BenchmarkPrecision::F64);
         assert_eq!(report.input_length, 17);
         assert!(report.results.iter().all(|result| {
-            result.status == "unavailable" || result.matches_reference == Some(true)
+            result.status == BackendResultStatus::Unavailable
+                || result.matches_reference == Some(true)
         }));
     }
 }

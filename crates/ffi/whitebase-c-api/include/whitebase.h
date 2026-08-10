@@ -89,6 +89,12 @@ WHITEBASE_API int32_t whitebase_add_scalar_f64(
     double rhs,
     double* output);
 
+/*
+ * inputはlength要素を読み取り可能で、
+ * outputはdouble 1要素を書き込み可能である必要があります。
+ * length == 0の場合、inputはnull pointerを許容します。
+ * outputが指す領域はinputが指す領域と重なってはいけません。
+ */
 WHITEBASE_API int32_t whitebase_sum_f64(
     uint32_t backend,
     const double* input,

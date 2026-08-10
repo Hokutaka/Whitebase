@@ -33,6 +33,9 @@ pub fn is_simd_available() -> bool {
 
     #[cfg(target_arch = "wasm32")]
     {
+        // 現在のWhitebase WebAssembly artifactはSIMD128を実行要件とします。
+        // SIMD128命令を含むartifactを正常に読み込めた環境では、
+        // Rust SIMD backendを利用可能として扱います。
         wasm32::is_available()
     }
 

@@ -115,8 +115,12 @@ app.innerHTML = `
 
       <div class="runtime-status">
       <div class="route-panel">
-        <span class="route-label">ROUTE</span>
-        <strong id="execution-route">Detecting...</strong>
+        <span class="route-label" id="execution-route-label">ROUTE</span>
+        <strong
+          id="execution-route"
+          aria-live="polite"
+          aria-labelledby="execution-route-label"
+        >Detecting...</strong>
       </div>
 
       <div class="status-panel">
@@ -706,8 +710,27 @@ function escapeHtml(value: string): string {
   return element.innerHTML;
 }
 
+function isApiError(error: unknown): error is ApiError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string" &&
+    "message" in error &&
+    typeof error.message === "string"
+  );
+}
+
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (isApiError(error)) {
+    return error.message;
+  }
+
+  return String(error);
 }
 
 async function executeScalarF64Observation(

@@ -1,4 +1,5 @@
 mod benchmark;
+mod error;
 mod scalar_f64;
 
 use benchmark::run_benchmark;

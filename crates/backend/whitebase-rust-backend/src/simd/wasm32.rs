@@ -1,6 +1,13 @@
 const F32_LANES: usize = 4;
 const F64_LANES: usize = 2;
 
+/// Whitebaseの現在のWebAssembly artifactではSIMD128を必須とします。
+///
+/// このmoduleに含まれるSIMD関数は`simd128`を有効化して生成されるため、
+/// artifactを正常に読み込めた環境ではSIMD128を利用可能として扱います。
+///
+/// WebAssemblyではnative環境のAVXのような実行時feature detectionを行わず、
+/// SIMD128非対応runtime向けには別artifactが必要です。
 pub(super) const fn is_available() -> bool {
     true
 }

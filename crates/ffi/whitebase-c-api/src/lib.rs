@@ -177,7 +177,9 @@ pub unsafe extern "C" fn whitebase_backend_supports(
 /// # Safety
 ///
 /// `lhs`と`rhs`はそれぞれ`length`要素を読み取り可能で、`output`は`length`要素を
-/// 書き込み可能である必要があります。`length == 0`の場合はnull pointerを許容します。
+/// 書き込み可能である必要があります。
+/// `output`が指す領域は`lhs`および`rhs`が指す領域と重なってはいけません。
+/// `length == 0`の場合はnull pointerを許容します。
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn whitebase_add_f32(
     backend: u32,
@@ -260,7 +262,9 @@ pub unsafe extern "C" fn whitebase_add_scalar_f64(
 /// # Safety
 ///
 /// `input`は`length`要素を読み取り可能で、`output`は書き込み可能な`f64` 1要素を
-/// 指す必要があります。`length == 0`の場合、`input`はnull pointerでも構いません。
+/// 指す必要があります。
+/// `output`が指す領域は`input`が指す領域と重なってはいけません。
+/// `length == 0`の場合、`input`はnull pointerでも構いません。
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn whitebase_sum_f64(
     backend: u32,

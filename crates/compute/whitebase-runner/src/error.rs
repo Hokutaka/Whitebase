@@ -13,14 +13,10 @@ pub enum RunnerError {
     ZeroMeasuredIterations,
 
     /// 絶対誤差の許容値が不正です。
-    InvalidAbsoluteTolerance {
-        value: f64,
-    },
+    InvalidAbsoluteTolerance { value: f64 },
 
     /// 参照バックエンドを現在の環境で利用できません。
-    ReferenceBackendUnavailable {
-        backend: BackendKind,
-    },
+    ReferenceBackendUnavailable { backend: BackendKind },
 
     /// `f64`スカラー観測用の10進入力が不正です。
     InvalidScalarF64Input {
@@ -30,34 +26,28 @@ pub enum RunnerError {
     },
 
     /// 正確な10進参照値を有限の`f64`へ変換できません。
-    ScalarF64ReferenceOutOfRange {
-        value: String,
-    },
+    ScalarF64ReferenceOutOfRange { value: String },
 
     /// Coreによる演算実行に失敗しました。
-    Compute {
-        error: ComputeError,
-    },
+    Compute { error: ComputeError },
 
+    /// ベンチマークの入力長が0です。
     ZeroInputLength,
 
-    InputLengthTooLarge {
-        maximum: usize,
-    },
+    /// ベンチマークの入力長が上限を超えています。
+    InputLengthTooLarge { maximum: usize },
 
-    WarmupIterationsTooLarge {
-        maximum: usize,
-    },
+    /// ウォームアップ回数が上限を超えています。
+    WarmupIterationsTooLarge { maximum: usize },
 
-    MeasuredIterationsTooLarge {
-        maximum: usize,
-    },
+    /// 計測回数が上限を超えています。
+    MeasuredIterationsTooLarge { maximum: usize },
 
+    /// `SumF64`ベンチマークに`F32`精度が指定されています。
     SumF64RequiresF64,
 
-    BenchmarkWorkloadTooLarge {
-        maximum: usize,
-    },
+    /// ベンチマークの総処理量が上限を超えています。
+    BenchmarkWorkloadTooLarge { maximum: usize },
 }
 
 impl fmt::Display for RunnerError {
