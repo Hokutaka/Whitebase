@@ -27,7 +27,6 @@ use whitebase_interface::{
 };
 
 /// Whitebase HTTP APIのRouterを構築します。
-#[must_use]
 pub fn router() -> Router {
     let allowed_origins = [
         HeaderValue::from_static("http://localhost:1420"),
