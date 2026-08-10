@@ -125,7 +125,7 @@ Layer番号は単純な実行順序を示すものではありません。
       </td>
     </tr>
     <tr>
-      <td>Tauri Command API</td>
+      td>Tauri Command API<br><code>whitebase-tauri-api</code></td>
       <td>
         whitebase-interfaceをTauri IPCへ変換するInterface Adapter
       </td>
@@ -188,7 +188,7 @@ HTTP、Tauri IPC、WebAssembly / JavaScriptなどのtransport固有処理は、
 現在の主な構成は以下です。
 
 - `whitebase-http-api`: HTTP / JSON / Axum Interface Adapter
-- Tauri Command API: Tauri IPC Interface Adapter
+- `whitebase-tauri-api`: Tauri IPC Interface Adapter
 - `whitebase-wasm`: WebAssembly / JavaScript Interface Adapter
 
 各Interface Adapterは`whitebase-interface`を共通Application Boundaryとして利用し、
