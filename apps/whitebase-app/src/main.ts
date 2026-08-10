@@ -101,17 +101,6 @@ const API_BASE_URL = getApiBaseUrl();
 
 const executionRoute = initializeComputeClient();
 
-void executionRoute.then(
-  (route: ExecutionRoute) => {
-    console.log(`[Whitebase] Execution route: ${route}`);
-  },
-  (error: unknown) => {
-    console.error(
-      `[Whitebase] Execution route initialization failed: ${errorMessage(error)}`,
-    );
-  },
-);
-
 const app = requireElement<HTMLDivElement>("#app");
 app.innerHTML = `
   <main class="shell">
@@ -124,10 +113,17 @@ app.innerHTML = `
         </p>
       </div>
 
+      <div class="runtime-status">
+      <div class="route-panel">
+        <span class="route-label">ROUTE</span>
+        <strong id="execution-route">Detecting...</strong>
+      </div>
+
       <div class="status-panel">
         <span class="status-dot"></span>
         <span id="application-status">Ready</span>
       </div>
+    </div>
     </header>
 
     <section class="observation-panel">
@@ -349,6 +345,7 @@ const observationResultsBody = requireElement<HTMLTableSectionElement>(
 const benchmarkForm = requireElement<HTMLFormElement>("#benchmark-form");
 const runButton = requireElement<HTMLButtonElement>("#run-button");
 const statusElement = requireElement<HTMLSpanElement>("#application-status");
+const executionRouteElement = requireElement<HTMLElement>("#execution-route");
 const errorElement = requireElement<HTMLParagraphElement>("#error-message");
 const resultsBody = requireElement<HTMLTableSectionElement>("#results-body");
 const summary = requireElement<HTMLElement>("#summary");
@@ -362,6 +359,20 @@ const f64PrecisionInput = requireElement<HTMLInputElement>(
 document
   .querySelectorAll<HTMLInputElement>('input[name="benchmark-operation"]')
   .forEach((input) => input.addEventListener("change", syncBenchmarkControls));
+
+void executionRoute.then(
+  (route: ExecutionRoute) => {
+    executionRouteElement.textContent = executionRouteLabel(route);
+    console.log(`[Whitebase] Execution route: ${route}`);
+  },
+  (error: unknown) => {
+    executionRouteElement.textContent = "Unavailable";
+
+    console.error(
+      `[Whitebase] Execution route initialization failed: ${errorMessage(error)}`,
+    );
+  },
+);
 
 syncBenchmarkControls();
 
@@ -676,6 +687,17 @@ function formatDuration(
   }
 
   return `${nanoseconds.toFixed(1)} ns`;
+}
+
+function executionRouteLabel(route: ExecutionRoute): string {
+  switch (route) {
+    case "tauri":
+      return "Tauri IPC";
+    case "server":
+      return "HTTP Server";
+    case "wasm":
+      return "WebAssembly";
+  }
 }
 
 function escapeHtml(value: string): string {
