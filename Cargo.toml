@@ -10,6 +10,7 @@ members = [
     "crates/compute/whitebase-core",
     "crates/compute/whitebase-runner",
     "crates/interface/whitebase-interface",
+    "crates/interface/whitebase-http-api",
     "crates/interface/whitebase-wasm",
     "crates/ffi/whitebase-c-api",
     "apps/whitebase-app/src-tauri",

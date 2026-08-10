@@ -26,8 +26,8 @@ Whitebase can be tested in the following three ways.
 | Runtime | Server | Whitebase call path |
 | --- | ---: | --- |
 | Tauri app | Not required | Tauri → Tauri Commands → Interface → Runner / Core |
-| GitHub Pages | Optional | Browser → WASM → Interface → Runner / Core, or when loopback access is available: Browser → HTTP → Whitebase Server → Interface → Runner / Core |
-| Local web app | Optional | Browser → WASM → Interface → Runner / Core, or Browser → HTTP → Whitebase Server → Interface → Runner / Core |
+| GitHub Pages | Optional | Browser → WASM → Interface → Runner / Core, or when loopback access is available: Browser → HTTP → Whitebase Server → HTTP API Adapter → Interface → Runner / Core |
+| Local web app | Optional | Browser → WASM → Interface → Runner / Core, or Browser → HTTP → Whitebase Server → HTTP API Adapter → Interface → Runner / Core |
 
 In browser environments, the execution route is selected when the application starts.
 
@@ -80,6 +80,7 @@ browser security settings or permissions, the application falls back to WebAssem
 Browser
 → HTTP
 → Whitebase Server
+→ whitebase-http-api
 → whitebase-interface
 → Runner / Whitebase Core
 → Native backend
@@ -176,7 +177,19 @@ of the build configuration.
 Tauri uses IPC, while regular web browsers select either the local HTTP API
 or WebAssembly at startup.
 
-These execution routes share the same Runner and Core layers.
+Each Application Interface uses `whitebase-interface` as the shared
+Application Boundary.
+
+`whitebase-interface` is transport-independent. It uses Whitebase Core
+directly for Pure Compute and Runner for Applied Compute such as comparison,
+measurement, and observation.
+
+For HTTP, `whitebase-http-api` handles HTTP / JSON / Axum-specific behavior,
+while `whitebase-server` acts only as the Host that starts the Interface Adapter.
+
+Tauri Commands and WebAssembly also avoid exposing Whitebase Core / Runner
+directly and use `whitebase-interface` for their respective execution
+environments.
 
 ![Architecture diagram](/docs/diagrams/structure/architecture.svg)
 
@@ -239,8 +252,11 @@ part of the benchmark result.
 ### Core API
 
 See [Core API](api/Core-API.md) for the Rust API, operations, backends, and errors.
+
 ### HTTP API
 
-Whitebase Server exposes a local HTTP/JSON API.
+`whitebase-http-api` provides the local HTTP / JSON Interface Adapter.
+
+`whitebase-server` hosts that adapter and handles server startup.
 
 See [HTTP API](api/HTTP-API.md) for endpoint and request/response details.

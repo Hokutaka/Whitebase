@@ -6,11 +6,16 @@ flowchart TB
         External["External Applications<br/>C / C++ / C# / other"]
     end
 
-    subgraph UserFaces["User Faces / Transport Adapters"]
+   subgraph RuntimeHosts["Runtime Hosts"]
+        direction LR
+        HttpServer["whitebase-server<br/>HTTP Server Host"]
+    end
+
+    subgraph InterfaceAdapters["Interface Adapters"]
         direction LR
         TauriCommand["Tauri Commands<br/>IPC / invoke()"]
-        HttpServer["whitebase-server<br/>HTTP + JSON"]
-        Wasm["whitebase-wasm<br/>WebAssembly"]
+        HttpApi["whitebase-http-api<br/>HTTP / JSON / Axum"]
+        Wasm["whitebase-wasm<br/>WebAssembly / JavaScript"]
     end
 
     ApplicationInterface["whitebase-interface<br/>Application Boundary<br/>Pure Compute / Applied Compute<br/>Request / Response / InterfaceError"]
@@ -62,12 +67,14 @@ flowchart TB
 
     External -->|"C ABI"| CApi
 
+    HttpServer --> HttpApi
+
     %% --------------------------------------------------------
-    %% User faces → Application Boundary
+    %% Interface Adapters → Application Boundary
     %% --------------------------------------------------------
 
     TauriCommand --> ApplicationInterface
-    HttpServer --> ApplicationInterface
+    HttpApi --> ApplicationInterface
     Wasm --> ApplicationInterface
 
     %% --------------------------------------------------------

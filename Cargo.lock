@@ -6286,6 +6286,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "whitebase-http-api"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde",
+ "tokio",
+ "tower-http 0.7.0",
+ "whitebase-interface",
+]
+
+[[package]]
 name = "whitebase-interface"
 version = "0.1.0"
 dependencies = [
@@ -6311,10 +6322,8 @@ name = "whitebase-server"
 version = "0.1.0"
 dependencies = [
  "axum",
- "serde",
  "tokio",
- "tower-http 0.7.0",
- "whitebase-interface",
+ "whitebase-http-api",
 ]
 
 [[package]]

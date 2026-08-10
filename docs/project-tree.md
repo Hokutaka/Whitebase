@@ -160,6 +160,10 @@ Whitebase
 │   │       │   └── lib.rs
 │   │       └── Cargo.toml
 │   └── interface
+│       ├── whitebase-http-api
+│       │   ├── src
+│       │   │   └── lib.rs
+│       │   └── Cargo.toml
 │       ├── whitebase-interface
 │       │   ├── src
 │       │   │   ├── benchmark.rs
