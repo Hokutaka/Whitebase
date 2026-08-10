@@ -6,11 +6,16 @@ flowchart TB
         External["External Applications<br/>C / C++ / C# / other"]
     end
 
-    subgraph ApplicationBoundaries["Application Boundary"]
+    subgraph UserFaces["User Faces / Transport Adapters"]
         direction LR
         TauriCommand["Tauri Commands<br/>IPC / invoke()"]
         HttpServer["whitebase-server<br/>HTTP + JSON"]
         Wasm["whitebase-wasm<br/>WebAssembly"]
+    end
+
+    ApplicationInterface["whitebase-interface<br/>Application Boundary<br/>Pure Compute / Applied Compute<br/>Request / Response / InterfaceError"]
+
+    subgraph FfiBoundary["FFI Boundary"]
         CApi["whitebase-c-api<br/>C ABI"]
     end
 
@@ -18,14 +23,14 @@ flowchart TB
 
     Core["whitebase-core<br/>Backend登録・指定実行<br/>能力・可用性確認・統一計算API"]
 
-    Interface["whitebase-backend-contract<br/>BackendKind / Capabilities<br/>ComputeBackend / Error"]
+    BackendContract["whitebase-backend-contract<br/>BackendKind / Capabilities<br/>ComputeBackend / Error"]
 
-    Bridge["whitebase-backend-bridge<br/>各Backendを共通Interfaceへ統合"]
+    Bridge["whitebase-backend-bridge<br/>各Backendを共通Backend Contractへ統合"]
 
     subgraph BackendConnections["Backend Implementations / Bindings"]
         direction LR
 
-        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / wasm32 SIMD128"]
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / AArch64 NEON / wasm32 SIMD128"]
 
         CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
 
@@ -58,14 +63,19 @@ flowchart TB
     External -->|"C ABI"| CApi
 
     %% --------------------------------------------------------
-    %% Application boundaries
+    %% User faces → Application Boundary
     %% --------------------------------------------------------
 
-    TauriCommand --> Runner
-    HttpServer --> Runner
+    TauriCommand --> ApplicationInterface
+    HttpServer --> ApplicationInterface
+    Wasm --> ApplicationInterface
 
-    Wasm -->|"Observation / Benchmark"| Runner
-    Wasm -->|"Primitive compute API"| Core
+    %% --------------------------------------------------------
+    %% Application Boundary → Compute layers
+    %% --------------------------------------------------------
+
+    ApplicationInterface -->|"Applied Compute"| Runner
+    ApplicationInterface -->|"Pure Compute"| Core
 
     CApi --> Core
 
@@ -76,8 +86,8 @@ flowchart TB
     Runner --> Core
     Core --> Bridge
 
-    Core -. "uses contract" .-> Interface
-    Bridge -. "implements contract" .-> Interface
+    Core -. "uses contract" .-> BackendContract
+    Bridge -. "implements contract" .-> BackendContract
 
     %% --------------------------------------------------------
     %% Backend routing

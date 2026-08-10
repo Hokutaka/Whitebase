@@ -23,11 +23,11 @@ Examples include:
 
 Whitebase can be tested in the following three ways.
 
-| Execution method | Server | Core call path |
+| Runtime | Server | Whitebase call path |
 | --- | ---: | --- |
-| Tauri app | Not required | Tauri → Tauri Commands → Runner → Core |
-| GitHub Pages | Optional | Browser → WASM → Runner → Core, or, when loopback access is available, Browser → HTTP → Whitebase Server → Runner → Core |
-| Local web app | Optional | Browser → WASM → Runner → Core, or Browser → HTTP → Whitebase Server → Runner → Core |
+| Tauri app | Not required | Tauri → Tauri Commands → Interface → Runner / Core |
+| GitHub Pages | Optional | Browser → WASM → Interface → Runner / Core, or when loopback access is available: Browser → HTTP → Whitebase Server → Interface → Runner / Core |
+| Local web app | Optional | Browser → WASM → Interface → Runner / Core, or Browser → HTTP → Whitebase Server → Interface → Runner / Core |
 
 In browser environments, the execution route is selected when the application starts.
 
@@ -55,14 +55,15 @@ scripts\ops.bat dev
 
 The Tauri app does not require Whitebase Server.
 
-Computation is routed from Tauri Commands through Runner and Whitebase Core
+Computation is routed from Tauri Commands through `whitebase-interface`,
+which uses Runner or Whitebase Core depending on the operation,
 to the available native backends.
 
 ```text
 Tauri
 → Tauri Commands
-→ Runner
-→ Whitebase Core
+→ whitebase-interface
+→ Runner / Whitebase Core
 → Native backend
 ```
 
@@ -79,8 +80,8 @@ browser security settings or permissions, the application falls back to WebAssem
 Browser
 → HTTP
 → Whitebase Server
-→ Runner
-→ Whitebase Core
+→ whitebase-interface
+→ Runner / Whitebase Core
 → Native backend
 ```
 
@@ -89,14 +90,18 @@ If Whitebase Server is unavailable or cannot be reached, WebAssembly is used.
 ```text
 Browser
 → WebAssembly
-→ Runner
-→ Whitebase Core
+→ whitebase-interface
+→ Runner / Whitebase Core
 → Rust backend
 ```
 
 In the WebAssembly environment, Rust Scalar and Rust SIMD backends are available.
 
+The current Whitebase WebAssembly artifact requires a runtime with WebAssembly
+SIMD128 support.
+
 On wasm32, the Rust SIMD backend uses WebAssembly SIMD128.
+A baseline artifact for runtimes without SIMD128 support is not currently provided.
 
 ### Local Web App
 

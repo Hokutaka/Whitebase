@@ -49,6 +49,7 @@ Whitebase
 │   │   │   │   └── StoreLogo.png
 │   │   │   ├── src
 │   │   │   │   ├── benchmark.rs
+│   │   │   │   ├── error.rs
 │   │   │   │   ├── lib.rs
 │   │   │   │   ├── main.rs
 │   │   │   │   └── scalar_f64.rs
@@ -69,91 +70,108 @@ Whitebase
 │       │   └── main.rs
 │       └── Cargo.toml
 ├── crates
-│   ├── whitebase-asm-adapter
-│   │   ├── src
-│   │   │   └── lib.rs
-│   │   ├── tests
-│   │   │   └── assembly_smoke.rs
-│   │   ├── build.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-backend-bridge
-│   │   ├── src
-│   │   │   ├── assembly.rs
-│   │   │   ├── cpp.rs
-│   │   │   ├── lib.rs
-│   │   │   ├── rust.rs
-│   │   │   ├── unavailable.rs
-│   │   │   └── windows_gnu.rs
-│   │   ├── tests
-│   │   │   └── backend_bridge_smoke.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-backend-contract
-│   │   ├── src
-│   │   │   ├── backend.rs
-│   │   │   ├── capabilities.rs
-│   │   │   ├── error.rs
-│   │   │   ├── lib.rs
-│   │   │   └── operation.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-c-api
-│   │   ├── include
-│   │   │   └── whitebase.h
-│   │   ├── src
-│   │   │   └── lib.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-core
-│   │   ├── src
-│   │   │   └── lib.rs
-│   │   ├── tests
-│   │   │   ├── core_smoke.rs
-│   │   │   ├── f64_array_smoke.rs
-│   │   │   └── scalar_f64_smoke.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-cpp-adapter
-│   │   ├── src
-│   │   │   └── lib.rs
-│   │   ├── tests
-│   │   │   └── cpp_backend_smoke.rs
-│   │   ├── build.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-runner
-│   │   ├── examples
-│   │   │   └── scalar_f64.rs
-│   │   ├── src
-│   │   │   ├── benchmark.rs
-│   │   │   ├── config.rs
-│   │   │   ├── decimal.rs
-│   │   │   ├── error.rs
-│   │   │   ├── lib.rs
-│   │   │   ├── report.rs
-│   │   │   └── runner.rs
-│   │   ├── tests
-│   │   │   ├── runner_smoke.rs
-│   │   │   └── scalar_f64.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-rust-backend
-│   │   ├── src
-│   │   │   ├── error.rs
-│   │   │   ├── lib.rs
-│   │   │   ├── scalar.rs
-│   │   │   └── simd.rs
-│   │   ├── tests
-│   │   │   ├── scalar_f64.rs
-│   │   │   ├── scalar_f64_array.rs
-│   │   │   ├── scalar_smoke.rs
-│   │   │   ├── simd_f64_array.rs
-│   │   │   └── simd_smoke.rs
-│   │   └── Cargo.toml
-│   ├── whitebase-wasm
-│   │   ├── src
-│   │   │   └── lib.rs
-│   │   └── Cargo.toml
-│   └── whitebase-windows-gnu-adapter
-│       ├── src
-│       │   └── lib.rs
-│       ├── tests
-│       │   └── windows_gnu_smoke.rs
-│       └── Cargo.toml
+│   ├── backend
+│   │   ├── integration
+│   │   │   ├── whitebase-asm-adapter
+│   │   │   │   ├── src
+│   │   │   │   │   └── lib.rs
+│   │   │   │   ├── tests
+│   │   │   │   │   └── assembly_smoke.rs
+│   │   │   │   ├── build.rs
+│   │   │   │   └── Cargo.toml
+│   │   │   ├── whitebase-backend-bridge
+│   │   │   │   ├── src
+│   │   │   │   │   ├── assembly.rs
+│   │   │   │   │   ├── cpp.rs
+│   │   │   │   │   ├── lib.rs
+│   │   │   │   │   ├── rust.rs
+│   │   │   │   │   ├── unavailable.rs
+│   │   │   │   │   └── windows_gnu.rs
+│   │   │   │   ├── tests
+│   │   │   │   │   └── backend_bridge_smoke.rs
+│   │   │   │   └── Cargo.toml
+│   │   │   ├── whitebase-cpp-adapter
+│   │   │   │   ├── src
+│   │   │   │   │   └── lib.rs
+│   │   │   │   ├── tests
+│   │   │   │   │   └── cpp_backend_smoke.rs
+│   │   │   │   ├── build.rs
+│   │   │   │   └── Cargo.toml
+│   │   │   └── whitebase-windows-gnu-adapter
+│   │   │       ├── src
+│   │   │       │   └── lib.rs
+│   │   │       ├── tests
+│   │   │       │   └── windows_gnu_smoke.rs
+│   │   │       └── Cargo.toml
+│   │   ├── whitebase-backend-contract
+│   │   │   ├── src
+│   │   │   │   ├── backend.rs
+│   │   │   │   ├── capabilities.rs
+│   │   │   │   ├── error.rs
+│   │   │   │   ├── lib.rs
+│   │   │   │   └── operation.rs
+│   │   │   └── Cargo.toml
+│   │   └── whitebase-rust-backend
+│   │       ├── src
+│   │       │   ├── simd
+│   │       │   │   ├── aarch64.rs
+│   │       │   │   ├── mod.rs
+│   │       │   │   ├── wasm32.rs
+│   │       │   │   └── x86_64.rs
+│   │       │   ├── error.rs
+│   │       │   ├── lib.rs
+│   │       │   └── scalar.rs
+│   │       ├── tests
+│   │       │   ├── scalar_f64.rs
+│   │       │   ├── scalar_f64_array.rs
+│   │       │   ├── scalar_smoke.rs
+│   │       │   ├── simd_f64_array.rs
+│   │       │   └── simd_smoke.rs
+│   │       └── Cargo.toml
+│   ├── compute
+│   │   ├── whitebase-core
+│   │   │   ├── src
+│   │   │   │   └── lib.rs
+│   │   │   ├── tests
+│   │   │   │   ├── core_smoke.rs
+│   │   │   │   ├── f64_array_smoke.rs
+│   │   │   │   └── scalar_f64_smoke.rs
+│   │   │   └── Cargo.toml
+│   │   └── whitebase-runner
+│   │       ├── examples
+│   │       │   └── scalar_f64.rs
+│   │       ├── src
+│   │       │   ├── benchmark.rs
+│   │       │   ├── config.rs
+│   │       │   ├── decimal.rs
+│   │       │   ├── error.rs
+│   │       │   ├── lib.rs
+│   │       │   ├── report.rs
+│   │       │   └── runner.rs
+│   │       ├── tests
+│   │       │   ├── runner_smoke.rs
+│   │       │   └── scalar_f64.rs
+│   │       └── Cargo.toml
+│   ├── ffi
+│   │   └── whitebase-c-api
+│   │       ├── include
+│   │       │   └── whitebase.h
+│   │       ├── src
+│   │       │   └── lib.rs
+│   │       └── Cargo.toml
+│   └── interface
+│       ├── whitebase-interface
+│       │   ├── src
+│       │   │   ├── benchmark.rs
+│       │   │   ├── compute.rs
+│       │   │   ├── error.rs
+│       │   │   ├── lib.rs
+│       │   │   └── scalar_f64.rs
+│       │   └── Cargo.toml
+│       └── whitebase-wasm
+│           ├── src
+│           │   └── lib.rs
+│           └── Cargo.toml
 ├── docs
 │   ├── api
 │   │   ├── Core-API.ja.md

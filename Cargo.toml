@@ -1,16 +1,18 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/whitebase-rust-backend",
-    "crates/whitebase-wasm",
-    "crates/whitebase-c-api",
-    "crates/whitebase-cpp-adapter",
-    "crates/whitebase-windows-gnu-adapter",
-    "crates/whitebase-backend-contract",
-    "crates/whitebase-backend-bridge",
-    "crates/whitebase-asm-adapter",
-    "crates/whitebase-core",
-    "crates/whitebase-runner",
+    "crates/backend/whitebase-backend-contract",
+    "crates/backend/whitebase-rust-backend",
+    "crates/backend/integration/whitebase-backend-bridge",
+    "crates/backend/integration/whitebase-cpp-adapter",
+    "crates/backend/integration/whitebase-asm-adapter",
+    "crates/backend/integration/whitebase-windows-gnu-adapter",
+    "crates/compute/whitebase-core",
+    "crates/compute/whitebase-runner",
+    "crates/interface/whitebase-interface",
+    "crates/interface/whitebase-wasm",
+    "crates/ffi/whitebase-c-api",
     "apps/whitebase-app/src-tauri",
     "apps/whitebase-server",
-    "tools/whitebase-control-center"]
+    "tools/whitebase-control-center",
+]

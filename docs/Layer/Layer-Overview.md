@@ -105,20 +105,36 @@ Layer番号は単純な実行順序を示すものではありません。
       <td>L4 Coreを利用し、L6 Interfaceから利用される</td>
     </tr>
     <tr>
-      <td rowspan="3">L6<br>Interface</td>
-      <td rowspan="3">Application Boundary</td>
-      <td>HTTP API<br><code>whitebase-server</code></td>
-      <td>Whitebaseの機能をHTTP / JSONとして公開する</td>
-      <td rowspan="3">Pure ComputeはL4、Applied ComputeはL5を利用し、L7 Presentationへ機能を公開する</td>
-    </tr>
-    <tr>
-      <td>Tauri Command API</td>
-      <td>Whitebaseの機能をTauri IPCとして公開する</td>
-    </tr>
-    <tr>
-      <td>WASM API<br><code>whitebase-wasm</code></td>
-      <td>Whitebaseの機能をWebAssembly / JavaScriptへ公開する</td>
-    </tr>
+  <td rowspan="4">L6<br>Interface</td>
+  <td rowspan="4">Application Boundary</td>
+  <td><code>whitebase-interface</code></td>
+  <td>
+    Core / Runnerを利用する共通Application API、
+    Request / Response、Interface Errorを提供する
+  </td>
+  <td rowspan="4">
+    Pure ComputeはL4 Core、Applied ComputeはL5 Runnerを利用し、
+    各Interface AdapterへWhitebaseの機能を公開する
+  </td>
+  </tr>
+  <tr>
+    <td>HTTP API<br><code>whitebase-server</code></td>
+    <td>
+      whitebase-interfaceをHTTP / JSONへ変換して公開する
+    </td>
+  </tr>
+  <tr>
+    <td>Tauri Command API</td>
+    <td>
+      whitebase-interfaceをTauri IPCへ公開する
+    </td>
+  </tr>
+  <tr>
+    <td>WASM API<br><code>whitebase-wasm</code></td>
+    <td>
+      whitebase-interfaceをWebAssembly / JavaScriptへ公開する
+    </td>
+  </tr>
     <tr>
       <td>L7<br>Presentation</td>
       <td>User Facing</td>

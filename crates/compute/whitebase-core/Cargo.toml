@@ -1,0 +1,14 @@
+[package]
+name = "whitebase-core"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+whitebase-backend-contract = {
+    path = "../../backend/whitebase-backend-contract"
+}
+
+whitebase-backend-bridge = {
+    path = "../../backend/integration/whitebase-backend-bridge"
+}

@@ -13,12 +13,17 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
-use whitebase_runner::{
-    BackendRunResult, BackendRunStatus, BenchmarkOperation as RunnerBenchmarkOperation,
-    BenchmarkPrecision as RunnerBenchmarkPrecision, BenchmarkReport as RunnerBenchmarkReport,
-    BenchmarkRequest as RunnerBenchmarkRequest, F64Value, Runner, RunnerError,
-    ScalarF64BackendObservation, ScalarF64ObservationReport, TimingMeasurement,
-    run_benchmark as run_runner_benchmark,
+use whitebase_interface::{
+    InterfaceError,
+    benchmark::{
+        BenchmarkOperation, BenchmarkPrecision, BenchmarkReportDto,
+        BenchmarkRequest as InterfaceBenchmarkRequest,
+        execute_benchmark as execute_interface_benchmark,
+    },
+    scalar_f64::{
+        ScalarF64ObservationDto, ScalarF64Request,
+        execute_scalar_f64_observation as execute_interface_scalar_f64_observation,
+    },
 };
 
 const SERVER_ADDRESS: &str = "127.0.0.1:1430";
@@ -84,43 +89,27 @@ async fn observe_add_scalar_f64(
 fn execute_scalar_f64_observation(
     request: ScalarF64Request,
 ) -> Result<ScalarF64ObservationDto, ApiError> {
-    Runner::new()
-        .observe_add_scalar_f64(&request.lhs, &request.rhs)
-        .map(Into::into)
-        .map_err(map_scalar_f64_error)
-}
-
-fn map_scalar_f64_error(error: RunnerError) -> ApiError {
-    let is_bad_request = matches!(
-        &error,
-        RunnerError::InvalidScalarF64Input { .. }
-            | RunnerError::ScalarF64ReferenceOutOfRange { .. }
-    );
-
-    if is_bad_request {
-        ApiError::bad_request("invalid_scalar_f64_request", error.to_string())
-    } else {
-        ApiError::internal("scalar_f64_observation_failed", error.to_string())
-    }
+    execute_interface_scalar_f64_observation(request).map_err(Into::into)
 }
 
 async fn run_benchmark(
-    Json(request): Json<BenchmarkRequest>,
+    Json(request): Json<HttpBenchmarkRequest>,
 ) -> Result<Json<BenchmarkReportDto>, ApiError> {
-    run_benchmark_task(request).await.map(Json)
+    run_benchmark_task(request.into()).await.map(Json)
 }
 
 async fn run_add_benchmark(
-    Json(mut request): Json<BenchmarkRequest>,
+    Json(mut request): Json<HttpBenchmarkRequest>,
 ) -> Result<Json<BenchmarkReportDto>, ApiError> {
     request.operation = BenchmarkOperation::AddArray;
-    run_benchmark_task(request).await.map(Json)
+
+    run_benchmark_task(request.into()).await.map(Json)
 }
 
 async fn run_legacy_add_f32_benchmark(
     Json(request): Json<LegacyBenchmarkRequest>,
 ) -> Result<Json<BenchmarkReportDto>, ApiError> {
-    run_benchmark_task(BenchmarkRequest {
+    run_benchmark_task(InterfaceBenchmarkRequest {
         operation: BenchmarkOperation::AddArray,
         precision: BenchmarkPrecision::F32,
         input_length: request.input_length,
@@ -131,7 +120,9 @@ async fn run_legacy_add_f32_benchmark(
     .map(Json)
 }
 
-async fn run_benchmark_task(request: BenchmarkRequest) -> Result<BenchmarkReportDto, ApiError> {
+async fn run_benchmark_task(
+    request: InterfaceBenchmarkRequest,
+) -> Result<BenchmarkReportDto, ApiError> {
     let task = tokio::task::spawn_blocking(move || execute_benchmark(request));
 
     task.await.map_err(|error| {
@@ -142,132 +133,13 @@ async fn run_benchmark_task(request: BenchmarkRequest) -> Result<BenchmarkReport
     })?
 }
 
-fn execute_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReportDto, ApiError> {
-    run_runner_benchmark(RunnerBenchmarkRequest {
-        operation: match request.operation {
-            BenchmarkOperation::AddArray => RunnerBenchmarkOperation::AddArray,
-            BenchmarkOperation::SumF64 => RunnerBenchmarkOperation::SumF64,
-        },
-        precision: match request.precision {
-            BenchmarkPrecision::F32 => RunnerBenchmarkPrecision::F32,
-            BenchmarkPrecision::F64 => RunnerBenchmarkPrecision::F64,
-        },
-        input_length: request.input_length,
-        warmup_iterations: request.warmup_iterations,
-        measured_iterations: request.measured_iterations,
-    })
-    .map(Into::into)
-    .map_err(map_benchmark_error)
-}
-
-fn map_benchmark_error(error: RunnerError) -> ApiError {
-    let is_bad_request = matches!(
-        &error,
-        RunnerError::ZeroInputLength
-            | RunnerError::InputLengthTooLarge { .. }
-            | RunnerError::WarmupIterationsTooLarge { .. }
-            | RunnerError::MeasuredIterationsTooLarge { .. }
-            | RunnerError::ZeroMeasuredIterations
-            | RunnerError::BenchmarkWorkloadTooLarge { .. }
-            | RunnerError::SumF64RequiresF64
-    );
-
-    if is_bad_request {
-        ApiError::bad_request("invalid_benchmark_request", error.to_string())
-    } else {
-        ApiError::internal("runner_failed", error.to_string())
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ScalarF64Request {
-    lhs: String,
-    rhs: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ScalarF64ObservationDto {
-    lhs_input: String,
-    rhs_input: String,
-    lhs: F64ValueDto,
-    rhs: F64ValueDto,
-    decimal_reference: String,
-    reference: F64ValueDto,
-    results: Vec<ScalarF64BackendResultDto>,
-    all_backends_match: bool,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ScalarF64BackendResultDto {
-    backend: String,
-    result: F64ValueDto,
-    matches_reference_bits: bool,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct F64ValueDto {
-    value: f64,
-    decimal: String,
-    bits: String,
-}
-
-impl From<ScalarF64ObservationReport> for ScalarF64ObservationDto {
-    fn from(report: ScalarF64ObservationReport) -> Self {
-        Self {
-            lhs_input: report.lhs_input,
-            rhs_input: report.rhs_input,
-            lhs: report.lhs.into(),
-            rhs: report.rhs.into(),
-            decimal_reference: report.decimal_reference,
-            reference: report.reference.into(),
-            results: report.results.into_iter().map(Into::into).collect(),
-            all_backends_match: report.all_backends_match,
-        }
-    }
-}
-
-impl From<ScalarF64BackendObservation> for ScalarF64BackendResultDto {
-    fn from(result: ScalarF64BackendObservation) -> Self {
-        Self {
-            backend: result.backend.display_name().to_owned(),
-            result: result.result.into(),
-            matches_reference_bits: result.matches_reference_bits,
-        }
-    }
-}
-
-impl From<F64Value> for F64ValueDto {
-    fn from(value: F64Value) -> Self {
-        Self {
-            value: value.value,
-            decimal: format!("{:.17}", value.value),
-            bits: format!("0x{:016x}", value.bits),
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-enum BenchmarkOperation {
-    #[default]
-    AddArray,
-    SumF64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-enum BenchmarkPrecision {
-    F32,
-    F64,
+fn execute_benchmark(request: InterfaceBenchmarkRequest) -> Result<BenchmarkReportDto, ApiError> {
+    execute_interface_benchmark(request).map_err(Into::into)
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct BenchmarkRequest {
+struct HttpBenchmarkRequest {
     #[serde(default)]
     operation: BenchmarkOperation,
     precision: BenchmarkPrecision,
@@ -276,159 +148,24 @@ struct BenchmarkRequest {
     measured_iterations: usize,
 }
 
+impl From<HttpBenchmarkRequest> for InterfaceBenchmarkRequest {
+    fn from(request: HttpBenchmarkRequest) -> Self {
+        Self {
+            operation: request.operation,
+            precision: request.precision,
+            input_length: request.input_length,
+            warmup_iterations: request.warmup_iterations,
+            measured_iterations: request.measured_iterations,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct LegacyBenchmarkRequest {
     input_length: usize,
     warmup_iterations: usize,
     measured_iterations: usize,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct BenchmarkReportDto {
-    operation: BenchmarkOperation,
-    precision: BenchmarkPrecision,
-    input_length: usize,
-    reference_backend: String,
-    warmup_iterations: usize,
-    measured_iterations: usize,
-    absolute_tolerance: f64,
-    results: Vec<BackendResultDto>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct BackendResultDto {
-    backend: String,
-    status: &'static str,
-    timing_status: Option<&'static str>,
-
-    iterations: Option<usize>,
-    total_nanoseconds: Option<f64>,
-    minimum_nanoseconds: Option<f64>,
-    maximum_nanoseconds: Option<f64>,
-    mean_nanoseconds: Option<f64>,
-
-    matches_reference: Option<bool>,
-    mismatch_count: Option<usize>,
-    maximum_absolute_error: Option<f64>,
-
-    error: Option<String>,
-}
-
-impl From<RunnerBenchmarkReport> for BenchmarkReportDto {
-    fn from(report: RunnerBenchmarkReport) -> Self {
-        Self {
-            operation: match report.operation {
-                RunnerBenchmarkOperation::AddArray => BenchmarkOperation::AddArray,
-                RunnerBenchmarkOperation::SumF64 => BenchmarkOperation::SumF64,
-            },
-            precision: match report.precision {
-                RunnerBenchmarkPrecision::F32 => BenchmarkPrecision::F32,
-                RunnerBenchmarkPrecision::F64 => BenchmarkPrecision::F64,
-            },
-            input_length: report.input_length,
-            reference_backend: report.reference_backend.display_name().to_owned(),
-            warmup_iterations: report.warmup_iterations,
-            measured_iterations: report.measured_iterations,
-            absolute_tolerance: report.absolute_tolerance,
-            results: report
-                .results
-                .into_iter()
-                .map(BackendResultDto::from)
-                .collect(),
-        }
-    }
-}
-
-impl From<BackendRunResult> for BackendResultDto {
-    fn from(result: BackendRunResult) -> Self {
-        let backend = result.backend.display_name().to_owned();
-
-        match result.status {
-            BackendRunStatus::Completed { timing, comparison } => {
-                let (
-                    timing_status,
-                    iterations,
-                    total_nanoseconds,
-                    minimum_nanoseconds,
-                    maximum_nanoseconds,
-                    mean_nanoseconds,
-                ) = match timing {
-                    TimingMeasurement::Measured(timing) => (
-                        Some("measured"),
-                        Some(timing.iterations),
-                        Some(timing.total_nanoseconds as f64),
-                        Some(timing.minimum_nanoseconds as f64),
-                        Some(timing.maximum_nanoseconds as f64),
-                        Some(timing.mean_nanoseconds),
-                    ),
-
-                    TimingMeasurement::TooFastToMeasure => {
-                        (Some("too-fast-to-measure"), None, None, None, None, None)
-                    }
-                };
-
-                Self {
-                    backend,
-                    status: "completed",
-                    timing_status,
-
-                    iterations,
-                    total_nanoseconds,
-                    minimum_nanoseconds,
-                    maximum_nanoseconds,
-                    mean_nanoseconds,
-
-                    matches_reference: Some(comparison.matches_reference),
-                    mismatch_count: Some(comparison.mismatch_count),
-                    maximum_absolute_error: comparison
-                        .maximum_absolute_error
-                        .is_finite()
-                        .then_some(comparison.maximum_absolute_error),
-
-                    error: None,
-                }
-            }
-
-            BackendRunStatus::Unavailable => Self {
-                backend,
-                status: "unavailable",
-                timing_status: None,
-
-                iterations: None,
-                total_nanoseconds: None,
-                minimum_nanoseconds: None,
-                maximum_nanoseconds: None,
-                mean_nanoseconds: None,
-
-                matches_reference: None,
-                mismatch_count: None,
-                maximum_absolute_error: None,
-
-                error: None,
-            },
-
-            BackendRunStatus::Failed { error } => Self {
-                backend,
-                status: "failed",
-                timing_status: None,
-
-                iterations: None,
-                total_nanoseconds: None,
-                minimum_nanoseconds: None,
-                maximum_nanoseconds: None,
-                mean_nanoseconds: None,
-
-                matches_reference: None,
-                mismatch_count: None,
-                maximum_absolute_error: None,
-
-                error: Some(error.to_string()),
-            },
-        }
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -462,6 +199,16 @@ impl ApiError {
     }
 }
 
+impl From<InterfaceError> for ApiError {
+    fn from(error: InterfaceError) -> Self {
+        if error.is_invalid_request() {
+            Self::bad_request(error.code(), error.to_string())
+        } else {
+            Self::internal(error.code(), error.to_string())
+        }
+    }
+}
+
 impl fmt::Display for ApiError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "{}", self.message)
@@ -491,6 +238,7 @@ struct ApiErrorBody {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use whitebase_interface::benchmark::BackendResultStatus;
 
     #[test]
     fn scalar_f64_observation_generates_decimal_reference() {
@@ -519,7 +267,7 @@ mod tests {
 
     #[test]
     fn f64_array_benchmark_uses_all_available_backends() {
-        let report = execute_benchmark(BenchmarkRequest {
+        let report = execute_benchmark(InterfaceBenchmarkRequest {
             operation: BenchmarkOperation::AddArray,
             precision: BenchmarkPrecision::F64,
             input_length: 17,
@@ -531,13 +279,14 @@ mod tests {
         assert_eq!(report.precision, BenchmarkPrecision::F64);
         assert_eq!(report.input_length, 17);
         assert!(report.results.iter().all(|result| {
-            result.status == "unavailable" || result.matches_reference == Some(true)
+            result.status == BackendResultStatus::Unavailable
+                || result.matches_reference == Some(true)
         }));
     }
 
     #[test]
     fn sum_f64_benchmark_uses_all_available_backends() {
-        let report = execute_benchmark(BenchmarkRequest {
+        let report = execute_benchmark(InterfaceBenchmarkRequest {
             operation: BenchmarkOperation::SumF64,
             precision: BenchmarkPrecision::F64,
             input_length: 17,
@@ -550,7 +299,8 @@ mod tests {
         assert_eq!(report.precision, BenchmarkPrecision::F64);
         assert_eq!(report.input_length, 17);
         assert!(report.results.iter().all(|result| {
-            result.status == "unavailable" || result.matches_reference == Some(true)
+            result.status == BackendResultStatus::Unavailable
+                || result.matches_reference == Some(true)
         }));
     }
 }
