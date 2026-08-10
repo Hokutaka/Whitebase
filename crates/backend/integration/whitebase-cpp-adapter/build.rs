@@ -79,11 +79,7 @@ fn link_linux_library(manifest_dir: &Path, configuration: &str) {
 }
 
 fn repository_root(manifest_dir: &Path) -> PathBuf {
-    manifest_dir
-        .join("..")
-        .join("..")
-        .join("..")
-        .join("..")
+    manifest_dir.join("..").join("..").join("..").join("..")
 }
 
 fn require_library(library_file: &Path, instruction: &str) {
