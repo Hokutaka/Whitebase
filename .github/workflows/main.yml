@@ -159,8 +159,10 @@ jobs:
           echo "NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
 
-      - name: Setup Rust Android target
-        run: rustup target add aarch64-linux-android
+      - name: Setup Rust targets
+        run: |
+          rustup target add aarch64-linux-android
+          rustup target add wasm32-unknown-unknown
 
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@v2
@@ -170,6 +172,16 @@ jobs:
       - name: Install frontend dependencies
         working-directory: apps/whitebase-app
         run: npm ci
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - name: Build frontend WASM package
+        run: |
+          wasm-pack build crates/interface/whitebase-wasm \
+            --target web \
+            --dev \
+            --out-dir "$GITHUB_WORKSPACE/apps/whitebase-app/src/wasm"
 
       - name: Show Android environment
         run: |
