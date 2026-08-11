@@ -1,4 +1,4 @@
-use crate::{BackendCapabilities, ComputeError, OperationKind};
+use crate::{BackendCapabilities, BackendExecutionProfile, ComputeError, OperationKind};
 
 /// Whitebaseで利用できる計算バックエンドの種類です。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -63,6 +63,14 @@ pub trait ComputeBackend: Send + Sync {
 
     /// バックエンドの能力を返します。
     fn capabilities(&self) -> BackendCapabilities;
+
+    /// 現在の実行環境で利用される計算経路を返します。
+    ///
+    /// 実行経路を特定できない、またはバックエンドが利用できない場合は
+    /// `None`を返します。
+    fn execution_profile(&self) -> Option<BackendExecutionProfile> {
+        None
+    }
 
     /// 現在の実行環境で利用可能か返します。
     fn is_available(&self) -> bool;

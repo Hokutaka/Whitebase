@@ -1,4 +1,7 @@
-use whitebase_backend_contract::{BackendCapabilities, BackendKind, ComputeBackend, ComputeError};
+use whitebase_backend_contract::{
+    BackendCapabilities, BackendExecutionProfile, BackendKind, ComputeBackend, ComputeError,
+    ExecutionArchitecture, ExecutionMode,
+};
 
 use crate::backend_failure;
 
@@ -16,6 +19,14 @@ impl ComputeBackend for RustScalarBackend {
             .with_add_f64(1)
             .with_add_scalar_f64()
             .with_sum_f64()
+    }
+
+    fn execution_profile(&self) -> Option<BackendExecutionProfile> {
+        Some(BackendExecutionProfile::new(
+            ExecutionArchitecture::current(),
+            ExecutionMode::Scalar,
+            None,
+        ))
     }
 
     fn is_available(&self) -> bool {
@@ -67,6 +78,48 @@ impl ComputeBackend for RustSimdBackend {
             BackendCapabilities::simd_add_f32(8)
                 .with_add_f64(4)
                 .with_sum_f64()
+        }
+    }
+
+    fn execution_profile(&self) -> Option<BackendExecutionProfile> {
+        if !self.is_available() {
+            return None;
+        }
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            return Some(BackendExecutionProfile::new(
+                ExecutionArchitecture::X86_64,
+                ExecutionMode::Avx,
+                Some(256),
+            ));
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            return Some(BackendExecutionProfile::new(
+                ExecutionArchitecture::Aarch64,
+                ExecutionMode::Neon,
+                Some(128),
+            ));
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            return Some(BackendExecutionProfile::new(
+                ExecutionArchitecture::Wasm32,
+                ExecutionMode::WasmSimd128,
+                Some(128),
+            ));
+        }
+
+        #[cfg(not(any(
+            target_arch = "x86_64",
+            target_arch = "aarch64",
+            target_arch = "wasm32"
+        )))]
+        {
+            None
         }
     }
 

@@ -5,11 +5,13 @@
 mod backend;
 mod capabilities;
 mod error;
+mod execution;
 mod operation;
 
 pub use backend::{BackendKind, ComputeBackend};
 pub use capabilities::BackendCapabilities;
 pub use error::ComputeError;
+pub use execution::{BackendExecutionProfile, ExecutionArchitecture, ExecutionMode};
 pub use operation::OperationKind;
 
 #[cfg(test)]
