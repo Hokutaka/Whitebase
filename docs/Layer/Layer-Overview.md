@@ -125,7 +125,7 @@ Layer番号は単純な実行順序を示すものではありません。
       </td>
     </tr>
     <tr>
-      td>Tauri Command API<br><code>whitebase-tauri-api</code></td>
+      <td>Tauri Command API<br><code>whitebase-tauri-api</code></td>
       <td>
         whitebase-interfaceをTauri IPCへ変換するInterface Adapter
       </td>
