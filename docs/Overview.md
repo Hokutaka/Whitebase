@@ -19,6 +19,49 @@ Examples include:
 - WebAssembly
 - Desktop and browser-based user interfaces
 
+## Primer Boundary
+
+### Current Implementation
+
+Whitebase connects built-in Rust, C++, and Assembly operations to a common compute API and compares their results and execution times. It does not yet accept Primer source or artifacts for building and execution.
+
+- [`ComputeBackend`](../crates/backend/whitebase-backend-contract/src/backend.rs) defines calls to known operations such as array addition.
+- [`BackendCapabilities`](../crates/backend/whitebase-backend-contract/src/capabilities.rs) describes support for those operations and their processing widths. `is_available()` reports availability in the current environment. Neither represents external-compiler support or permission to execute.
+- [`Runner`](../crates/compute/whitebase-runner/src/runner.rs) repeats, measures, and compares Core operations. It is not a runner that builds arbitrary source through external compilers.
+- [`F64Value`](../crates/compute/whitebase-runner/src/report.rs) retains values and bits received directly from operations. These observations differ from an external program's standard output.
+
+### Integration Responsibilities
+
+The following describes integration boundaries, not APIs that are already available.
+
+| Owner | Responsibility |
+| --- | --- |
+| Primer | Syntax, types, operation semantics, diagnostics, Primer IR, artifacts for each output route, and VM execution |
+| Whitebase-side experiment processing | External-tool and target selection, builds, separate-process execution, recording conditions, comparison, and measurement |
+| Consumer execution environment | Authorization, isolation of untrusted code, and resource limits |
+
+Use Primer's public CLI and artifacts rather than its internal Rust IR. Do not force generated programs into the existing `ComputeBackend` contract or consider integration complete merely by adding a `BackendKind`. Choose the placement of experiment processing once its inputs and outputs are concrete. Keep external-process launching outside Core.
+
+Regression tests checking Primer's language rules serve a different purpose from user-configured experiments. Primer tests that execute emitted code do not necessarily duplicate Whitebase's role.
+
+### Support and Comparison Results
+
+Integration distinguishes generation support, build readiness, execution readiness, and permission to execute. Finding a tool does not guarantee success; record preflight checks separately from actual stage results. Distinguish unsupported routes, missing tools, policy denial, generation/build/execution failure, and timeout. Retain unexecutable routes with their reasons. Existing operation capabilities and execution statuses are not substitutes for this detail.
+
+Whitebase having its own Linux Assembly implementation does not change Primer's `emit-asm` target: Windows x86-64, even when generated in WSL. Running C or LLVM artifacts on Linux requires separate checks of external tools and libraries. Adding Linux Direct ASM is a different task.
+
+Existing `primer run` and `emit-*` commands can initially support exit-status and standard-output comparison. Matching displayed results does not establish equality of all internal bits, and two nonzero exits need not have the same cause. Check known expected results as well as the VM, and state comparison conditions such as newline normalization or numeric tolerance. Do not compare timings that include process startup and output with the existing Runner's compute-only timings as though they measured the same work.
+
+### Recording and Authorization
+
+Experiments retain input and artifact identity, Primer build identity, output route, target, external-tool versions and options, stage results, and comparison conditions. `primer --version` reports the package version. To distinguish development builds sharing a version, also record the verified commit or executable hash. A machine-readable supported-route listing is not implemented; integration can initially use the CLI and documentation of a verified version.
+
+Observation data and artifacts must not carry executable commands or authority. Design tool invocation around trusted, user-selected executables with separate arguments, and require appropriate isolation for untrusted code. Timeouts and separate processes alone are not a security sandbox. Bound captured output and do not unconditionally record source text, paths, or entire environments.
+
+This clarification adds no external-command execution rights to HTTP, Tauri, or browsers. Design new public schemas or bitwise observation formats when concrete consumers require them. Primer language features such as strings do not need to wait for integration to be completed.
+
+See Primer's [Output routes and targets](https://github.com/Hokutaka/Primer/blob/master/docs/design/targets.en.md) and [Compiler architecture](https://github.com/Hokutaka/Primer/blob/master/docs/design/architecture.en.md) for its outputs and responsibilities.
+
 ## How to Verify Operation
 
 Whitebase can be tested in the following three ways.
