@@ -1,6 +1,6 @@
 # Whitebase Core API
 
-日本語 | [English](Core-API.en.md)
+[English](HTTP-API.en.md) | **日本語**
 
 `whitebase-core` は、Whitebase に登録された計算 Backend を共通の Rust API から利用するための Core 層です。
 
