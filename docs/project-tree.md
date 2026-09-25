@@ -260,10 +260,8 @@ Whitebase
 │   ├── api
 │   │   ├── Core-API.en.md
 │   │   ├── Core-API.ja.md
-│   │   ├── Core-API.md
 │   │   ├── HTTP-API.en.md
-│   │   ├── HTTP-API.ja.md
-│   │   └── HTTP-API.md
+│   │   └── HTTP-API.ja.md
 │   ├── diagrams
 │   │   ├── Layer
 │   │   │   ├── Applied-Compute.mmd
@@ -294,8 +292,7 @@ Whitebase
 │   │   ├── Whitebase Control Panel.md
 │   │   └── Whitebase Operations.md
 │   ├── Overview.en.md
-│   ├── Overview.ja.md
-│   └── Overview.md
+│   └── Overview.ja.md
 ├── native
 │   ├── Whitebase.Cpp
 │   │   ├── Whitebase.Assembly
@@ -404,13 +401,11 @@ Whitebase
 ├── Cargo.lock
 ├── Cargo.toml
 ├── CONTRIBUTING.en.md
-├── CONTRIBUTING.ja.md
 ├── CONTRIBUTING.md
 ├── LICENSE.md
 ├── package.json
 ├── package-lock.json
 ├── README.en.md
-├── README.ja.md
 ├── README.md
 ├── rust-toolchain.toml
 └── SECURITY.md
