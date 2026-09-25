@@ -23,7 +23,7 @@ For more details, see the sections below.
 
 - [Detailed documentation](/docs//Overview.en.md)
 - [Project structure](docs/project-tree.md)
-- [Layer Overview(Ja)](docs/Layer/Layer-Overview.en.md)
+- [Layer Overview (Japanese)](docs/Layer/Layer-Overview.md)
 
 ### Operation Tools
 
