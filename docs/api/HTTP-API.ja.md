@@ -1,6 +1,6 @@
 # Whitebase HTTP API
 
-[English](HTTP-API.md) | **日本語**
+[English](HTTP-API.en.md) | **日本語**
 
 Whitebase Serverが、Browserや他のLocal ClientからWhitebaseの演算を実行するために公開するLocal HTTP/JSON APIです。
 
