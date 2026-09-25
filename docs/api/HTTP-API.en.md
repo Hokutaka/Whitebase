@@ -1,5 +1,7 @@
 # Whitebase HTTP API
 
+**English** | [日本語](HTTP-API.ja.md)
+
 Whitebase Server exposes a local HTTP/JSON API for running Whitebase computations from a browser or another local client.
 
 > [!IMPORTANT]
@@ -24,7 +26,7 @@ cargo run -p whitebase-server
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Check whether Whitebase Server is running. |
-| `POST` | `/api/observations/add-scalar-f64` | Observe scalar `f64` addition, including decimal and bit representations. |
+| `POST` | `/api/observations/add-scalar-f64` | Observe scalar `f64` addition across supported backends. |
 | `POST` | `/api/benchmarks/run` | Run a benchmark by operation and precision. |
 | `POST` | `/api/benchmarks/add-array` | Compatibility endpoint for array addition. |
 | `POST` | `/api/benchmarks/add-f32` | Legacy endpoint for `f32` array addition. |
@@ -157,13 +159,9 @@ A completed backend result has one of the following `timingStatus` values.
 | `measured` | Every measured iteration produced an observable execution time. |
 | `too-fast-to-measure` | One or more measured iterations were below the current timer resolution. |
 
-When `timingStatus` is `too-fast-to-measure`, the backend status remains
-`completed`. The computation and reference comparison are still valid, but the
-timing values are not reported and the result is excluded from fastest and
-speedup calculations.
+When `timingStatus` is `too-fast-to-measure`, the backend status remains `completed`. The computation and reference comparison are still valid, but timing values are not reported and the result is excluded from fastest and speedup calculations.
 
-In this state, `iterations`, `totalNanoseconds`, `minimumNanoseconds`,
-`maximumNanoseconds`, and `meanNanoseconds` are `null`.
+In this state, `iterations`, `totalNanoseconds`, `minimumNanoseconds`, `maximumNanoseconds`, and `meanNanoseconds` are `null`.
 
 For a completed result:
 
@@ -267,11 +265,13 @@ New clients should prefer `/api/benchmarks/run`.
 
 ### `POST /api/observations/add-scalar-f64`
 
-This endpoint is intended for observing scalar IEEE 754 `f64` addition across available backends.
+This endpoint observes scalar IEEE 754 `f64` addition across every registered backend that declares `AddScalarF64` capability.
 
-Unlike the benchmark endpoint, `lhs` and `rhs` are decimal strings supplied by the client.
+Unlike the benchmark endpoint, `lhs` and `rhs` are decimal strings supplied by the client. Runner calculates an exact decimal reference independently from the backend executions, then compares each completed backend result with the correctly rounded `f64` reference bit-for-bit.
 
-Request:
+A backend being unavailable or failing does not abort the entire observation. Its status is retained in `results`, and observation continues with the remaining supported backends.
+
+### Request
 
 ```json
 {
@@ -280,7 +280,7 @@ Request:
 }
 ```
 
-Response fields include:
+### Response Fields
 
 | Field | Description |
 | --- | --- |
@@ -288,12 +288,12 @@ Response fields include:
 | `rhsInput` | Original right-hand decimal string. |
 | `lhs` | Parsed `f64` value, decimal rendering, and bit pattern. |
 | `rhs` | Parsed `f64` value, decimal rendering, and bit pattern. |
-| `decimalReference` | Decimal reference result calculated by Runner. |
-| `reference` | Reference `f64` value, decimal rendering, and bit pattern. |
-| `results` | Per-backend result and bitwise comparison. |
-| `allBackendsMatch` | Whether all reported backend results match the reference bits. |
+| `decimalReference` | Exact decimal addition result calculated by Runner. |
+| `reference` | The exact decimal reference rounded to the nearest `f64`, including decimal rendering and bit pattern. |
+| `results` | Per-backend execution status, result, bitwise comparison, and error information. |
+| `allBackendsMatch` | Whether all successfully completed backend results have identical result bits. `false` when no backend completed successfully. |
 
-`lhs`, `rhs`, `reference`, and each backend `result` use this shape:
+`lhs`, `rhs`, `reference`, and a completed backend `result` use this shape:
 
 ```json
 {
@@ -303,21 +303,63 @@ Response fields include:
 }
 ```
 
-Each backend observation uses this shape:
+For `0.1 + 0.2`, the exact decimal reference is `0.3`. The correctly rounded reference `f64` has bits `0x3fd3333333333333`, while ordinary binary `f64` addition produces `0x3fd3333333333334`. Therefore a backend can complete successfully while `matchesReferenceBits` is `false`.
+
+### Scalar Backend Status
+
+Each backend observation has one of three statuses.
+
+| Status | `result` | `matchesReferenceBits` | `error` | Meaning |
+| --- | --- | --- | --- | --- |
+| `completed` | object | boolean | `null` | The backend ran successfully. |
+| `unavailable` | `null` | `null` | `null` | The backend declares scalar `f64` support but is unavailable in the current environment. |
+| `failed` | `null` | `null` | string | The backend was available but execution failed. Observation continues with the remaining backends. |
+
+Completed example:
 
 ```json
 {
   "backend": "<backend display name>",
+  "status": "completed",
   "result": {
-    "value": 0.3,
-    "decimal": "0.29999999999999999",
-    "bits": "0x3fd3333333333333"
+    "value": 0.30000000000000004,
+    "decimal": "0.30000000000000004",
+    "bits": "0x3fd3333333333334"
   },
-  "matchesReferenceBits": true
+  "matchesReferenceBits": false,
+  "error": null
 }
 ```
 
-PowerShell example:
+Unavailable example:
+
+```json
+{
+  "backend": "<backend display name>",
+  "status": "unavailable",
+  "result": null,
+  "matchesReferenceBits": null,
+  "error": null
+}
+```
+
+Failed example:
+
+```json
+{
+  "backend": "<backend display name>",
+  "status": "failed",
+  "result": null,
+  "matchesReferenceBits": null,
+  "error": "<backend failure message>"
+}
+```
+
+`matchesReferenceBits` is populated only for completed backends. It indicates whether that backend result is bit-identical to the correctly rounded exact decimal reference.
+
+`allBackendsMatch` is a separate comparison. It compares completed backend results with each other; it does not mean that every completed result matches `reference`.
+
+### PowerShell Example
 
 ```powershell
 $body = @{
@@ -354,9 +396,11 @@ Benchmark validation errors currently include:
 | `400` | `measured_iterations_too_large` | `measuredIterations` exceeds `10,000`. |
 | `400` | `invalid_benchmark_precision` | `sum-f64` is requested with a precision other than `f64`. |
 
-The scalar observation endpoint returns `400` with `invalid_scalar_f64_request` for invalid scalar input or an out-of-range reference.
+The scalar observation endpoint returns HTTP `400` with `invalid_scalar_f64_request` for invalid scalar input or an out-of-range exact decimal reference.
 
-Execution or background-task failures are returned as HTTP `500` errors with an error `code` and `message`.
+Backend execution failures during scalar observation are not returned as top-level HTTP `500` errors. They are represented as `status: "failed"` entries in `results`, and observation continues for the remaining supported backends.
+
+Unexpected interface failures or background-task failures may still be returned as HTTP `500` errors with an error `code` and `message`.
 
 ## Notes
 

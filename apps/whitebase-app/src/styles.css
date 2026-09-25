@@ -43,6 +43,11 @@ button {
   margin-bottom: 28px;
 }
 
+.hero > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
 h1,
 h2,
 p {
@@ -69,7 +74,7 @@ h2 {
 }
 
 .subtitle {
-  max-width: 760px;
+  max-width: 920px;
   margin-bottom: 0;
   color: #91a0b7;
   line-height: 1.7;
@@ -144,6 +149,8 @@ h2 {
 
 .observation-panel {
   padding: 22px;
+  background:
+    linear-gradient(180deg, #101a2bd9 0%, #0d1522d9 100%);
 }
 
 .control-panel {
@@ -315,16 +322,50 @@ input:not([type="radio"]):focus {
 
 .observation-summary {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr 1.5fr;
   gap: 14px;
+  margin-top: 16px;
+}
+
+.observation-summary strong {
+  font-size: 15px;
+}
+
+#observation-expression,
+#observation-decimal-reference,
+#observation-agreement {
+  overflow-wrap: anywhere;
+}
+
+#observation-agreement {
+  color: #d6e5ff;
+  line-height: 1.45;
+}
+
+.observation-table-wrapper {
   margin-top: 14px;
 }
 
+.observation-table-wrapper table {
+  min-width: 920px;
+}
+
+.observation-table-wrapper th:nth-child(2),
+.observation-table-wrapper td:nth-child(2) {
+  width: 1%;
+}
+
+.observation-table-wrapper td:nth-child(3),
+.observation-table-wrapper td:nth-child(4) {
+  font-variant-numeric: tabular-nums;
+}
+
 .observation-summary > div {
-  padding: 14px 16px;
+  min-width: 0;
+  padding: 16px 18px;
   border: 1px solid #223047;
   border-radius: 12px;
-  background: #09111d99;
+  background: #09111dcc;
 }
 
 .observation-summary span {
@@ -420,6 +461,7 @@ tbody tr:hover {
 }
 
 .expected-row {
+  border-top: 1px solid #34445f;
   background: #0a111c;
 }
 

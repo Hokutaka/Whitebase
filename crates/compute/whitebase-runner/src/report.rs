@@ -108,17 +108,33 @@ pub struct AddScalarF64Report {
     pub result: F64Value,
 }
 
+/// `f64`スカラー加算の1バックエンド分の実行状態です。
+#[derive(Debug, Clone, PartialEq)]
+pub enum ScalarF64BackendStatus {
+    /// 実行に成功しました。
+    Completed {
+        /// バックエンドが返した値とビット表現。
+        result: F64Value,
+
+        /// 正確な10進加算結果を`f64`へ丸めた参照値とビット一致したかどうか。
+        matches_reference_bits: bool,
+    },
+
+    /// 現在の環境では利用できません。
+    Unavailable,
+
+    /// バックエンドの実行に失敗しました。
+    Failed { error: ComputeError },
+}
+
 /// 1バックエンド分の`f64`スカラー加算観測結果です。
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScalarF64BackendObservation {
-    /// 実行したバックエンド。
+    /// 実行対象のバックエンド。
     pub backend: BackendKind,
 
-    /// バックエンドが返した値とビット表現。
-    pub result: F64Value,
-
-    /// 正確な10進加算結果を`f64`へ丸めた参照値とビット一致したかどうか。
-    pub matches_reference_bits: bool,
+    /// バックエンドごとの実行状態。
+    pub status: ScalarF64BackendStatus,
 }
 
 /// 対応する全バックエンドを横断した`f64`スカラー加算観測レポートです。
@@ -145,7 +161,9 @@ pub struct ScalarF64ObservationReport {
     /// 各バックエンドの実行結果。
     pub results: Vec<ScalarF64BackendObservation>,
 
-    /// 全バックエンドの結果ビットが一致したかどうか。
+    /// 実行に成功した全バックエンドの結果ビットが一致したかどうか。
+    ///
+    /// 実行に成功したバックエンドがない場合は`false`です。
     pub all_backends_match: bool,
 }
 

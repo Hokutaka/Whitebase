@@ -4,13 +4,13 @@ use std::time::Duration;
 
 use web_time::Instant;
 
-use whitebase_core::{BackendKind, ComputeError, Whitebase};
+use whitebase_core::{BackendKind, ComputeError, OperationKind, Whitebase};
 
 use crate::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
     ComparisonSummary, F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation,
-    ScalarF64ObservationReport, SumF64Report, TimingMeasurement, TimingSummary,
-    decimal::ExactDecimal,
+    ScalarF64BackendStatus, ScalarF64ObservationReport, SumF64Report, TimingMeasurement,
+    TimingSummary, decimal::ExactDecimal,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -72,27 +72,28 @@ impl Runner {
         }
 
         let reference = F64Value::new(reference_value);
-        let mut results = Vec::new();
+        let backends = self
+            .whitebase
+            .backends()
+            .into_iter()
+            .filter(|info| info.capabilities.supports(OperationKind::AddScalarF64))
+            .map(|info| (info.kind, info.available));
 
-        for backend in scalar_f64_backends() {
-            let info = self.whitebase.backend_info(backend)?;
+        let results = observe_scalar_f64_backends(backends, reference, |backend| {
+            self.run_add_scalar_f64(backend, lhs, rhs)
+                .map(|report| report.result)
+        })?;
 
-            if !info.available {
-                continue;
-            }
+        let mut completed_result_bits = results.iter().filter_map(|observation| match &observation
+            .status
+        {
+            ScalarF64BackendStatus::Completed { result, .. } => Some(result.bits),
+            ScalarF64BackendStatus::Unavailable | ScalarF64BackendStatus::Failed { .. } => None,
+        });
 
-            let report = self.run_add_scalar_f64(backend, lhs, rhs)?;
-
-            results.push(ScalarF64BackendObservation {
-                backend,
-                matches_reference_bits: report.result.bits == reference.bits,
-                result: report.result,
-            });
-        }
-
-        let first_result_bits = results.first().map(|result| result.result.bits);
+        let first_result_bits = completed_result_bits.next();
         let all_backends_match = first_result_bits
-            .is_some_and(|bits| results.iter().all(|result| result.result.bits == bits));
+            .is_some_and(|bits| completed_result_bits.all(|result_bits| result_bits == bits));
 
         Ok(ScalarF64ObservationReport {
             lhs_input: lhs_input.trim().to_owned(),
@@ -400,24 +401,35 @@ impl Default for Runner {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-fn scalar_f64_backends() -> Vec<BackendKind> {
-    vec![
-        BackendKind::RustScalar,
-        BackendKind::CppScalar,
-        BackendKind::AssemblyScalar,
-        BackendKind::WindowsGnuCppScalar,
-        BackendKind::WindowsGnuAssemblyScalar,
-    ]
-}
+fn observe_scalar_f64_backends<I, F>(
+    backends: I,
+    reference: F64Value,
+    mut run_backend: F,
+) -> Result<Vec<ScalarF64BackendObservation>, RunnerError>
+where
+    I: IntoIterator<Item = (BackendKind, bool)>,
+    F: FnMut(BackendKind) -> Result<F64Value, RunnerError>,
+{
+    let mut results = Vec::new();
 
-#[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
-fn scalar_f64_backends() -> Vec<BackendKind> {
-    vec![
-        BackendKind::RustScalar,
-        BackendKind::CppScalar,
-        BackendKind::AssemblyScalar,
-    ]
+    for (backend, available) in backends {
+        let status = if !available {
+            ScalarF64BackendStatus::Unavailable
+        } else {
+            match run_backend(backend) {
+                Ok(result) => ScalarF64BackendStatus::Completed {
+                    matches_reference_bits: result.bits == reference.bits,
+                    result,
+                },
+                Err(RunnerError::Compute { error }) => ScalarF64BackendStatus::Failed { error },
+                Err(error) => return Err(error),
+            }
+        };
+
+        results.push(ScalarF64BackendObservation { backend, status });
+    }
+
+    Ok(results)
 }
 
 fn parse_finite_f64(name: &'static str, input: &str) -> Result<f64, RunnerError> {
@@ -641,8 +653,23 @@ mod tests {
         assert_eq!(report.reference.bits, 0x3fd3_3333_3333_3333);
         assert!(!report.results.is_empty());
         assert!(report.all_backends_match);
-        assert!(report.results.iter().all(|result| {
-            result.result.bits == 0x3fd3_3333_3333_3334 && !result.matches_reference_bits
+
+        let completed = report
+            .results
+            .iter()
+            .filter_map(|observation| match &observation.status {
+                ScalarF64BackendStatus::Completed {
+                    result,
+                    matches_reference_bits,
+                } => Some((result, *matches_reference_bits)),
+                ScalarF64BackendStatus::Unavailable | ScalarF64BackendStatus::Failed { .. } => None,
+            });
+
+        let completed: Vec<_> = completed.collect();
+
+        assert!(!completed.is_empty());
+        assert!(completed.iter().all(|(result, matches_reference_bits)| {
+            result.bits == 0x3fd3_3333_3333_3334 && !matches_reference_bits
         }));
     }
 
@@ -682,5 +709,106 @@ mod tests {
 
         assert_eq!(summary.minimum_nanoseconds, 100_000);
         assert_eq!(summary.maximum_nanoseconds, 200_000);
+    }
+
+    #[test]
+    fn observes_cerune_vm_scalar_f64_result() {
+        let report = Runner::new()
+            .run_add_scalar_f64(BackendKind::CeruneVm, 0.1, 0.2)
+            .unwrap();
+
+        assert_eq!(report.backend, BackendKind::CeruneVm);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+
+    #[test]
+    fn scalar_f64_observation_includes_cerune_vm() {
+        let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let cerune = report
+            .results
+            .iter()
+            .find(|result| result.backend == BackendKind::CeruneVm)
+            .expect("Cerune VM should be included in scalar f64 observation");
+
+        let ScalarF64BackendStatus::Completed {
+            result,
+            matches_reference_bits,
+        } = &cerune.status
+        else {
+            panic!("Cerune VM should complete scalar f64 observation");
+        };
+
+        assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+        assert!(!matches_reference_bits);
+    }
+
+    #[test]
+    fn scalar_observation_continues_after_backend_failure() {
+        let backends = [
+            (BackendKind::RustScalar, true),
+            (BackendKind::CppScalar, true),
+            (BackendKind::AssemblyScalar, false),
+            (BackendKind::CeruneVm, true),
+        ];
+
+        let reference = F64Value::new(3.0);
+        let mut executed = Vec::new();
+
+        let results = observe_scalar_f64_backends(backends, reference, |backend| {
+            executed.push(backend);
+
+            match backend {
+                BackendKind::RustScalar | BackendKind::CeruneVm => Ok(F64Value::new(3.0)),
+
+                BackendKind::CppScalar => Err(RunnerError::Compute {
+                    error: ComputeError::BackendFailure {
+                        backend,
+                        message: "test failure".to_owned(),
+                    },
+                }),
+
+                _ => panic!("unavailable backend must not execute"),
+            }
+        })
+        .unwrap();
+
+        assert_eq!(results.len(), 4);
+
+        assert!(matches!(
+            &results[0].status,
+            ScalarF64BackendStatus::Completed { .. }
+        ));
+
+        let ScalarF64BackendStatus::Failed { error } = &results[1].status else {
+            panic!("Cpp Scalar should fail");
+        };
+
+        assert_eq!(
+            error,
+            &ComputeError::BackendFailure {
+                backend: BackendKind::CppScalar,
+                message: "test failure".to_owned(),
+            }
+        );
+
+        assert!(matches!(
+            &results[2].status,
+            ScalarF64BackendStatus::Unavailable
+        ));
+
+        assert!(matches!(
+            &results[3].status,
+            ScalarF64BackendStatus::Completed { .. }
+        ));
+
+        assert_eq!(
+            executed,
+            vec![
+                BackendKind::RustScalar,
+                BackendKind::CppScalar,
+                BackendKind::CeruneVm,
+            ]
+        );
     }
 }

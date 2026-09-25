@@ -26,8 +26,10 @@ interface F64Value {
 
 interface ScalarF64BackendResult {
   backend: string;
-  result: F64Value;
-  matchesReferenceBits: boolean;
+  status: "completed" | "unavailable" | "failed";
+  result: F64Value | null;
+  matchesReferenceBits: boolean | null;
+  error: string | null;
 }
 
 interface ScalarF64Observation {
@@ -109,7 +111,8 @@ app.innerHTML = `
         <p class="eyebrow">WHITEBASE COMPUTE LAB</p>
         <h1>Backend Observation</h1>
         <p class="subtitle">
-          Rust、C++、Assemblyの演算結果を、値とIEEE 754ビット表現まで横断して観測します。
+          Rust、C++、Assembly、CeruneなどのBackendを、
+          計算結果・IEEE 754ビット表現・実行状態まで横断して観測します。
         </p>
       </div>
 
@@ -176,6 +179,7 @@ app.innerHTML = `
           <thead>
             <tr>
               <th>Backend</th>
+              <th>Status</th>
               <th>Decimal value</th>
               <th>IEEE 754 bits</th>
               <th>vs decimal reference</th>
@@ -184,7 +188,7 @@ app.innerHTML = `
 
           <tbody id="observation-results-body">
             <tr class="empty-row">
-              <td colspan="4">Observe 0.1 + 0.2 to display results.</td>
+              <td colspan="5">Enter two decimal values to observe backend results.</td>
             </tr>
           </tbody>
         </table>
@@ -432,13 +436,68 @@ benchmarkForm.addEventListener("submit", async (event) => {
 });
 
 function renderScalarF64Observation(report: ScalarF64Observation): void {
+  const completedCount = report.results.filter(
+    (result) => result.status === "completed",
+  ).length;
+
+  const failedCount = report.results.filter(
+    (result) => result.status === "failed",
+  ).length;
+
+  const unavailableCount = report.results.filter(
+    (result) => result.status === "unavailable",
+  ).length;
+
   const resultRows = report.results
     .map((backendResult) => {
+      if (backendResult.status === "unavailable") {
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+            <td>
+              <span class="badge badge-muted">UNAVAILABLE</span>
+            </td>
+            <td colspan="3">—</td>
+          </tr>
+        `;
+      }
+
+      if (backendResult.status === "failed") {
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+            <td>
+              <span class="badge badge-error">FAILED</span>
+            </td>
+            <td colspan="3" class="failure">
+              ${escapeHtml(backendResult.error ?? "Unknown error")}
+            </td>
+          </tr>
+        `;
+      }
+
+      if (!backendResult.result || backendResult.matchesReferenceBits === null) {
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+            <td>
+              <span class="badge badge-warn">INVALID</span>
+            </td>
+            <td colspan="3" class="failure">
+              Invalid completed result
+            </td>
+          </tr>
+        `;
+      }
+
       const matchesReference = backendResult.matchesReferenceBits;
 
       return `
         <tr>
           <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+          <td>
+            <span class="badge badge-ok">COMPLETED</span>
+          </td>
           <td class="monospace">${escapeHtml(backendResult.result.decimal)}</td>
           <td class="monospace bits">${escapeHtml(backendResult.result.bits)}</td>
           <td>
@@ -455,9 +514,12 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
     ${resultRows}
     <tr class="expected-row">
       <td class="backend-name">Decimal reference</td>
+      <td>
+        <span class="badge badge-muted">REFERENCE</span>
+      </td>
       <td class="monospace">${escapeHtml(report.reference.decimal)}</td>
       <td class="monospace bits">${escapeHtml(report.reference.bits)}</td>
-      <td><span class="badge badge-muted">REFERENCE</span></td>
+      <td>—</td>
     </tr>
   `;
 
@@ -466,9 +528,12 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
     `${report.lhsInput} + ${report.rhsInput}`,
   );
 
-  const agreement = report.allBackendsMatch
-    ? "All backend bits match"
-    : "Backend mismatch detected";
+  const agreement =
+    completedCount === 0
+      ? `No completed backends / ${failedCount} failed / ${unavailableCount} unavailable`
+      : report.allBackendsMatch
+        ? `${completedCount} completed / ${failedCount} failed / bits agree`
+        : `${completedCount} completed / ${failedCount} failed / bit mismatch`;
 
   setText("observation-decimal-reference", report.decimalReference);
   setText("observation-agreement", agreement);

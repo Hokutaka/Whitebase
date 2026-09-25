@@ -649,6 +649,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "cerune-lang"
+version = "0.1.0"
+source = "git+https://github.com/Hokutaka/Cerune.git?rev=85be8ab1719cba577acc7c32404bf481ad141769#85be8ab1719cba577acc7c32404bf481ad141769"
+
+[[package]]
 name = "cesu8"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6244,6 +6249,7 @@ version = "0.1.0"
 dependencies = [
  "whitebase-asm-adapter",
  "whitebase-backend-contract",
+ "whitebase-cerune-vm-adapter",
  "whitebase-cpp-adapter",
  "whitebase-rust-backend",
  "whitebase-windows-gnu-adapter",
@@ -6258,6 +6264,13 @@ name = "whitebase-c-api"
 version = "0.1.0"
 dependencies = [
  "whitebase-core",
+]
+
+[[package]]
+name = "whitebase-cerune-vm-adapter"
+version = "0.1.0"
+dependencies = [
+ "cerune-lang",
 ]
 
 [[package]]

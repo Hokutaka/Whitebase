@@ -1,27 +1,65 @@
 flowchart TB
-    Applications["上位アプリケーション<br/>Web・Desktop・CLI・その他"]
+    User["利用者 / Consumer"]
 
-    Interfaces["API・バインディング層<br/>Rust API / WebAssembly / C ABI / Tauri commands"]
+    subgraph AppRoutes["Application routes"]
+        direction LR
+        Tauri["Tauri App"]
+        Browser["Browser App"]
+        NativeConsumer["Native Consumer"]
+    end
 
-    Core["whitebase-core<br/>計算処理・参照実装"]
+    subgraph BrowserRoutes["Browser execution route"]
+        direction LR
+        Server["Whitebase Server<br/>HTTP / JSON"]
+        Wasm["WebAssembly"]
+    end
 
-    Results["計算・測定結果<br/>数値・配列・統計データ"]
+    Interface["whitebase-interface<br/>Application Boundary"]
 
-    RustViz["Rust Visualization<br/>Plotters・独自描画"]
+    Runner["whitebase-runner<br/>比較 / 計測 / 観測"]
+    Core["whitebase-core<br/>Pure Compute"]
 
-    WebViz["Web Visualization<br/>SVG・Canvas"]
+    subgraph Backends["ComputeBackend"]
+        direction LR
+        Rust["Rust<br/>Scalar / SIMD"]
+        Cpp["C++<br/>Scalar / AVX"]
+        Assembly["Assembly<br/>Scalar / AVX"]
+        Cerune["Cerune VM<br/>AddScalarF64"]
+        Platform["Platform-specific<br/>Windows GNU etc."]
+    end
 
-    StaticOutput["静的出力<br/>SVG・PNG・レポート"]
+    CApi["whitebase-c-api<br/>C ABI"]
 
-    Python["Python Tools<br/>追加分析・検証"]
+    Results["結果 / Report<br/>値・ビット表現・Backend status・Timing"]
 
-    Applications <--> Interfaces
-    Interfaces <--> Core
+    Visualization["Whitebase App<br/>tables / charts / visualization"]
 
+    User --> Tauri
+    User --> Browser
+    User --> NativeConsumer
+
+    Tauri -->|"Tauri IPC"| Interface
+
+    Browser -->|"Server available"| Server
+    Browser -->|"Server unavailable"| Wasm
+    Server --> Interface
+    Wasm --> Interface
+
+    NativeConsumer --> CApi
+    CApi --> Core
+
+    Interface -->|"Applied Compute"| Runner
+    Interface -->|"Pure Compute"| Core
+
+    Runner --> Core
+
+    Core --> Rust
+    Core --> Cpp
+    Core --> Assembly
+    Core --> Cerune
+    Core --> Platform
+
+    Runner --> Results
     Core --> Results
 
-    Results --> RustViz
-    RustViz --> StaticOutput
-    RustViz --> WebViz
-
-    Results -. 任意の追加分析 .-> Python
+    Results --> Visualization

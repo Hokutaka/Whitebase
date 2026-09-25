@@ -1,7 +1,7 @@
 use whitebase_core::{OperationKind, Whitebase};
 
 #[test]
-fn available_backends_add_f64_arrays() {
+fn backends_supporting_add_f64_add_arrays() {
     let whitebase = Whitebase::new();
 
     let lhs = [0.1, 1.0, 2.0, 3.0, 4.0, 5.0];
@@ -18,7 +18,9 @@ fn available_backends_add_f64_arrays() {
     for info in whitebase.backends() {
         let kind = info.kind;
 
-        assert!(info.capabilities.supports(OperationKind::AddF64));
+        if !info.capabilities.supports(OperationKind::AddF64) {
+            continue;
+        }
 
         if !info.available {
             continue;
