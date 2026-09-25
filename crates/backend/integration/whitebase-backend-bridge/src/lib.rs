@@ -7,12 +7,12 @@
 ))]
 mod assembly;
 
+mod cerune;
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
 ))]
 mod cpp;
-
 mod rust;
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
@@ -34,12 +34,12 @@ use whitebase_backend_contract::{BackendKind, ComputeError};
 ))]
 pub use assembly::{AssemblyAvxBackend, AssemblyScalarBackend};
 
+pub use cerune::CeruneVmBackend;
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
 ))]
 pub use cpp::{CppAvxBackend, CppScalarBackend};
-
 pub use rust::{RustScalarBackend, RustSimdBackend};
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]

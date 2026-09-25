@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use web_time::Instant;
 
-use whitebase_core::{BackendKind, ComputeError, Whitebase};
+use whitebase_core::{BackendKind, ComputeError, OperationKind, Whitebase};
 
 use crate::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
@@ -74,13 +74,16 @@ impl Runner {
         let reference = F64Value::new(reference_value);
         let mut results = Vec::new();
 
-        for backend in scalar_f64_backends() {
-            let info = self.whitebase.backend_info(backend)?;
+        for info in self.whitebase.backends() {
+            if !info.capabilities.supports(OperationKind::AddScalarF64) {
+                continue;
+            }
 
             if !info.available {
                 continue;
             }
 
+            let backend = info.kind;
             let report = self.run_add_scalar_f64(backend, lhs, rhs)?;
 
             results.push(ScalarF64BackendObservation {
@@ -400,26 +403,6 @@ impl Default for Runner {
     }
 }
 
-#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
-fn scalar_f64_backends() -> Vec<BackendKind> {
-    vec![
-        BackendKind::RustScalar,
-        BackendKind::CppScalar,
-        BackendKind::AssemblyScalar,
-        BackendKind::WindowsGnuCppScalar,
-        BackendKind::WindowsGnuAssemblyScalar,
-    ]
-}
-
-#[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
-fn scalar_f64_backends() -> Vec<BackendKind> {
-    vec![
-        BackendKind::RustScalar,
-        BackendKind::CppScalar,
-        BackendKind::AssemblyScalar,
-    ]
-}
-
 fn parse_finite_f64(name: &'static str, input: &str) -> Result<f64, RunnerError> {
     let value = input
         .trim()
@@ -682,5 +665,29 @@ mod tests {
 
         assert_eq!(summary.minimum_nanoseconds, 100_000);
         assert_eq!(summary.maximum_nanoseconds, 200_000);
+    }
+
+    #[test]
+    fn observes_cerune_vm_scalar_f64_result() {
+        let report = Runner::new()
+            .run_add_scalar_f64(BackendKind::CeruneVm, 0.1, 0.2)
+            .unwrap();
+
+        assert_eq!(report.backend, BackendKind::CeruneVm);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+
+    #[test]
+    fn scalar_f64_observation_includes_cerune_vm() {
+        let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let cerune = report
+            .results
+            .iter()
+            .find(|result| result.backend == BackendKind::CeruneVm)
+            .expect("Cerune VM should be included in scalar f64 observation");
+
+        assert_eq!(cerune.result.bits, 0x3fd3_3333_3333_3334);
+        assert!(!cerune.matches_reference_bits);
     }
 }

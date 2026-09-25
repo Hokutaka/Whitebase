@@ -1,0 +1,11 @@
+[package]
+name = "whitebase-cerune-vm-adapter"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+cerune-lang = {
+    git = "https://github.com/Hokutaka/Cerune.git",
+    rev = "85be8ab1719cba577acc7c32404bf481ad141769"
+}
