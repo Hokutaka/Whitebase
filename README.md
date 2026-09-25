@@ -1,31 +1,33 @@
 [![CI](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/main.yml)
 [![CodeQL](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql/badge.svg?branch=main)](https://github.com/Hokutaka/Whitebase/actions/workflows/github-code-scanning/codeql)
 
-**English** | [日本語](README.ja.md)
+**日本語** | [English](README.en.md)
 
-A repository for learning and experimentation.
+学習・実験用リポジトリです。
 
 # Whitebase
-Whitebase is a place for building and experimenting with various foundational implementations.
+Whitebaseは、基盤となる実装を作りながら試すための実験場所です。
 
-It is organized as a monorepo centered around Core.
-Consumer-facing functionality is limited to displaying execution results, charts, and other visualizations.
-Concrete applications and use-case-specific implementations are kept in separate projects.
+Whitebase Coreを中心としたモノレポとして構成されています。
 
-Currently, it focuses on array operations for f32 and f64 using Rust, C++, and Assembly.
-Use it at your own risk.
+このリポジトリでは、利用者向けの機能を実行結果・グラフ・その他の可視化に絞っています。
+具体的なアプリケーションや用途固有の実装は、別のプロジェクトとして扱います。
 
-For more details, see the sections below.
+現在は、Rust、C++、Assembly、Ceruneを使った`f32` / `f64`の小さな計算処理を中心に、Scalar、SIMD、VMなど異なる実行経路を実装・比較しています。
+
+実験用プロジェクトのため、利用は自己責任でお願いします。
+
+内容については、以下を確認してください。
 
 ## Documentation
 
-- [Detailed documentation](/docs//Overview.md)
-- [Project structure](docs/project-tree.md)
-- [Layer Overview(Ja)](docs/Layer/Layer-Overview.md)
+- [詳しい説明](/docs/Overview.ja.md)
+- [プロジェクト構成](docs/project-tree.md)
+- [レイヤーの説明](docs/Layer/Layer-Overview.md)
 
-### Operation Tools
+### Tools
 
-| Name | Implementation |
+| 名称 | 実装内容 |
 | --- | --- |
 | [Whitebase Operations](docs/tools/Whitebase%20Operations.md) | Windows Batch / Linux Native Shell |
 | [Whitebase Control Center](docs/tools/Whitebase%20Control%20Center.md) | Rust + egui / Windows and Linux |
@@ -33,4 +35,4 @@ For more details, see the sections below.
 
 ## License
 
-MIT License
+MIT LICENSE

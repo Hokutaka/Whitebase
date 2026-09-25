@@ -30,6 +30,77 @@ Whitebase
 │   │   ├── src-tauri
 │   │   │   ├── capabilities
 │   │   │   │   └── default.json
+│   │   │   ├── gen
+│   │   │   │   └── android
+│   │   │   │       ├── app
+│   │   │   │       │   ├── src
+│   │   │   │       │   │   └── main
+│   │   │   │       │   │       ├── java
+│   │   │   │       │   │       │   └── com
+│   │   │   │       │   │       │       └── hokutaka
+│   │   │   │       │   │       │           └── Whitebase
+│   │   │   │       │   │       │               └── MainActivity.kt
+│   │   │   │       │   │       ├── res
+│   │   │   │       │   │       │   ├── drawable
+│   │   │   │       │   │       │   │   └── ic_launcher_background.xml
+│   │   │   │       │   │       │   ├── drawable-v24
+│   │   │   │       │   │       │   │   └── ic_launcher_foreground.xml
+│   │   │   │       │   │       │   ├── layout
+│   │   │   │       │   │       │   │   └── activity_main.xml
+│   │   │   │       │   │       │   ├── mipmap-hdpi
+│   │   │   │       │   │       │   │   ├── ic_launcher.png
+│   │   │   │       │   │       │   │   ├── ic_launcher_foreground.png
+│   │   │   │       │   │       │   │   └── ic_launcher_round.png
+│   │   │   │       │   │       │   ├── mipmap-mdpi
+│   │   │   │       │   │       │   │   ├── ic_launcher.png
+│   │   │   │       │   │       │   │   ├── ic_launcher_foreground.png
+│   │   │   │       │   │       │   │   └── ic_launcher_round.png
+│   │   │   │       │   │       │   ├── mipmap-xhdpi
+│   │   │   │       │   │       │   │   ├── ic_launcher.png
+│   │   │   │       │   │       │   │   ├── ic_launcher_foreground.png
+│   │   │   │       │   │       │   │   └── ic_launcher_round.png
+│   │   │   │       │   │       │   ├── mipmap-xxhdpi
+│   │   │   │       │   │       │   │   ├── ic_launcher.png
+│   │   │   │       │   │       │   │   ├── ic_launcher_foreground.png
+│   │   │   │       │   │       │   │   └── ic_launcher_round.png
+│   │   │   │       │   │       │   ├── mipmap-xxxhdpi
+│   │   │   │       │   │       │   │   ├── ic_launcher.png
+│   │   │   │       │   │       │   │   ├── ic_launcher_foreground.png
+│   │   │   │       │   │       │   │   └── ic_launcher_round.png
+│   │   │   │       │   │       │   ├── values
+│   │   │   │       │   │       │   │   ├── colors.xml
+│   │   │   │       │   │       │   │   ├── strings.xml
+│   │   │   │       │   │       │   │   └── themes.xml
+│   │   │   │       │   │       │   ├── values-night
+│   │   │   │       │   │       │   │   └── themes.xml
+│   │   │   │       │   │       │   └── xml
+│   │   │   │       │   │       │       └── file_paths.xml
+│   │   │   │       │   │       └── AndroidManifest.xml
+│   │   │   │       │   ├── .gitignore
+│   │   │   │       │   ├── build.gradle.kts
+│   │   │   │       │   └── proguard-rules.pro
+│   │   │   │       ├── buildSrc
+│   │   │   │       │   ├── src
+│   │   │   │       │   │   └── main
+│   │   │   │       │   │       └── java
+│   │   │   │       │   │           └── com
+│   │   │   │       │   │               └── hokutaka
+│   │   │   │       │   │                   └── Whitebase
+│   │   │   │       │   │                       └── kotlin
+│   │   │   │       │   │                           ├── BuildTask.kt
+│   │   │   │       │   │                           └── RustPlugin.kt
+│   │   │   │       │   └── build.gradle.kts
+│   │   │   │       ├── gradle
+│   │   │   │       │   └── wrapper
+│   │   │   │       │       ├── gradle-wrapper.jar
+│   │   │   │       │       └── gradle-wrapper.properties
+│   │   │   │       ├── .editorconfig
+│   │   │   │       ├── .gitignore
+│   │   │   │       ├── build.gradle.kts
+│   │   │   │       ├── gradle.properties
+│   │   │   │       ├── gradlew
+│   │   │   │       ├── gradlew.bat
+│   │   │   │       └── settings.gradle
 │   │   │   ├── icons
 │   │   │   │   ├── 128x128.png
 │   │   │   │   ├── 128x128@2x.png
@@ -48,11 +119,8 @@ Whitebase
 │   │   │   │   ├── Square89x89Logo.png
 │   │   │   │   └── StoreLogo.png
 │   │   │   ├── src
-│   │   │   │   ├── benchmark.rs
-│   │   │   │   ├── error.rs
 │   │   │   │   ├── lib.rs
-│   │   │   │   ├── main.rs
-│   │   │   │   └── scalar_f64.rs
+│   │   │   │   └── main.rs
 │   │   │   ├── .gitignore
 │   │   │   ├── build.rs
 │   │   │   ├── Cargo.lock
@@ -82,6 +150,7 @@ Whitebase
 │   │   │   ├── whitebase-backend-bridge
 │   │   │   │   ├── src
 │   │   │   │   │   ├── assembly.rs
+│   │   │   │   │   ├── cerune.rs
 │   │   │   │   │   ├── cpp.rs
 │   │   │   │   │   ├── lib.rs
 │   │   │   │   │   ├── rust.rs
@@ -89,6 +158,10 @@ Whitebase
 │   │   │   │   │   └── windows_gnu.rs
 │   │   │   │   ├── tests
 │   │   │   │   │   └── backend_bridge_smoke.rs
+│   │   │   │   └── Cargo.toml
+│   │   │   ├── whitebase-cerune-vm-adapter
+│   │   │   │   ├── src
+│   │   │   │   │   └── lib.rs
 │   │   │   │   └── Cargo.toml
 │   │   │   ├── whitebase-cpp-adapter
 │   │   │   │   ├── src
@@ -185,8 +258,10 @@ Whitebase
 │           └── Cargo.toml
 ├── docs
 │   ├── api
+│   │   ├── Core-API.en.md
 │   │   ├── Core-API.ja.md
 │   │   ├── Core-API.md
+│   │   ├── HTTP-API.en.md
 │   │   ├── HTTP-API.ja.md
 │   │   └── HTTP-API.md
 │   ├── diagrams
@@ -210,6 +285,7 @@ Whitebase
 │   │   ├── image.png
 │   │   └── whitebase-control-center.png
 │   ├── Layer
+│   │   ├── Cerune-Integration.md
 │   │   └── Layer-Overview.md
 │   ├── planning
 │   │   └── plan.md
@@ -217,6 +293,7 @@ Whitebase
 │   │   ├── Whitebase Control Center.md
 │   │   ├── Whitebase Control Panel.md
 │   │   └── Whitebase Operations.md
+│   ├── Overview.en.md
 │   ├── Overview.ja.md
 │   └── Overview.md
 ├── native
@@ -326,11 +403,13 @@ Whitebase
 ├── .gitignore
 ├── Cargo.lock
 ├── Cargo.toml
+├── CONTRIBUTING.en.md
 ├── CONTRIBUTING.ja.md
 ├── CONTRIBUTING.md
 ├── LICENSE.md
 ├── package.json
 ├── package-lock.json
+├── README.en.md
 ├── README.ja.md
 ├── README.md
 ├── rust-toolchain.toml
