@@ -3,8 +3,8 @@
 #![forbid(unsafe_code)]
 
 use whitebase_backend_bridge::{
-    AssemblyAvxBackend, AssemblyScalarBackend, CppAvxBackend, CppScalarBackend, RustScalarBackend,
-    RustSimdBackend,
+    AssemblyAvxBackend, AssemblyScalarBackend, CeruneVmBackend, CppAvxBackend, CppScalarBackend,
+    RustScalarBackend, RustSimdBackend,
 };
 
 #[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
@@ -168,6 +168,7 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
     vec![
         Box::new(RustScalarBackend),
         Box::new(RustSimdBackend),
+        Box::new(CeruneVmBackend::new()),
         Box::new(CppScalarBackend),
         Box::new(CppAvxBackend),
         Box::new(AssemblyScalarBackend),
@@ -184,6 +185,7 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
     vec![
         Box::new(RustScalarBackend),
         Box::new(RustSimdBackend),
+        Box::new(CeruneVmBackend::new()),
         Box::new(CppScalarBackend),
         Box::new(CppAvxBackend),
         Box::new(AssemblyScalarBackend),

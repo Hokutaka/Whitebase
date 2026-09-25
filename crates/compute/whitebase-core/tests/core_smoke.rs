@@ -1,7 +1,7 @@
-use whitebase_core::Whitebase;
+use whitebase_core::{OperationKind, Whitebase};
 
 #[test]
-fn every_available_backend_produces_the_same_result() {
+fn every_available_backend_supporting_add_f32_produces_the_same_result() {
     let whitebase = Whitebase::new();
 
     let lhs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
@@ -16,6 +16,10 @@ fn every_available_backend_produces_the_same_result() {
         let kind = info.kind;
 
         println!("{} available: {}", kind.display_name(), info.available,);
+
+        if !info.capabilities.supports(OperationKind::AddF32) {
+            continue;
+        }
 
         if !info.available {
             continue;
@@ -43,13 +47,35 @@ fn reports_all_standard_backends() {
         target_os = "windows",
         target_env = "msvc"
     )) {
-        10
+        11
     } else {
-        6
+        7
     };
 
     assert_eq!(whitebase.backends().len(), expected);
 }
+
+#[test]
+fn cerune_vm_adds_f64_scalars() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneVm).unwrap();
+
+    assert!(info.available);
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneVm, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
 #[test]
 fn rust_backends_sum_f64_values() {
     use whitebase_core::BackendKind;
