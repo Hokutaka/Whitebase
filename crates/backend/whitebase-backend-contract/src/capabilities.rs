@@ -17,7 +17,7 @@ pub struct BackendCapabilities {
 
     /// 1命令または1ループ単位で処理する`f32`要素数の目安。
     ///
-    /// Scalar実装では`1`、256-bit AVX実装では`8`です。
+    /// 未対応では`0`、Scalar実装では`1`、256-bit AVX実装では`8`です。
     pub vector_width_f32: usize,
 
     /// 1命令または1ループ単位で処理する`f64`要素数の目安。
@@ -27,6 +27,19 @@ pub struct BackendCapabilities {
 }
 
 impl BackendCapabilities {
+    /// 未対応の状態から能力を組み立てるための空のCapabilityを生成します。
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self {
+            add_f32: false,
+            add_f64: false,
+            add_scalar_f64: false,
+            sum_f64: false,
+            vector_width_f32: 0,
+            vector_width_f64: 0,
+        }
+    }
+
     /// Scalarの`f32`配列加算能力を生成します。
     #[must_use]
     pub const fn scalar_add_f32() -> Self {
@@ -119,5 +132,17 @@ mod tests {
 
         assert_eq!(capabilities.vector_width_f32, 8);
         assert_eq!(capabilities.vector_width_f64, 4);
+    }
+
+    #[test]
+    fn empty_capabilities_support_no_operations() {
+        let capabilities = BackendCapabilities::empty();
+
+        assert!(!capabilities.supports(OperationKind::AddF32));
+        assert!(!capabilities.supports(OperationKind::AddF64));
+        assert!(!capabilities.supports(OperationKind::AddScalarF64));
+        assert!(!capabilities.supports(OperationKind::SumF64));
+        assert_eq!(capabilities.vector_width_f32, 0);
+        assert_eq!(capabilities.vector_width_f64, 0);
     }
 }

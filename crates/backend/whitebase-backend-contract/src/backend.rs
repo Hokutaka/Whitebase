@@ -9,6 +9,9 @@ pub enum BackendKind {
     /// RustによるSIMD実装。
     RustSimd,
 
+    /// Cerune VMによる実装。
+    CeruneVm,
+
     /// C++によるScalar実装。
     CppScalar,
 
@@ -41,6 +44,7 @@ impl BackendKind {
         match self {
             Self::RustScalar => "Rust Scalar",
             Self::RustSimd => "Rust SIMD",
+            Self::CeruneVm => "Cerune VM",
             Self::CppScalar => "C++ Scalar",
             Self::CppAvx => "C++ AVX",
             Self::AssemblyScalar => "Assembly Scalar",
