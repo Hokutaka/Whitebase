@@ -1,176 +1,152 @@
 flowchart TB
-    subgraph Apps["Applications"]
+    %% ========================================================
+    %% apps/
+    %% ========================================================
+
+    subgraph Apps["apps/"]
         direction LR
-        Web["whitebase-app<br/>Web UI<br/>(Browser runtime)"]
-        TauriApp["whitebase-app<br/>Tauri Application"]
-        Server["whitebase-server<br/>HTTP Server Host"]
-        CppClient["Whitebase.CppClient<br/>C ABI smoke test"]
-        CppBackendClient["Whitebase.CppBackendClient<br/>C++ Backend smoke test"]
-        AssemblyClient["Whitebase.AssemblyClient<br/>Assembly smoke test"]
-        External["External Applications<br/>C# / C++ / other"]
+        App["apps/whitebase-app<br/>Browser UI + Tauri host"]
+        Server["apps/whitebase-server<br/>HTTP host"]
     end
 
-    subgraph Consumers["Interface Adapters / Entry Points"]
+    %% ========================================================
+    %% crates/interface/
+    %% ========================================================
+
+    subgraph Interface["crates/interface/"]
         direction LR
-            HttpApi["whitebase-http-api<br/>HTTP / JSON / Axum Adapter"]
-            Wasm["whitebase-wasm<br/>WebAssembly boundary"]
-            TauriApi["whitebase-tauri-api<br/>Tauri Command / IPC Adapter"]
-            CApi["whitebase-c-api<br/>C ABI boundary"]
+        ApplicationInterface["whitebase-interface<br/>Application Boundary"]
+        HttpApi["whitebase-http-api<br/>HTTP / JSON / Axum Adapter"]
+        TauriApi["whitebase-tauri-api<br/>Tauri IPC Adapter"]
+        WasmApi["whitebase-wasm<br/>WebAssembly Adapter"]
     end
 
-    ApplicationInterface["whitebase-interface<br/>Application Boundary<br/>Pure Compute / Applied Compute<br/>Request / Response / InterfaceError"]
+    %% ========================================================
+    %% crates/compute/
+    %% ========================================================
 
-    BackendContract["whitebase-backend-contract<br/>trait / common types / errors<br/>capabilities / operation kinds"]
-
-    Runner["whitebase-runner<br/>input generation / warmup / timing<br/>comparison / report generation"]
-
-    Core["whitebase-core<br/>backend registration / dispatch<br/>capability / availability / compute API"]
-
-    Bridge["whitebase-backend-bridge<br/>connects Backends to common Backend Contract"]
-
-    subgraph Backends["Backend implementations / bindings"]
+    subgraph Compute["crates/compute/"]
         direction LR
-        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD<br/>x86_64 AVX / AArch64 NEON / wasm32 SIMD128"]
-        CppAdapter["whitebase-cpp-adapter<br/>Rust → C++ FFI"]
-        AsmAdapter["whitebase-asm-adapter<br/>Rust → Assembly FFI"]
-        WindowsGnuAdapter["whitebase-windows-gnu-adapter<br/>Rust → Windows GNU native DLL"]
-        Unavailable["unavailable backend<br/>unsupported-target fallback"]
+        Runner["whitebase-runner<br/>benchmark / comparison / observation"]
+        Core["whitebase-core<br/>registration / dispatch / compute API"]
     end
 
-    subgraph Native["Native libraries"]
+    %% ========================================================
+    %% crates/backend/
+    %% ========================================================
+
+    subgraph Backend["crates/backend/"]
         direction TB
 
-        subgraph WindowsMsvc["Windows x64 / MSVC"]
-            direction LR
-            CppLib["Whitebase.CppBackend.lib<br/>C++ Scalar / AVX"]
-            AsmLib["Whitebase.Assembly.lib<br/>MASM x64 Scalar / AVX"]
-        end
+        Contract["whitebase-backend-contract<br/>common contract / types / errors / capabilities"]
 
-        subgraph LinuxGnu["Linux x86_64 / GNU"]
-            direction LR
-            LinuxCppLib["libwhitebase_cpp_backend.a<br/>GCC Scalar / AVX"]
-            LinuxAsmLib["libwhitebase_assembly.a<br/>NASM Scalar / AVX"]
-        end
+        RustBackend["whitebase-rust-backend<br/>Rust Scalar / SIMD"]
 
-        subgraph WindowsGnu["Windows x64 / GNU"]
+        subgraph BackendIntegration["integration/"]
             direction LR
-            WindowsGnuLib["whitebase_windows_gnu_native.dll<br/>GCC / NASM<br/>Scalar / AVX"]
+            Bridge["whitebase-backend-bridge"]
+            CppAdapter["whitebase-cpp-adapter"]
+            AsmAdapter["whitebase-asm-adapter"]
+            WindowsGnuAdapter["whitebase-windows-gnu-adapter"]
+            CeruneVmAdapter["whitebase-cerune-vm-adapter"]
         end
     end
 
-    subgraph Analysis["Analysis / Output"]
+    %% ========================================================
+    %% crates/ffi/
+    %% ========================================================
+
+    subgraph FFI["crates/ffi/"]
+        CApi["whitebase-c-api<br/>C ABI"]
+    end
+
+    %% ========================================================
+    %% native/
+    %% ========================================================
+
+    subgraph Native["native/"]
         direction LR
-        Visualization["whitebase-visualization<br/>tables / charts / rendering"]
-        OutputModule["whitebase-output<br/>CSV / JSON output"]
-        Artifacts["output data<br/>CSV / JSON / measurements"]
-        Python["Python tools<br/>additional analysis / visualization"]
+        NativeCpp["Whitebase.Cpp<br/>Windows MSVC C++ / MASM"]
+        NativeLinux["Whitebase.Linux<br/>Linux GCC / NASM"]
+        NativeWindowsGnu["Whitebase.Windows.Gnu<br/>Windows GCC / NASM"]
     end
 
-    subgraph Tools["Development tools"]
+    %% ========================================================
+    %% external dependency
+    %% ========================================================
+
+    Cerune["Hokutaka/Cerune<br/>cerune-lang<br/>bytecode / VM"]
+
+    %% ========================================================
+    %% tools/
+    %% ========================================================
+
+    subgraph Tools["tools/"]
         direction LR
-
-        Scripts["scripts<br/>ops.bat / linux-native.sh<br/>windows-gnu-native.ps1"]
-
-        ControlCenter["whitebase-control-center<br/>Rust + egui operation tool"]
-
-        subgraph Operation["Operation / Control Panel"]
-            direction LR
-            ControlPanel["whitebase-control-panel<br/>Windows GUI operation panel"]
-            WhitebaseWindows["Whitebase.Windows<br/>Win32 API / process control"]
-        end
+        ControlCenter["whitebase-control-center"]
+        ControlPanel["whitebase-control-panel"]
+        WhitebaseWindows["Whitebase.Windows"]
     end
 
-    %% --------------------------------------------------------
-    %% Application routes
-    %% --------------------------------------------------------
+    Scripts["scripts/<br/>operations / build / test / run / release"]
 
-    Web -->|"Server available: HTTP"| Server
-    Web -->|"Server unavailable: WebAssembly"| Wasm
+    %% ========================================================
+    %% Application / interface routes
+    %% ========================================================
 
-    TauriApp -->|"IPC / invoke()"| TauriApi
-    TauriApi --> ApplicationInterface
-
-    CppClient --> CApi
-    External --> CApi
-
-    CppBackendClient --> CppLib
-    AssemblyClient --> AsmLib
-
-    %% --------------------------------------------------------
-    %% Interface Adapters → Application Boundary
-    %% --------------------------------------------------------
+    App -->|"Tauri"| TauriApi
+    App -->|"Browser + Server"| Server
+    App -->|"Browser + WASM"| WasmApi
 
     Server --> HttpApi
 
     HttpApi --> ApplicationInterface
-    TauriCommands --> ApplicationInterface
-    Wasm --> ApplicationInterface
+    TauriApi --> ApplicationInterface
+    WasmApi --> ApplicationInterface
 
-    %% --------------------------------------------------------
-    %% Application Boundary → Runner / Core
-    %% --------------------------------------------------------
-
-    ApplicationInterface -->|"Applied Compute"| Runner
-    ApplicationInterface -->|"Pure Compute"| Core
-
-    CApi --> Core
-
+    ApplicationInterface --> Runner
+    ApplicationInterface --> Core
     Runner --> Core
 
-    %% --------------------------------------------------------
-    %% Core / Backend Contract / Backend routing
-    %% --------------------------------------------------------
+    %% ========================================================
+    %% Core / backend dependencies
+    %% ========================================================
 
     Core --> Bridge
-    Core -. "uses contract" .-> BackendContract
-    Bridge -. "implements contract" .-> BackendContract
+    Core --> Contract
+    Bridge --> Contract
 
     Bridge --> RustBackend
     Bridge --> CppAdapter
     Bridge --> AsmAdapter
     Bridge --> WindowsGnuAdapter
-    Bridge -. "unsupported targets" .-> Unavailable
+    Bridge --> CeruneVmAdapter
 
-    %% --------------------------------------------------------
-    %% Native backend bindings
-    %% --------------------------------------------------------
+    CppAdapter --> NativeCpp
+    CppAdapter --> NativeLinux
 
-    CppAdapter -->|"Windows MSVC"| CppLib
-    CppAdapter -->|"Linux GNU"| LinuxCppLib
+    AsmAdapter --> NativeCpp
+    AsmAdapter --> NativeLinux
 
-    AsmAdapter -->|"Windows MSVC"| AsmLib
-    AsmAdapter -->|"Linux GNU"| LinuxAsmLib
+    WindowsGnuAdapter --> NativeWindowsGnu
+    CeruneVmAdapter --> Cerune
 
-    WindowsGnuAdapter --> WindowsGnuLib
+    %% ========================================================
+    %% FFI
+    %% ========================================================
 
-    %% --------------------------------------------------------
-    %% Planned analysis / output
-    %% --------------------------------------------------------
+    CApi --> Core
 
-    Runner -. "planned: report" .-> Visualization
-    Runner -. "planned: report" .-> OutputModule
-    OutputModule -. "planned: generates" .-> Artifacts
-    Python -. "planned: reads / analyzes" .-> Artifacts
+    %% ========================================================
+    %% Operations
+    %% ========================================================
 
-    %% --------------------------------------------------------
-    %% Development tools
-    %% --------------------------------------------------------
+    ControlCenter -.-> Scripts
+    ControlPanel -.-> Scripts
+    ControlPanel --> WhitebaseWindows
 
-    Scripts -. "build / test" .-> ApplicationInterface
-    Scripts -. "build / test" .-> Runner
-    Scripts -. "build / test" .-> Core
-    Scripts -. "build / test" .-> Backends
+    Scripts -. "build / test" .-> Apps
+    Scripts -. "build / test" .-> Interface
+    Scripts -. "build / test" .-> Compute
+    Scripts -. "build / test" .-> Backend
     Scripts -. "native build / test" .-> Native
-    Scripts -. "smoke test" .-> CppClient
-    Scripts -. "smoke test" .-> CppBackendClient
-    Scripts -. "smoke test" .-> AssemblyClient
-    Scripts -. "run / release" .-> Server
-    Scripts -. "build / release" .-> TauriApp
-    Scripts -. "build" .-> Wasm
-
-    ControlCenter -. "operation / check / build" .-> Scripts
-    ControlPanel -. "operation / check / build" .-> Scripts
-    ControlPanel -->|"Win32 interop / process control"| WhitebaseWindows
-
-    classDef planned stroke-dasharray: 6 4
-    class Visualization,OutputModule,Artifacts,Python planned

@@ -1,28 +1,28 @@
-# Contributing to Whitebase
+# Whitebaseへのコントリビューション
 
-日本語版: [CONTRIBUTING.ja.md](./CONTRIBUTING.ja.md)
+English: [CONTRIBUTING.md](./CONTRIBUTING.en.md)
 
-Thank you for your interest in contributing to Whitebase.
+Whitebaseへの貢献に興味を持っていただきありがとうございます。
 
-## Development Model
+## 開発モデル
 
-Whitebase uses `dev` as the integration branch and `main` as the stable branch.
+Whitebaseでは、`dev`を統合開発ブランチ、`main`を安定ブランチとして運用します。
 
 ```text
-working branch
+作業ブランチ
     ↓ Pull Request
 dev
     ↓ Pull Request
 main
 ```
 
-Create feature, fix, documentation, CI, and other working branches from the latest `dev` branch.
+機能追加、修正、ドキュメント、CIなどの作業ブランチは、最新の`dev`から作成してください。
 
-Do not develop directly on `main` or `dev`.
+`main`または`dev`上で直接開発しないでください。
 
-## Starting Work
+## 作業の開始
 
-Update `dev` before creating a working branch.
+作業ブランチを作る前に`dev`を最新化します。
 
 ```shell
 git switch dev
@@ -30,41 +30,41 @@ git pull --ff-only origin dev
 git switch -c feature/example
 ```
 
-Use a branch name that reflects the purpose of the change, for example:
+ブランチ名は変更内容が分かるものを使用してください。例:
 
-- `feature/...` for new functionality
-- `fix/...` for bug fixes
-- `docs/...` for documentation
-- `ci/...` for CI or workflow changes
+- `feature/...` — 機能追加
+- `fix/...` — バグ修正
+- `docs/...` — ドキュメント更新
+- `ci/...` — CI / Workflow更新
 
-## Development Environment
+## 開発環境
 
-The Rust toolchain is managed by `rust-toolchain.toml`.
+使用するRustツールチェーンは`rust-toolchain.toml`で管理しています。
 
 ### Windows
 
-Run the common Windows setup and integrated checks from the repository root:
+リポジトリのルートディレクトリから、Windows共通のセットアップと統合チェックを実行できます。
 
 ```powershell
 .\scripts\ops.bat setup
 .\scripts\ops.bat check
 ```
 
-Windows GNU Native development additionally requires an MSYS2 UCRT64 environment with MinGW-w64 GCC, CMake, Ninja, and NASM.
+Windows GNU Nativeを開発する場合は、MSYS2 UCRT64環境とMinGW-w64 GCC、CMake、Ninja、NASMも必要です。
 
 ### Linux x86_64
 
-Check the Linux GCC/NASM native backends with:
+LinuxのGCC/NASM Nativeバックエンドは以下で確認できます。
 
 ```bash
 ./scripts/linux-native.sh check
 ```
 
-For the full command reference, see [Whitebase Operations](./docs/tools/Whitebase%20Operations.md).
+各コマンドの詳細は[Whitebase Operations](./docs/tools/Whitebase%20Operations.md)を参照してください。
 
-## Rust Workspace Checks
+## Rustワークスペースの確認
 
-Before opening a pull request, run the checks relevant to your change. The standard Rust checks are:
+Pull Requestを作成する前に、変更内容に対応する検査を実行してください。基本的なRustチェックは以下です。
 
 ```shell
 cargo fmt --all -- --check
@@ -73,25 +73,25 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-OS-specific changes should also be validated on the affected operating system whenever possible.
+OS固有の変更では、可能な限り対象OS上でも動作確認してください。
 
 ## Control Center
 
-The Whitebase Control Center provides integrated check, build, and release operations for the current platform.
+Whitebase Control Centerから、現在のプラットフォームで利用可能な検査、ビルド、Release操作をまとめて実行できます。
 
 ```shell
 cargo run -p whitebase-control-center
 ```
 
-The main aggregate operations are:
+主な一括操作:
 
-- `Check All` — run the checks supported on the current platform.
-- `Build All` — build the development artifacts supported on the current platform.
-- `Release All` — build the release artifacts supported on the current platform.
+- `Check All` — 現在のプラットフォームで利用可能な検査を順番に実行します。
+- `Build All` — 現在のプラットフォーム向け開発用成果物をビルドします。
+- `Release All` — 現在のプラットフォーム向けRelease成果物をビルドします。
 
-## Before Committing
+## コミット前の確認
 
-Review the working tree before creating a commit:
+コミット前に作業ツリーを確認してください。
 
 ```shell
 git status
@@ -99,26 +99,26 @@ git diff --check
 git diff --stat
 ```
 
-Do not commit private keys, access tokens, personal information, temporary patches, archives, or unnecessary generated files.
+秘密鍵、アクセストークン、個人情報、一時的なパッチやZIP、不要な生成物をコミットしないでください。
 
-## Pull Requests
+## Pull Request
 
-Working branches should normally target `dev`.
+通常の作業ブランチは`dev`向けにPull Requestを作成します。
 
-Describe the change and the validation performed using the pull request template. For OS-specific changes, clearly state which operating systems were tested.
+Pull Requestテンプレートに変更内容と動作確認結果を記載してください。OS固有の変更では、確認したOSを明記してください。
 
-Required CI, dependency review, code scanning, and review conversations must be resolved before merging when enforced by repository rules.
+リポジトリのRulesetで要求されているCI、Dependency Review、Code Scanningを通し、レビュー上の会話を解決してからマージしてください。
 
-Squash merge is preferred for working branches.
+作業ブランチのマージにはSquash mergeを推奨します。
 
-## Promoting `dev` to `main`
+## `dev`から`main`への昇格
 
-After changes have been integrated and validated on `dev`, open a pull request from `dev` to `main`.
+複数の変更を`dev`で統合・確認した後、`dev`から`main`へのPull Requestを作成します。
 
-`main` represents the stable branch. Release packaging and GitHub Pages workflows run from `main` according to the repository CI configuration.
+`main`は安定ブランチとして扱います。Release成果物やGitHub Pagesは、リポジトリのCI設定に従って`main`から生成・更新されます。
 
-## Security
+## セキュリティ
 
-Do not report security vulnerabilities in a public issue.
+セキュリティ上の問題を公開Issueで報告しないでください。
 
-Follow the private reporting process described in [SECURITY.md](./SECURITY.md).
+[SECURITY.md](./SECURITY.md)に記載された非公開の報告手順を使用してください。

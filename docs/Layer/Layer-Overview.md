@@ -2,29 +2,30 @@
 
 ## 目的
 
-WhitebaseのLayerを整理するためのドキュメントです。
-上記を一目でわかるようにすることが目的になります。
+Whitebaseを構成する各Layerの責務と関係を整理するためのドキュメントです。
 
-以下を明記して、定義します。
+各Layerについて、次の内容を明確にします。
 
-- この層の役割はなにか
-- この層の目的はなにか
-- どのようなつながりを持っているか
-- どのように使っていくか
-- 想定される使用方法
-- なにが出来て、どんな制約があるのか
+- どのような役割を持つか
+- 何を目的とするか
+- 他のLayerとどのように接続するか
+- どのように利用されるか
+- どのような利用方法を想定しているか
+- 何ができ、どのような制約があるか
 
-注意点として、[Overview.md](/docs/Overview.md) / [Overview.ja.md](/docs/Overview.ja.md) にも図と文書はありますが、
-アーキテクチャ、モジュール構成図、利用構成図等の概要を掴むための図とはわけて考えます。
+[Overview.ja.md](/docs/Overview.ja.md) / [Overview.en.md](/docs/Overview.en.md) にも
+アーキテクチャ図、モジュール構成図、利用構成図がありますが、
+そちらはWhitebase全体の概要を把握するためのものです。
 
-このドキュメントでは、より正確な実装意図を記載し、
-実際の構成と設計意図がずれないようにします。
+このドキュメントでは、各Layerの責務と設計意図をより正確に定義し、
+実装と設計の間にずれが生じないようにします。
 
-また、実装の変化によって責務や方向性にずれが生じた場合、
-どちらを修正するべきか判断できるよう、
-Whitebaseの構成を一段深いところで定義します。
+また、実装の変化によって責務や依存方向にずれが生じた場合に、
+実装と設計のどちらを修正するべきか判断できる基準として使用します。
 
-ここは各Layerの責務と論理的な関係を定義するものです。実際のビルド・リンク依存関係については、各CrateおよびNative実装のビルド定義を参照してください。
+ここで定義するのは、各Layerの論理的な責務と関係です。
+実際のビルド・リンク依存関係については、
+各CrateおよびNative実装のビルド定義を参照してください。
 
 ---
 
@@ -72,11 +73,14 @@ Layer番号は単純な実行順序を示すものではありません。
       <td>AssemblyによるScalar / AVX計算を実装する</td>
     </tr>
     <tr>
-      <td rowspan="4">L3<br>Backend Integration</td>
-      <td rowspan="4">Backend接続・統合</td>
+      <td rowspan="5">L3<br>Backend Integration</td>
+      <td rowspan="5">Backend接続・統合</td>
       <td><code>whitebase-cpp-adapter</code></td>
       <td>C++ Native実装をRust側から利用可能にする</td>
-      <td rowspan="4">L1のContractを利用し、L2の実装をL4 Coreへ接続する</td>
+      <td rowspan="5">
+        L1のContractを利用し、
+        L2または外部実行環境の実装をL4 Coreへ接続する
+      </td>
     </tr>
     <tr>
       <td><code>whitebase-asm-adapter</code></td>
@@ -87,14 +91,18 @@ Layer番号は単純な実行順序を示すものではありません。
       <td>Windows GNU Native実装をRust側へ接続する</td>
     </tr>
     <tr>
+      <td><code>whitebase-cerune-vm-adapter</code></td>
+      <td>Cerune bytecode / VMをWhitebase Backendとして利用可能にする</td>
+    </tr>
+    <tr>
       <td><code>whitebase-backend-bridge</code></td>
-      <td>各Backendを共通のBackendとしてCoreへ統合する</td>
+      <td>各Backendを共通の<code>ComputeBackend</code>としてCoreへ統合する</td>
     </tr>
     <tr>
       <td>L4<br>Core</td>
       <td>Pure Compute</td>
       <td><code>whitebase-core</code></td>
-      <td>Backendの登録・選択・Capability確認・dispatchを行い、Whitebaseの基礎計算を提供する</td>
+      <td>Backendの登録・選択・Capability確認・availability確認・dispatchを行い、Whitebaseの基礎計算を提供する</td>
       <td>L1 / L3を利用し、L5 Runner / L6 Interfaceから利用される</td>
     </tr>
     <tr>
@@ -105,7 +113,6 @@ Layer番号は単純な実行順序を示すものではありません。
       <td>L4 Coreを利用し、L6 Interfaceから利用される</td>
     </tr>
     <tr>
-  <tr>
       <td rowspan="4">L6<br>Interface</td>
       <td rowspan="4">Application Boundary / Interface Adapter</td>
       <td><code>whitebase-interface</code></td>
@@ -121,19 +128,19 @@ Layer番号は単純な実行順序を示すものではありません。
     <tr>
       <td>HTTP API<br><code>whitebase-http-api</code></td>
       <td>
-        whitebase-interfaceをHTTP / JSONへ変換するAxum Interface Adapter
+        <code>whitebase-interface</code>をHTTP / JSONへ変換するAxum Interface Adapter
       </td>
     </tr>
     <tr>
       <td>Tauri Command API<br><code>whitebase-tauri-api</code></td>
       <td>
-        whitebase-interfaceをTauri IPCへ変換するInterface Adapter
+        <code>whitebase-interface</code>をTauri IPCへ変換するInterface Adapter
       </td>
     </tr>
     <tr>
       <td>WASM API<br><code>whitebase-wasm</code></td>
       <td>
-        whitebase-interfaceをWebAssembly / JavaScriptへ変換するInterface Adapter
+        <code>whitebase-interface</code>をWebAssembly / JavaScriptへ変換するInterface Adapter
       </td>
     </tr>
     <tr>
@@ -162,6 +169,33 @@ Backend IntegrationとCoreが共有する契約を定義する基盤です。
 Backend Contractは、Backend IntegrationとCoreの双方から利用される共通契約です。
 
 ![Backend Contract](/docs/diagrams/Layer/Backend-Contract.svg)
+
+### Backend Integration
+
+Backend Integrationは、Backend固有の実装や外部実行環境を
+Whitebaseの共通`ComputeBackend`としてCoreへ接続します。
+
+現在の主な統合経路は以下です。
+
+- Rust Scalar / SIMD
+- C++ Native
+- Assembly Native
+- Windows GNU Native
+- Cerune VM
+
+Cerune VM統合もL3 Backend Integrationの責務として扱います。
+
+`whitebase-cerune-vm-adapter`は、Ceruneのbytecode / VMを
+Whitebaseの`ComputeBackend`として利用可能な形へ適合します。
+
+Cerune固有のbytecode、VM値、function handleなどは
+`whitebase-core`へ公開しません。
+
+将来CeruneのC / LLVM / QBE / WAT / Assembly / Native Objectなどの
+Artifact経路を追加する場合も、
+各経路をL3の独立したAdapterとして接続します。
+
+詳細は [Cerune Integration](Cerune-Integration.md) を参照してください。
 
 ### Pure Compute
 
@@ -197,9 +231,11 @@ Core / Runner固有のApplication処理をtransport側へ重複させない構�
 `whitebase-server`などの実行HostはInterface Adapterを起動する役割のみを持ち、
 Application Boundaryそのものには含めません。
 
+---
+
 ## Layer外の構成要素
 
-7 Layerとは別に、FFI BoundaryとOperationsがあります。
+7 Layerとは別に、FFI BoundaryとOperations Planeがあります。
 
 | 区分 | 主な構成要素 | 役割 |
 | --- | --- | --- |
@@ -217,7 +253,7 @@ FFI Boundaryです。
 
 ### Operations Plane
 
-Operationsは8番目のLayerではありません。
+Operations Planeは8番目のLayerではありません。
 
 Whitebase全体を横断し、
 各Layerを構築・実行・検証・管理するための領域として扱います。
