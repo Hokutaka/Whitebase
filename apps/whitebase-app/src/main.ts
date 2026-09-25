@@ -26,8 +26,10 @@ interface F64Value {
 
 interface ScalarF64BackendResult {
   backend: string;
-  result: F64Value;
-  matchesReferenceBits: boolean;
+  status: "completed" | "unavailable" | "failed";
+  result: F64Value | null;
+  matchesReferenceBits: boolean | null;
+  error: string | null;
 }
 
 interface ScalarF64Observation {
@@ -434,6 +436,36 @@ benchmarkForm.addEventListener("submit", async (event) => {
 function renderScalarF64Observation(report: ScalarF64Observation): void {
   const resultRows = report.results
     .map((backendResult) => {
+      if (backendResult.status === "unavailable") {
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+            <td colspan="2">—</td>
+            <td><span class="badge badge-muted">UNAVAILABLE</span></td>
+          </tr>
+        `;
+      }
+
+      if (backendResult.status === "failed") {
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+            <td colspan="2">${escapeHtml(backendResult.error ?? "Unknown error")}</td>
+            <td><span class="badge badge-warn">FAILED</span></td>
+          </tr>
+        `;
+      }
+
+      if (!backendResult.result || backendResult.matchesReferenceBits === null) {
+        return `
+          <tr>
+            <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
+            <td colspan="2">Invalid completed result</td>
+            <td><span class="badge badge-warn">INVALID</span></td>
+          </tr>
+        `;
+      }
+
       const matchesReference = backendResult.matchesReferenceBits;
 
       return `

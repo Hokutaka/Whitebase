@@ -228,7 +228,9 @@ struct ApiErrorBody {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use whitebase_interface::benchmark::BackendResultStatus;
+    use whitebase_interface::{
+        benchmark::BackendResultStatus, scalar_f64::ScalarF64BackendResultStatus,
+    };
 
     #[test]
     fn scalar_f64_observation_generates_decimal_reference() {
@@ -241,6 +243,26 @@ mod tests {
         assert_eq!(report.decimal_reference, "0.3");
         assert_eq!(report.reference.decimal, "0.29999999999999999");
         assert_eq!(report.reference.bits, "0x3fd3333333333333");
+
+        assert!(!report.results.is_empty());
+
+        assert!(report.results.iter().all(|result| match result.status {
+            ScalarF64BackendResultStatus::Completed => {
+                result.result.is_some()
+                    && result.matches_reference_bits.is_some()
+                    && result.error.is_none()
+            }
+            ScalarF64BackendResultStatus::Unavailable => {
+                result.result.is_none()
+                    && result.matches_reference_bits.is_none()
+                    && result.error.is_none()
+            }
+            ScalarF64BackendResultStatus::Failed => {
+                result.result.is_none()
+                    && result.matches_reference_bits.is_none()
+                    && result.error.is_some()
+            }
+        }));
     }
 
     #[test]
