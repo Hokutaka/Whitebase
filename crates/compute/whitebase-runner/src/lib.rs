@@ -11,9 +11,9 @@ mod runner;
 
 pub use benchmark::{
     BenchmarkOperation, BenchmarkPrecision, BenchmarkReport, BenchmarkRequest, MAX_INPUT_LENGTH,
-    MAX_ITERATIONS, MAX_TOTAL_ELEMENT_ITERATIONS, run_benchmark,
+    MAX_TOTAL_ELEMENT_ITERATIONS, run_benchmark,
 };
-pub use config::RunnerConfig;
+pub use config::{MAX_ITERATIONS, RunnerConfig};
 pub use error::RunnerError;
 pub use report::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,

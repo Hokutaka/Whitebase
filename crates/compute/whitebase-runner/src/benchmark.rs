@@ -1,11 +1,11 @@
 use whitebase_core::BackendKind;
 
 use crate::{
-    AddF32Report, AddF64Report, BackendRunResult, Runner, RunnerConfig, RunnerError, SumF64Report,
+    AddF32Report, AddF64Report, BackendRunResult, MAX_ITERATIONS, Runner, RunnerConfig,
+    RunnerError, SumF64Report,
 };
 
 pub const MAX_INPUT_LENGTH: usize = 10_000_000;
-pub const MAX_ITERATIONS: usize = 10_000;
 pub const MAX_TOTAL_ELEMENT_ITERATIONS: usize = 1_000_000_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

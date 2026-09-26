@@ -8,9 +8,9 @@ use whitebase_core::{BackendKind, ComputeError, OperationKind, Whitebase};
 
 use crate::{
     AddF32Report, AddF64Report, AddScalarF64Report, BackendRunResult, BackendRunStatus,
-    ComparisonSummary, F64Value, RunnerConfig, RunnerError, ScalarF64BackendObservation,
-    ScalarF64BackendStatus, ScalarF64ObservationReport, SumF64Report, TimingMeasurement,
-    TimingSummary, decimal::ExactDecimal,
+    ComparisonSummary, F64Value, MAX_ITERATIONS, RunnerConfig, RunnerError,
+    ScalarF64BackendObservation, ScalarF64BackendStatus, ScalarF64ObservationReport, SumF64Report,
+    TimingMeasurement, TimingSummary, decimal::ExactDecimal,
 };
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
@@ -458,6 +458,18 @@ fn validate_common_config(config: &RunnerConfig) -> Result<(), RunnerError> {
         return Err(RunnerError::NoBackends);
     }
 
+    if config.warmup_iterations > MAX_ITERATIONS {
+        return Err(RunnerError::WarmupIterationsTooLarge {
+            maximum: MAX_ITERATIONS,
+        });
+    }
+
+    if config.measured_iterations > MAX_ITERATIONS {
+        return Err(RunnerError::MeasuredIterationsTooLarge {
+            maximum: MAX_ITERATIONS,
+        });
+    }
+
     if config.measured_iterations == 0 {
         return Err(RunnerError::ZeroMeasuredIterations);
     }
@@ -809,6 +821,36 @@ mod tests {
                 BackendKind::CppScalar,
                 BackendKind::CeruneVm,
             ]
+        );
+    }
+
+    #[test]
+    fn rejects_excessive_warmup_iterations_in_runner_config() {
+        let config = RunnerConfig {
+            warmup_iterations: MAX_ITERATIONS + 1,
+            ..RunnerConfig::default()
+        };
+
+        assert_eq!(
+            validate_common_config(&config),
+            Err(RunnerError::WarmupIterationsTooLarge {
+                maximum: MAX_ITERATIONS,
+            })
+        );
+    }
+
+    #[test]
+    fn rejects_excessive_measured_iterations_in_runner_config() {
+        let config = RunnerConfig {
+            measured_iterations: MAX_ITERATIONS + 1,
+            ..RunnerConfig::default()
+        };
+
+        assert_eq!(
+            validate_common_config(&config),
+            Err(RunnerError::MeasuredIterationsTooLarge {
+                maximum: MAX_ITERATIONS,
+            })
         );
     }
 }
