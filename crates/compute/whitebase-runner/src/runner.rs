@@ -248,7 +248,7 @@ impl Runner {
         }
 
         let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
-        let mut durations = Vec::with_capacity(measured_iterations);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
 
         for _ in 0..measured_iterations {
             let started_at = Instant::now();
@@ -311,7 +311,7 @@ impl Runner {
         }
 
         let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
-        let mut durations = Vec::with_capacity(measured_iterations);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
 
         for _ in 0..measured_iterations {
             let started_at = Instant::now();
@@ -366,7 +366,7 @@ impl Runner {
         }
 
         let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
-        let mut durations = Vec::with_capacity(measured_iterations);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
         let mut output = None;
 
         for _ in 0..measured_iterations {
