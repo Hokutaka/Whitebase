@@ -1,5 +1,8 @@
 use whitebase_core::BackendKind;
 
+/// Runnerが受け付けるウォームアップ・計測反復回数の上限です。
+pub const MAX_ITERATIONS: usize = 10_000;
+
 /// Runnerによる演算実行と計測の設定です。
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunnerConfig {
