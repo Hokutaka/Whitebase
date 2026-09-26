@@ -247,9 +247,10 @@ impl Runner {
             }
         }
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
+        let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
 
-        for _ in 0..config.measured_iterations {
+        for _ in 0..measured_iterations {
             let started_at = Instant::now();
             let result = self.whitebase.add_f32(
                 backend,
@@ -309,9 +310,10 @@ impl Runner {
             }
         }
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
+        let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
 
-        for _ in 0..config.measured_iterations {
+        for _ in 0..measured_iterations {
             let started_at = Instant::now();
             let result = self.whitebase.add_f64(
                 backend,
@@ -363,10 +365,11 @@ impl Runner {
             }
         }
 
-        let mut durations = Vec::with_capacity(config.measured_iterations);
+        let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
         let mut output = None;
 
-        for _ in 0..config.measured_iterations {
+        for _ in 0..measured_iterations {
             let started_at = Instant::now();
             let result = self.whitebase.sum_f64(backend, black_box(input));
             let elapsed = started_at.elapsed();
