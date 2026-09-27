@@ -134,9 +134,9 @@ impl CeruneNativeAdapter {
             all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
         ))]
         {
-            return Ok(Self {
+            Ok(Self {
                 native: native::prepare_native()?,
-            });
+            })
         }
 
         #[cfg(not(any(
@@ -154,7 +154,7 @@ impl CeruneNativeAdapter {
             all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
         ))]
         {
-            return Ok(self.native.add_scalar_f64(lhs, rhs));
+            Ok(self.native.add_scalar_f64(lhs, rhs))
         }
 
         #[cfg(not(any(

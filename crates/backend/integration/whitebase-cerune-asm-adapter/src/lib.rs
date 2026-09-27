@@ -163,7 +163,7 @@ impl CeruneAsmAdapter {
             all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")
         ))]
         {
-            return prepare_native();
+            prepare_native()
         }
 
         #[cfg(not(any(
@@ -184,7 +184,7 @@ impl CeruneAsmAdapter {
             // SAFETY:
             // `new()`で対象ホスト用共有ライブラリから、
             // `f64, f64 -> f64` のC ABI symbolとして解決済みです。
-            return Ok(unsafe { (self.add_scalar_f64)(lhs, rhs) });
+            Ok(unsafe { (self.add_scalar_f64)(lhs, rhs) })
         }
 
         #[cfg(not(any(

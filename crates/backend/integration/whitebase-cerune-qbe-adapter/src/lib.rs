@@ -226,7 +226,7 @@ impl CeruneQbeAdapter {
     pub fn new() -> Result<Self, CeruneQbeAdapterError> {
         #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
         {
-            return Self::prepare_linux();
+            Self::prepare_linux()
         }
 
         #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
@@ -246,7 +246,7 @@ impl CeruneQbeAdapter {
             // SAFETY:
             // `new`でWhitebase所有の固定symbolを解決し、
             // libraryとworkspaceをadapterの生存期間中保持しています。
-            return unsafe { (self.add_scalar_f64)(lhs, rhs) };
+            unsafe { (self.add_scalar_f64)(lhs, rhs) }
         }
 
         #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
