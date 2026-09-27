@@ -42,14 +42,16 @@ fn every_available_backend_supporting_add_f32_produces_the_same_result() {
 fn reports_all_standard_backends() {
     let whitebase = Whitebase::new();
 
-    let expected = if cfg!(all(
+    let expected = if cfg!(target_arch = "wasm32") {
+        7
+    } else if cfg!(all(
         target_arch = "x86_64",
         target_os = "windows",
         target_env = "msvc"
     )) {
-        11
+        17
     } else {
-        7
+        13
     };
 
     assert_eq!(whitebase.backends().len(), expected);
@@ -71,6 +73,53 @@ fn cerune_vm_adds_f64_scalars() {
 
     let result = whitebase
         .add_scalar_f64(BackendKind::CeruneVm, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_c_adds_f64_scalars() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneC).unwrap();
+
+    assert!(info.available);
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneC, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_llvm_adds_f64_scalars() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneLlvm).unwrap();
+
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    if !info.available {
+        return;
+    }
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneLlvm, 0.1, 0.2)
         .unwrap();
 
     assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
@@ -204,6 +253,7 @@ fn windows_gnu_assembly_backends_sum_f64_values() {
     let avx_info = whitebase
         .backend_info(BackendKind::WindowsGnuAssemblyAvx)
         .unwrap();
+
     if avx_info.available {
         assert_eq!(
             whitebase
@@ -212,4 +262,101 @@ fn windows_gnu_assembly_backends_sum_f64_values() {
             55.0
         );
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_qbe_adds_f64_scalars_when_available() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneQbe).unwrap();
+
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    if !info.available {
+        return;
+    }
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneQbe, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_wat_adds_f64_scalars() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneWat).unwrap();
+
+    assert!(info.available);
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneWat, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_asm_adds_f64_scalars_when_available() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneAsm).unwrap();
+
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    if !info.available {
+        return;
+    }
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneAsm, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_native_adds_f64_scalars_when_available() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneNative).unwrap();
+
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    if !info.available {
+        return;
+    }
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneNative, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
 }

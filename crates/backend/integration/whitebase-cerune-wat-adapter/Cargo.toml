@@ -1,0 +1,14 @@
+[package]
+name = "whitebase-cerune-wat-adapter"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+cerune-lang = {
+    git = "https://github.com/Hokutaka/Cerune.git",
+    rev = "85be8ab1719cba577acc7c32404bf481ad141769"
+}
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+wasmi = { version = "2.0.0", features = ["wat"] }
