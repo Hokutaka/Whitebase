@@ -10,6 +10,9 @@ use whitebase_cerune_c_adapter::{CeruneCAdapter, CeruneCAdapterError};
 #[cfg(not(target_arch = "wasm32"))]
 use whitebase_cerune_llvm_adapter::{CeruneLlvmAdapter, CeruneLlvmAdapterError};
 
+#[cfg(not(target_arch = "wasm32"))]
+use whitebase_cerune_qbe_adapter::{CeruneQbeAdapter, CeruneQbeAdapterError};
+
 use crate::backend_failure;
 
 /// Cerune VMによる計算バックエンドです。
@@ -154,6 +157,65 @@ impl ComputeBackend for CeruneLlvmBackend {
     }
 }
 
+/// Cerune QBE artifactによる計算バックエンドです。
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug)]
+pub struct CeruneQbeBackend {
+    adapter: Result<CeruneQbeAdapter, CeruneQbeAdapterError>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CeruneQbeBackend {
+    /// Cerune QBE artifactの実行対象を準備します。
+    ///
+    /// QBE生成、native共有ライブラリ生成、関数解決はここで完了し、
+    /// 演算呼び出し中には行いません。
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            adapter: CeruneQbeAdapter::new(),
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Default for CeruneQbeBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl ComputeBackend for CeruneQbeBackend {
+    fn kind(&self) -> BackendKind {
+        BackendKind::CeruneQbe
+    }
+
+    fn capabilities(&self) -> BackendCapabilities {
+        BackendCapabilities::empty().with_add_scalar_f64()
+    }
+
+    fn is_available(&self) -> bool {
+        self.adapter.is_ok()
+    }
+
+    fn add_f32(&self, _lhs: &[f32], _rhs: &[f32], _output: &mut [f32]) -> Result<(), ComputeError> {
+        Err(ComputeError::OperationUnsupported {
+            backend: self.kind(),
+            operation: OperationKind::AddF32,
+        })
+    }
+
+    fn add_scalar_f64(&self, lhs: f64, rhs: f64) -> Result<f64, ComputeError> {
+        let adapter = self
+            .adapter
+            .as_ref()
+            .map_err(|error| backend_failure(self.kind(), error))?;
+
+        Ok(adapter.add_scalar_f64(lhs, rhs))
+    }
+}
+
 impl ComputeBackend for CeruneVmBackend {
     fn kind(&self) -> BackendKind {
         BackendKind::CeruneVm
@@ -251,6 +313,32 @@ mod tests {
     #[test]
     fn adds_f64_scalars_through_llvm_compute_backend() {
         let backend = CeruneLlvmBackend::new();
+
+        let result = backend.add_scalar_f64(0.1, 0.2).unwrap();
+
+        assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn reports_cerune_qbe_capabilities() {
+        let backend = CeruneQbeBackend::new();
+        let capabilities = backend.capabilities();
+
+        assert!(capabilities.supports(OperationKind::AddScalarF64));
+        assert!(!capabilities.supports(OperationKind::AddF32));
+        assert!(!capabilities.supports(OperationKind::AddF64));
+        assert!(!capabilities.supports(OperationKind::SumF64));
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    #[test]
+    fn adds_f64_scalars_through_cerune_qbe_backend() {
+        let backend = CeruneQbeBackend::new();
+
+        if !backend.is_available() {
+            return;
+        }
 
         let result = backend.add_scalar_f64(0.1, 0.2).unwrap();
 
