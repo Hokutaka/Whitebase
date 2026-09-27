@@ -9,3 +9,7 @@ cerune-lang = {
     git = "https://github.com/Hokutaka/Cerune.git",
     rev = "85be8ab1719cba577acc7c32404bf481ad141769"
 }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+libloading = "0.8"
+tempfile = "3"
