@@ -48,6 +48,9 @@ pub use cerune::CeruneQbeBackend;
 #[cfg(not(target_arch = "wasm32"))]
 pub use cerune::CeruneWatBackend;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneAsmBackend;
+
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")

@@ -6379,6 +6379,7 @@ version = "0.1.0"
 dependencies = [
  "whitebase-asm-adapter",
  "whitebase-backend-contract",
+ "whitebase-cerune-asm-adapter",
  "whitebase-cerune-c-adapter",
  "whitebase-cerune-llvm-adapter",
  "whitebase-cerune-qbe-adapter",
