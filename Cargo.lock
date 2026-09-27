@@ -6383,6 +6383,7 @@ dependencies = [
  "whitebase-cerune-llvm-adapter",
  "whitebase-cerune-qbe-adapter",
  "whitebase-cerune-vm-adapter",
+ "whitebase-cerune-wat-adapter",
  "whitebase-cpp-adapter",
  "whitebase-rust-backend",
  "whitebase-windows-gnu-adapter",
