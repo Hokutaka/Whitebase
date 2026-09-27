@@ -6382,6 +6382,7 @@ dependencies = [
  "whitebase-cerune-asm-adapter",
  "whitebase-cerune-c-adapter",
  "whitebase-cerune-llvm-adapter",
+ "whitebase-cerune-native-adapter",
  "whitebase-cerune-qbe-adapter",
  "whitebase-cerune-vm-adapter",
  "whitebase-cerune-wat-adapter",

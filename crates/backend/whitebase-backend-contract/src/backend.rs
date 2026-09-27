@@ -27,6 +27,9 @@ pub enum BackendKind {
     /// Cerune ASM artifactによる実装。
     CeruneAsm,
 
+    /// Cerune Native Object artifactによる実装。
+    CeruneNative,
+
     /// C++によるScalar実装。
     CppScalar,
 
@@ -65,6 +68,7 @@ impl BackendKind {
             Self::CeruneQbe => "Cerune QBE",
             Self::CeruneWat => "Cerune WAT",
             Self::CeruneAsm => "Cerune ASM",
+            Self::CeruneNative => "Cerune Native Object",
             Self::CppScalar => "C++ Scalar",
             Self::CppAvx => "C++ AVX",
             Self::AssemblyScalar => "Assembly Scalar",
