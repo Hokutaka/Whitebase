@@ -890,4 +890,38 @@ mod tests {
             status => panic!("unexpected Cerune C status: {status:?}"),
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_llvm_scalar_f64_result() {
+        let report = Runner::new()
+            .run_add_scalar_f64(BackendKind::CeruneLlvm, 0.1, 0.2)
+            .unwrap();
+
+        assert_eq!(report.backend, BackendKind::CeruneLlvm);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn scalar_f64_observation_includes_cerune_llvm() {
+        let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let cerune = report
+            .results
+            .iter()
+            .find(|result| result.backend == BackendKind::CeruneLlvm)
+            .expect("Cerune LLVM should be included in scalar f64 observation");
+
+        let ScalarF64BackendStatus::Completed {
+            result,
+            matches_reference_bits,
+        } = &cerune.status
+        else {
+            panic!("Cerune LLVM should complete scalar f64 observation");
+        };
+
+        assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+        assert!(!matches_reference_bits);
+    }
 }
