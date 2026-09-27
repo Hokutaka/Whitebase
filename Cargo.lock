@@ -6249,6 +6249,7 @@ version = "0.1.0"
 dependencies = [
  "whitebase-asm-adapter",
  "whitebase-backend-contract",
+ "whitebase-cerune-c-adapter",
  "whitebase-cerune-vm-adapter",
  "whitebase-cpp-adapter",
  "whitebase-rust-backend",

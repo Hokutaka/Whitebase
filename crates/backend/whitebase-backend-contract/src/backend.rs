@@ -12,6 +12,9 @@ pub enum BackendKind {
     /// Cerune VMによる実装。
     CeruneVm,
 
+    /// Cerune C artifactによる実装。
+    CeruneC,
+
     /// C++によるScalar実装。
     CppScalar,
 
@@ -45,6 +48,7 @@ impl BackendKind {
             Self::RustScalar => "Rust Scalar",
             Self::RustSimd => "Rust SIMD",
             Self::CeruneVm => "Cerune VM",
+            Self::CeruneC => "Cerune C",
             Self::CppScalar => "C++ Scalar",
             Self::CppAvx => "C++ AVX",
             Self::AssemblyScalar => "Assembly Scalar",
