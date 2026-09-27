@@ -955,4 +955,29 @@ mod tests {
             }
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_wat_scalar_f64_result() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneWat)
+            .expect("Cerune WAT backend should be observed");
+
+        let ScalarF64BackendStatus::Completed {
+            result,
+            matches_reference_bits,
+        } = &observation.status
+        else {
+            panic!("Cerune WAT backend should complete");
+        };
+
+        assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+        assert!(!matches_reference_bits);
+    }
 }
