@@ -49,9 +49,9 @@ fn reports_all_standard_backends() {
         target_os = "windows",
         target_env = "msvc"
     )) {
-        16
+        17
     } else {
-        12
+        13
     };
 
     assert_eq!(whitebase.backends().len(), expected);
@@ -331,6 +331,31 @@ fn cerune_asm_adds_f64_scalars_when_available() {
 
     let result = whitebase
         .add_scalar_f64(BackendKind::CeruneAsm, 0.1, 0.2)
+        .unwrap();
+
+    assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn cerune_native_adds_f64_scalars_when_available() {
+    use whitebase_core::BackendKind;
+
+    let whitebase = Whitebase::new();
+
+    let info = whitebase.backend_info(BackendKind::CeruneNative).unwrap();
+
+    assert!(info.capabilities.supports(OperationKind::AddScalarF64));
+    assert!(!info.capabilities.supports(OperationKind::AddF32));
+    assert!(!info.capabilities.supports(OperationKind::AddF64));
+    assert!(!info.capabilities.supports(OperationKind::SumF64));
+
+    if !info.available {
+        return;
+    }
+
+    let result = whitebase
+        .add_scalar_f64(BackendKind::CeruneNative, 0.1, 0.2)
         .unwrap();
 
     assert_eq!(result.to_bits(), 0x3fd3_3333_3333_3334);

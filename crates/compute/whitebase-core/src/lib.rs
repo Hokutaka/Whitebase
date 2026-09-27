@@ -15,7 +15,8 @@ use whitebase_backend_bridge::{
 
 #[cfg(not(target_arch = "wasm32"))]
 use whitebase_backend_bridge::{
-    CeruneAsmBackend, CeruneCBackend, CeruneLlvmBackend, CeruneQbeBackend, CeruneWatBackend,
+    CeruneAsmBackend, CeruneCBackend, CeruneLlvmBackend, CeruneNativeBackend, CeruneQbeBackend,
+    CeruneWatBackend,
 };
 
 pub use whitebase_backend_contract::{
@@ -180,6 +181,7 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
         Box::new(CeruneQbeBackend::new()),
         Box::new(CeruneWatBackend::new()),
         Box::new(CeruneAsmBackend::new()),
+        Box::new(CeruneNativeBackend::new()),
         Box::new(CppScalarBackend),
         Box::new(CppAvxBackend),
         Box::new(AssemblyScalarBackend),
@@ -213,6 +215,9 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
 
     #[cfg(not(target_arch = "wasm32"))]
     backends.push(Box::new(CeruneAsmBackend::new()));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    backends.push(Box::new(CeruneNativeBackend::new()));
 
     backends.push(Box::new(CppScalarBackend));
     backends.push(Box::new(CppAvxBackend));
