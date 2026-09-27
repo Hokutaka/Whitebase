@@ -924,4 +924,35 @@ mod tests {
         assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
         assert!(!matches_reference_bits);
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_qbe_scalar_f64_backend() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneQbe)
+            .expect("Cerune QBE backend should be observed");
+
+        match &observation.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            ScalarF64BackendStatus::Unavailable => {
+                // Cerune QBE currently targets Linux x86-64 and also requires
+                // the external QBE toolchain, so unavailable is valid here.
+            }
+            ScalarF64BackendStatus::Failed { error } => {
+                panic!("Cerune QBE observation failed: {error}");
+            }
+        }
+    }
 }
