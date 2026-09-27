@@ -6277,6 +6277,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "whitebase-cerune-llvm-adapter"
+version = "0.1.0"
+dependencies = [
+ "cerune-lang",
+]
+
+[[package]]
 name = "whitebase-cerune-vm-adapter"
 version = "0.1.0"
 dependencies = [

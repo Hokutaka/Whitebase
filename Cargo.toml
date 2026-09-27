@@ -6,6 +6,7 @@ members = [
     "crates/backend/integration/whitebase-backend-bridge",
     "crates/backend/integration/whitebase-cerune-vm-adapter",
     "crates/backend/integration/whitebase-cerune-c-adapter",
+    "crates/backend/integration/whitebase-cerune-llvm-adapter",
     "crates/backend/integration/whitebase-cpp-adapter",
     "crates/backend/integration/whitebase-asm-adapter",
     "crates/backend/integration/whitebase-windows-gnu-adapter",
