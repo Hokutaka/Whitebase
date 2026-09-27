@@ -47,7 +47,8 @@ pub(crate) fn benchmark_error(error: RunnerError) -> InterfaceError {
         | RunnerError::MeasuredIterationsTooLarge { .. }
         | RunnerError::ZeroMeasuredIterations
         | RunnerError::BenchmarkWorkloadTooLarge { .. }
-        | RunnerError::SumF64RequiresF64 => true,
+        | RunnerError::SumF64RequiresF64
+        | RunnerError::ScalarF64RequiresF64 => true,
 
         RunnerError::NoBackends
         | RunnerError::InvalidAbsoluteTolerance { .. }
@@ -85,6 +86,7 @@ pub(crate) fn scalar_f64_error(error: RunnerError) -> InterfaceError {
         | RunnerError::WarmupIterationsTooLarge { .. }
         | RunnerError::MeasuredIterationsTooLarge { .. }
         | RunnerError::SumF64RequiresF64
+        | RunnerError::ScalarF64RequiresF64
         | RunnerError::BenchmarkWorkloadTooLarge { .. } => false,
     };
 

@@ -7,10 +7,13 @@ use crate::{
 
 pub const MAX_INPUT_LENGTH: usize = 10_000_000;
 pub const MAX_TOTAL_ELEMENT_ITERATIONS: usize = 1_000_000_000;
+const SCALAR_F64_LHS: f64 = 0.1;
+const SCALAR_F64_RHS: f64 = 0.2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BenchmarkOperation {
     AddArray,
+    AddScalarF64,
     SumF64,
 }
 
@@ -83,15 +86,39 @@ pub fn run_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReport, Runne
                 .run_sum_f64(&input, &config)
                 .map(BenchmarkReport::from)
         }
+
+        BenchmarkOperation::AddScalarF64 => {
+            if request.precision != BenchmarkPrecision::F64 {
+                return Err(RunnerError::ScalarF64RequiresF64);
+            }
+
+            runner
+                .run_add_scalar_f64_benchmark(SCALAR_F64_LHS, SCALAR_F64_RHS, &config)
+                .map(|results| BenchmarkReport {
+                    operation: BenchmarkOperation::AddScalarF64,
+                    precision: BenchmarkPrecision::F64,
+                    input_length: 1,
+                    reference_backend: config.reference_backend,
+                    warmup_iterations: config.warmup_iterations,
+                    measured_iterations: config.measured_iterations,
+                    absolute_tolerance: config.absolute_tolerance_f64,
+                    results,
+                })
+        }
     }
 }
 
 fn validate_request(request: BenchmarkRequest) -> Result<(), RunnerError> {
-    if request.input_length == 0 {
+    let input_length = match request.operation {
+        BenchmarkOperation::AddScalarF64 => 1,
+        BenchmarkOperation::AddArray | BenchmarkOperation::SumF64 => request.input_length,
+    };
+
+    if input_length == 0 {
         return Err(RunnerError::ZeroInputLength);
     }
 
-    if request.input_length > MAX_INPUT_LENGTH {
+    if input_length > MAX_INPUT_LENGTH {
         return Err(RunnerError::InputLengthTooLarge {
             maximum: MAX_INPUT_LENGTH,
         });
@@ -120,7 +147,7 @@ fn validate_request(request: BenchmarkRequest) -> Result<(), RunnerError> {
             maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
         })?;
 
-    let total_element_iterations = request.input_length.checked_mul(total_iterations).ok_or(
+    let total_element_iterations = input_length.checked_mul(total_iterations).ok_or(
         RunnerError::BenchmarkWorkloadTooLarge {
             maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
         },
@@ -278,5 +305,39 @@ mod tests {
                 maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
             })
         );
+    }
+
+    #[test]
+    fn rejects_scalar_f64_with_f32_precision() {
+        let request = BenchmarkRequest {
+            operation: BenchmarkOperation::AddScalarF64,
+            precision: BenchmarkPrecision::F32,
+            input_length: 1,
+            warmup_iterations: 0,
+            measured_iterations: 1,
+        };
+
+        assert_eq!(
+            run_benchmark(request),
+            Err(RunnerError::ScalarF64RequiresF64)
+        );
+    }
+
+    #[test]
+    fn scalar_f64_benchmark_ignores_array_input_length() {
+        let request = BenchmarkRequest {
+            operation: BenchmarkOperation::AddScalarF64,
+            precision: BenchmarkPrecision::F64,
+            input_length: MAX_INPUT_LENGTH + 1,
+            warmup_iterations: 0,
+            measured_iterations: 1,
+        };
+
+        let result = run_benchmark(request);
+
+        assert!(!matches!(
+            result,
+            Err(RunnerError::InputLengthTooLarge { .. })
+        ));
     }
 }

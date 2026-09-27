@@ -1,6 +1,7 @@
 use whitebase_core::BackendKind;
 use whitebase_runner::{
-    BackendRunResult, BackendRunStatus, Runner, RunnerConfig, TimingMeasurement,
+    BackendRunResult, BackendRunStatus, BenchmarkOperation, BenchmarkPrecision, BenchmarkRequest,
+    Runner, RunnerConfig, TimingMeasurement, run_benchmark,
 };
 
 fn assert_backend_results(results: Vec<BackendRunResult>, expected_iterations: usize) {
@@ -111,4 +112,45 @@ fn measures_and_compares_rust_and_cpp_sum_f64_backends() {
     assert_eq!(report.results.len(), 4);
 
     assert_backend_results(report.results, 3);
+}
+
+#[test]
+fn benchmarks_scalar_f64_backends() {
+    let report = run_benchmark(BenchmarkRequest {
+        operation: BenchmarkOperation::AddScalarF64,
+        precision: BenchmarkPrecision::F64,
+        input_length: 1,
+        warmup_iterations: 1,
+        measured_iterations: 3,
+    })
+    .expect("scalar f64 benchmark must succeed");
+
+    assert_eq!(report.operation, BenchmarkOperation::AddScalarF64);
+    assert_eq!(report.precision, BenchmarkPrecision::F64);
+    assert_eq!(report.input_length, 1);
+    assert!(!report.results.is_empty());
+
+    for result in report.results {
+        match result.status {
+            BackendRunStatus::Completed { timing, comparison } => {
+                assert!(comparison.matches_reference);
+
+                let TimingMeasurement::Measured(timing) = timing else {
+                    panic!(
+                        "{} scalar benchmark was too fast to measure",
+                        result.backend.display_name()
+                    );
+                };
+
+                assert!(timing.iterations > 0);
+                assert!(timing.mean_nanoseconds > 0.0);
+            }
+
+            BackendRunStatus::Unavailable => {}
+
+            BackendRunStatus::Failed { error } => {
+                panic!("{} failed: {error}", result.backend.display_name());
+            }
+        }
+    }
 }
