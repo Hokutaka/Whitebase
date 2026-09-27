@@ -14,7 +14,7 @@ use whitebase_backend_bridge::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use whitebase_backend_bridge::CeruneCBackend;
+use whitebase_backend_bridge::{CeruneCBackend, CeruneLlvmBackend};
 
 pub use whitebase_backend_contract::{
     BackendCapabilities, BackendKind, ComputeBackend, ComputeError, OperationKind,
@@ -174,6 +174,7 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
         Box::new(RustSimdBackend),
         Box::new(CeruneVmBackend::new()),
         Box::new(CeruneCBackend::new()),
+        Box::new(CeruneLlvmBackend::new()),
         Box::new(CppScalarBackend),
         Box::new(CppAvxBackend),
         Box::new(AssemblyScalarBackend),
@@ -195,6 +196,9 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
 
     #[cfg(not(target_arch = "wasm32"))]
     backends.push(Box::new(CeruneCBackend::new()));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    backends.push(Box::new(CeruneLlvmBackend::new()));
 
     backends.push(Box::new(CppScalarBackend));
     backends.push(Box::new(CppAvxBackend));
