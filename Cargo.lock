@@ -6271,6 +6271,8 @@ name = "whitebase-cerune-c-adapter"
 version = "0.1.0"
 dependencies = [
  "cerune-lang",
+ "libloading 0.8.9",
+ "tempfile",
 ]
 
 [[package]]
