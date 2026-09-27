@@ -1011,4 +1011,35 @@ mod tests {
             }
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_native_scalar_f64_backend() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneNative)
+            .expect("Cerune Native backend should be observed");
+
+        match &observation.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            ScalarF64BackendStatus::Unavailable => {
+                // Cerune Native Object execution requires a supported native host
+                // and the required native object adaptation/linking toolchain.
+            }
+            ScalarF64BackendStatus::Failed { error } => {
+                panic!("Cerune Native backend failed: {error}");
+            }
+        }
+    }
 }
