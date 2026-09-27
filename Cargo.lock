@@ -6287,6 +6287,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "whitebase-cerune-qbe-adapter"
+version = "0.1.0"
+dependencies = [
+ "cerune-lang",
+ "libloading 0.8.9",
+ "tempfile",
+]
+
+[[package]]
 name = "whitebase-cerune-vm-adapter"
 version = "0.1.0"
 dependencies = [
