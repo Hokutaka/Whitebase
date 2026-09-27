@@ -11,6 +11,14 @@ whitebase-rust-backend = {
 }
 whitebase-cerune-vm-adapter = { path = "../whitebase-cerune-vm-adapter" }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+whitebase-cerune-c-adapter = { path = "../whitebase-cerune-c-adapter" }
+whitebase-cerune-llvm-adapter = { path = "../whitebase-cerune-llvm-adapter" }
+whitebase-cerune-qbe-adapter = { path = "../whitebase-cerune-qbe-adapter" }
+whitebase-cerune-wat-adapter = { path = "../whitebase-cerune-wat-adapter" }
+whitebase-cerune-asm-adapter = { path = "../whitebase-cerune-asm-adapter" }
+whitebase-cerune-native-adapter = { path = "../whitebase-cerune-native-adapter" }
+
 [target.x86_64-pc-windows-msvc.dependencies]
 whitebase-cpp-adapter = { path = "../whitebase-cpp-adapter" }
 whitebase-asm-adapter = { path = "../whitebase-asm-adapter" }

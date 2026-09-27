@@ -35,6 +35,25 @@ use whitebase_backend_contract::{BackendKind, ComputeError};
 pub use assembly::{AssemblyAvxBackend, AssemblyScalarBackend};
 
 pub use cerune::CeruneVmBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneCBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneLlvmBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneQbeBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneWatBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneAsmBackend;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use cerune::CeruneNativeBackend;
+
 #[cfg(any(
     all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"),
     all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")

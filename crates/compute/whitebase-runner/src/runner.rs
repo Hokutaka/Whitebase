@@ -736,6 +736,17 @@ mod tests {
         assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_c_scalar_f64_result() {
+        let report = Runner::new()
+            .run_add_scalar_f64(BackendKind::CeruneC, 0.1, 0.2)
+            .unwrap();
+
+        assert_eq!(report.backend, BackendKind::CeruneC);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+
     #[test]
     fn scalar_f64_observation_includes_cerune_vm() {
         let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
@@ -855,5 +866,180 @@ mod tests {
                 maximum: MAX_ITERATIONS,
             })
         );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn scalar_f64_observation_includes_cerune_c() {
+        let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let cerune_c = report
+            .results
+            .iter()
+            .find(|result| result.backend == BackendKind::CeruneC)
+            .expect("Cerune C backend should be included");
+
+        match &cerune_c.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            status => panic!("unexpected Cerune C status: {status:?}"),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_llvm_scalar_f64_result() {
+        let report = Runner::new()
+            .run_add_scalar_f64(BackendKind::CeruneLlvm, 0.1, 0.2)
+            .unwrap();
+
+        assert_eq!(report.backend, BackendKind::CeruneLlvm);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn scalar_f64_observation_includes_cerune_llvm() {
+        let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let cerune = report
+            .results
+            .iter()
+            .find(|result| result.backend == BackendKind::CeruneLlvm)
+            .expect("Cerune LLVM should be included in scalar f64 observation");
+
+        let ScalarF64BackendStatus::Completed {
+            result,
+            matches_reference_bits,
+        } = &cerune.status
+        else {
+            panic!("Cerune LLVM should complete scalar f64 observation");
+        };
+
+        assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+        assert!(!matches_reference_bits);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_qbe_scalar_f64_backend() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneQbe)
+            .expect("Cerune QBE backend should be observed");
+
+        match &observation.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            ScalarF64BackendStatus::Unavailable => {
+                // Cerune QBE currently targets Linux x86-64 and also requires
+                // the external QBE toolchain, so unavailable is valid here.
+            }
+            ScalarF64BackendStatus::Failed { error } => {
+                panic!("Cerune QBE observation failed: {error}");
+            }
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_wat_scalar_f64_result() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneWat)
+            .expect("Cerune WAT backend should be observed");
+
+        let ScalarF64BackendStatus::Completed {
+            result,
+            matches_reference_bits,
+        } = &observation.status
+        else {
+            panic!("Cerune WAT backend should complete");
+        };
+
+        assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+        assert!(!matches_reference_bits);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_asm_scalar_f64_backend() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneAsm)
+            .expect("Cerune ASM backend should be observed");
+
+        match &observation.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            ScalarF64BackendStatus::Unavailable => {
+                // Cerune ASM execution requires a supported native host
+                // and an external compiler/linker.
+            }
+            ScalarF64BackendStatus::Failed { error } => {
+                panic!("Cerune ASM backend failed: {error}");
+            }
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_native_scalar_f64_backend() {
+        let runner = Runner::new();
+
+        let report = runner.observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let observation = report
+            .results
+            .iter()
+            .find(|observation| observation.backend == BackendKind::CeruneNative)
+            .expect("Cerune Native backend should be observed");
+
+        match &observation.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            ScalarF64BackendStatus::Unavailable => {
+                // Cerune Native Object execution requires a supported native host
+                // and the required native object adaptation/linking toolchain.
+            }
+            ScalarF64BackendStatus::Failed { error } => {
+                panic!("Cerune Native backend failed: {error}");
+            }
+        }
     }
 }
