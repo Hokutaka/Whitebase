@@ -13,7 +13,7 @@ use crate::{
     TimingMeasurement, TimingSummary, decimal::ExactDecimal,
 };
 
-const SCALAR_F64_BATCH_SIZE: usize = 10_000;
+pub(crate) const SCALAR_F64_BATCH_SIZE: usize = 10_000;
 
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
 pub struct Runner {

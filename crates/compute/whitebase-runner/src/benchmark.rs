@@ -1,3 +1,4 @@
+use crate::runner::SCALAR_F64_BATCH_SIZE;
 use whitebase_core::BackendKind;
 
 use crate::{
@@ -109,19 +110,16 @@ pub fn run_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReport, Runne
 }
 
 fn validate_request(request: BenchmarkRequest) -> Result<(), RunnerError> {
-    let input_length = match request.operation {
-        BenchmarkOperation::AddScalarF64 => 1,
-        BenchmarkOperation::AddArray | BenchmarkOperation::SumF64 => request.input_length,
-    };
+    if request.operation != BenchmarkOperation::AddScalarF64 {
+        if request.input_length == 0 {
+            return Err(RunnerError::ZeroInputLength);
+        }
 
-    if input_length == 0 {
-        return Err(RunnerError::ZeroInputLength);
-    }
-
-    if input_length > MAX_INPUT_LENGTH {
-        return Err(RunnerError::InputLengthTooLarge {
-            maximum: MAX_INPUT_LENGTH,
-        });
+        if request.input_length > MAX_INPUT_LENGTH {
+            return Err(RunnerError::InputLengthTooLarge {
+                maximum: MAX_INPUT_LENGTH,
+            });
+        }
     }
 
     if request.warmup_iterations > MAX_ITERATIONS {
@@ -147,11 +145,16 @@ fn validate_request(request: BenchmarkRequest) -> Result<(), RunnerError> {
             maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
         })?;
 
-    let total_element_iterations = input_length.checked_mul(total_iterations).ok_or(
-        RunnerError::BenchmarkWorkloadTooLarge {
+    let work_units_per_iteration = match request.operation {
+        BenchmarkOperation::AddScalarF64 => SCALAR_F64_BATCH_SIZE,
+        BenchmarkOperation::AddArray | BenchmarkOperation::SumF64 => request.input_length,
+    };
+
+    let total_element_iterations = work_units_per_iteration
+        .checked_mul(total_iterations)
+        .ok_or(RunnerError::BenchmarkWorkloadTooLarge {
             maximum: MAX_TOTAL_ELEMENT_ITERATIONS,
-        },
-    )?;
+        })?;
 
     if total_element_iterations > MAX_TOTAL_ELEMENT_ITERATIONS {
         return Err(RunnerError::BenchmarkWorkloadTooLarge {
