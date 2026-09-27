@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-
 import {
   getApiBaseUrl,
   initializeComputeClient,
@@ -43,7 +42,8 @@ interface ScalarF64Observation {
   allBackendsMatch: boolean;
 }
 
-type BenchmarkOperation = "add-array" | "sum-f64";
+type BenchmarkOperation = "add-array" | "add-scalar-f64" | "sum-f64";
+
 type BenchmarkPrecision = "f32" | "f64";
 
 interface BenchmarkRequest {
@@ -68,19 +68,15 @@ interface BenchmarkReport {
 interface BackendResult {
   backend: string;
   status: "completed" | "unavailable" | "failed";
-
   timingStatus: "measured" | "too-fast-to-measure" | null | undefined;
-
   iterations: number | null | undefined;
   totalNanoseconds: number | null | undefined;
   minimumNanoseconds: number | null | undefined;
   maximumNanoseconds: number | null | undefined;
   meanNanoseconds: number | null | undefined;
-
   matchesReference: boolean | null | undefined;
   mismatchCount: number | null | undefined;
   maximumAbsoluteError: number | null | undefined;
-
   error: string | null | undefined;
 }
 
@@ -91,18 +87,14 @@ interface ApiError {
 
 function requireElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
-
   if (!element) {
     throw new Error(`required element was not found: ${selector}`);
   }
-
   return element;
 }
 
 const API_BASE_URL = getApiBaseUrl();
-
 const executionRoute = initializeComputeClient();
-
 const app = requireElement<HTMLDivElement>("#app");
 app.innerHTML = `
   <main class="shell">
@@ -115,7 +107,6 @@ app.innerHTML = `
           計算結果・IEEE 754ビット表現・実行状態まで横断して観測します。
         </p>
       </div>
-
       <div class="runtime-status">
       <div class="route-panel">
         <span class="route-label" id="execution-route-label">ROUTE</span>
@@ -125,55 +116,45 @@ app.innerHTML = `
           aria-labelledby="execution-route-label"
         >Detecting...</strong>
       </div>
-
       <div class="status-panel">
         <span class="status-dot"></span>
         <span id="application-status">Ready</span>
       </div>
     </div>
     </header>
-
     <section class="observation-panel">
       <div class="section-heading">
         <div>
           <p class="eyebrow">F64 SCALAR</p>
           <h2>Addition observation</h2>
         </div>
-
         <p id="observation-error" class="error-message"></p>
       </div>
-
       <form id="scalar-f64-form" class="observation-form">
         <label>
           <span>Left-hand side</span>
           <input id="scalar-lhs" type="text" inputmode="decimal" value="0.1" required />
         </label>
-
         <label>
           <span>Right-hand side</span>
           <input id="scalar-rhs" type="text" inputmode="decimal" value="0.2" required />
         </label>
-
         <button id="observe-button" type="submit">OBSERVE</button>
       </form>
-
       <div id="observation-summary" class="observation-summary" hidden>
         <div>
           <span>Expression</span>
           <strong id="observation-expression" class="monospace">-</strong>
         </div>
-
         <div>
           <span>Exact decimal reference</span>
           <strong id="observation-decimal-reference" class="monospace">-</strong>
         </div>
-
         <div>
           <span>Backend agreement</span>
           <strong id="observation-agreement">-</strong>
         </div>
       </div>
-
       <div class="table-wrapper observation-table-wrapper">
         <table>
           <thead>
@@ -185,7 +166,6 @@ app.innerHTML = `
               <th>vs decimal reference</th>
             </tr>
           </thead>
-
           <tbody id="observation-results-body">
             <tr class="empty-row">
               <td colspan="5">Enter two decimal values to observe backend results.</td>
@@ -194,25 +174,29 @@ app.innerHTML = `
         </table>
       </div>
     </section>
-
     <section class="control-panel">
       <div class="section-heading compact-heading">
         <div>
           <p id="benchmark-eyebrow" class="eyebrow">F32 / F64 ARRAY</p>
           <h2>Backend benchmark</h2>
         </div>
-
         <p id="error-message" class="error-message"></p>
       </div>
-
       <form id="benchmark-form">
         <fieldset class="operation-control">
           <legend>Operation</legend>
-
           <div class="operation-options">
             <label class="operation-option">
               <input type="radio" name="benchmark-operation" value="add-array" checked />
-              <span>Add</span>
+              <span>Array add</span>
+            </label>
+            <label class="operation-option">
+              <input
+                type="radio"
+                name="benchmark-operation"
+                value="add-scalar-f64"
+              />
+              <span>Scalar add</span>
             </label>
             <label class="operation-option">
               <input type="radio" name="benchmark-operation" value="sum-f64" />
@@ -220,23 +204,19 @@ app.innerHTML = `
             </label>
           </div>
         </fieldset>
-
         <fieldset class="precision-control">
           <legend>Precision</legend>
-
           <div class="precision-options">
             <label class="precision-option">
               <input type="radio" name="benchmark-precision" value="f32" checked />
               <span>f32</span>
             </label>
-
             <label class="precision-option">
               <input type="radio" name="benchmark-precision" value="f64" />
               <span>f64</span>
             </label>
           </div>
         </fieldset>
-
         <label>
           <span>Input length</span>
           <input
@@ -248,7 +228,6 @@ app.innerHTML = `
             required
           />
         </label>
-
         <label>
           <span>Warmup</span>
           <input
@@ -260,7 +239,6 @@ app.innerHTML = `
             required
           />
         </label>
-
         <label>
           <span>Iterations</span>
           <input
@@ -272,43 +250,35 @@ app.innerHTML = `
             required
           />
         </label>
-
         <button id="run-button" type="submit">RUN BENCHMARK</button>
       </form>
     </section>
-
     <section class="summary" id="summary" hidden>
       <div class="metric">
         <span>Operation</span>
         <strong id="summary-operation">-</strong>
       </div>
-
       <div class="metric">
         <span>Precision</span>
         <strong id="summary-precision">-</strong>
       </div>
-
       <div class="metric">
         <span>Elements</span>
         <strong id="summary-elements">-</strong>
       </div>
-
       <div class="metric">
         <span>Reference</span>
         <strong id="summary-reference">-</strong>
       </div>
-
       <div class="metric">
         <span>Iterations</span>
         <strong id="summary-iterations">-</strong>
       </div>
-
       <div class="metric">
         <span>Fastest</span>
         <strong id="summary-fastest">-</strong>
       </div>
     </section>
-
     <section class="results-panel">
       <div class="section-heading">
         <div>
@@ -316,7 +286,6 @@ app.innerHTML = `
           <h2>Backend comparison</h2>
         </div>
       </div>
-
       <div class="table-wrapper">
         <table>
           <thead>
@@ -330,7 +299,6 @@ app.innerHTML = `
               <th>Result</th>
             </tr>
           </thead>
-
           <tbody id="results-body">
             <tr class="empty-row">
               <td colspan="7">Run the benchmark to display results.</td>
@@ -360,9 +328,13 @@ const summary = requireElement<HTMLElement>("#summary");
 const f32PrecisionInput = requireElement<HTMLInputElement>(
   'input[name="benchmark-precision"][value="f32"]',
 );
+
 const f64PrecisionInput = requireElement<HTMLInputElement>(
   'input[name="benchmark-precision"][value="f64"]',
 );
+
+const inputLengthInput = requireElement<HTMLInputElement>("#input-length");
+let lastNonScalarInputLength = inputLengthInput.value;
 
 document
   .querySelectorAll<HTMLInputElement>('input[name="benchmark-operation"]')
@@ -375,7 +347,6 @@ void executionRoute.then(
   },
   (error: unknown) => {
     executionRouteElement.textContent = "Unavailable";
-
     console.error(
       `[Whitebase] Execution route initialization failed: ${errorMessage(error)}`,
     );
@@ -386,18 +357,14 @@ syncBenchmarkControls();
 
 observationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-
   const request: ScalarF64Request = {
     lhs: readDecimalText("scalar-lhs"),
     rhs: readDecimalText("scalar-rhs"),
   };
-
   setBusy(true, "observation");
   observationError.textContent = "";
-
   try {
     const report = await executeScalarF64Observation(request);
-
     renderScalarF64Observation(report);
     statusElement.textContent = "Completed";
   } catch (error) {
@@ -410,7 +377,6 @@ observationForm.addEventListener("submit", async (event) => {
 
 benchmarkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-
   const request: BenchmarkRequest = {
     operation: readBenchmarkOperation(),
     precision: readBenchmarkPrecision(),
@@ -418,13 +384,10 @@ benchmarkForm.addEventListener("submit", async (event) => {
     warmupIterations: readNumber("warmup-iterations"),
     measuredIterations: readNumber("measured-iterations"),
   };
-
   setBusy(true, "benchmark");
   errorElement.textContent = "";
-
   try {
     const report = await executeBenchmark(request);
-
     renderBenchmarkReport(report);
     statusElement.textContent = "Completed";
   } catch (error) {
@@ -439,15 +402,12 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
   const completedCount = report.results.filter(
     (result) => result.status === "completed",
   ).length;
-
   const failedCount = report.results.filter(
     (result) => result.status === "failed",
   ).length;
-
   const unavailableCount = report.results.filter(
     (result) => result.status === "unavailable",
   ).length;
-
   const resultRows = report.results
     .map((backendResult) => {
       if (backendResult.status === "unavailable") {
@@ -461,7 +421,6 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
           </tr>
         `;
       }
-
       if (backendResult.status === "failed") {
         return `
           <tr>
@@ -475,7 +434,6 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
           </tr>
         `;
       }
-
       if (!backendResult.result || backendResult.matchesReferenceBits === null) {
         return `
           <tr>
@@ -489,9 +447,7 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
           </tr>
         `;
       }
-
       const matchesReference = backendResult.matchesReferenceBits;
-
       return `
         <tr>
           <td class="backend-name">${escapeHtml(backendResult.backend)}</td>
@@ -509,7 +465,6 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
       `;
     })
     .join("");
-
   observationResultsBody.innerHTML = `
     ${resultRows}
     <tr class="expected-row">
@@ -522,19 +477,16 @@ function renderScalarF64Observation(report: ScalarF64Observation): void {
       <td>—</td>
     </tr>
   `;
-
   setText(
     "observation-expression",
     `${report.lhsInput} + ${report.rhsInput}`,
   );
-
   const agreement =
     completedCount === 0
       ? `No completed backends / ${failedCount} failed / ${unavailableCount} unavailable`
       : report.allBackendsMatch
         ? `${completedCount} completed / ${failedCount} failed / bits agree`
         : `${completedCount} completed / ${failedCount} failed / bit mismatch`;
-
   setText("observation-decimal-reference", report.decimalReference);
   setText("observation-agreement", agreement);
   observationSummary.hidden = false;
@@ -551,23 +503,19 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
       result.timingStatus === "measured" &&
       typeof result.meanNanoseconds === "number",
   );
-
   const baseline =
     completed.find((result) => result.backend === "Rust Scalar")
       ?.meanNanoseconds ??
     completed[0]?.meanNanoseconds ??
     null;
-
   const fastest = completed.reduce<
     (BackendResult & { meanNanoseconds: number }) | null
   >((current, result) => {
     if (!current) {
       return result;
     }
-
     return result.meanNanoseconds < current.meanNanoseconds ? result : current;
   }, null);
-
   resultsBody.innerHTML = report.results
     .map((result) => {
       if (result.status === "unavailable") {
@@ -579,7 +527,6 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
           </tr>
         `;
       }
-
       if (result.status === "failed") {
         return `
           <tr>
@@ -591,10 +538,8 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
           </tr>
         `;
       }
-
       if (result.timingStatus === "too-fast-to-measure") {
         const matches = result.matchesReference === true;
-
         return `
           <tr>
             <td class="backend-name">${escapeHtml(result.backend)}</td>
@@ -611,14 +556,11 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
           </tr>
         `;
       }
-
       const speedup =
         baseline !== null && typeof result.meanNanoseconds === "number"
           ? baseline / result.meanNanoseconds
           : null;
-
       const matches = result.matchesReference === true;
-
       return `
         <tr>
           <td class="backend-name">${escapeHtml(result.backend)}</td>
@@ -638,10 +580,13 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
       `;
     })
     .join("");
-
   setText(
     "summary-operation",
-    report.operation === "sum-f64" ? "Sum f64" : "Add array",
+    report.operation === "sum-f64"
+      ? "Sum f64"
+      : report.operation === "add-scalar-f64"
+        ? "Add scalar f64"
+        : "Add array",
   );
   setText("summary-precision", report.precision.toUpperCase());
   setText("summary-elements", report.inputLength.toLocaleString());
@@ -653,7 +598,6 @@ function renderBenchmarkReport(report: BenchmarkReport): void {
       ? `${fastest.backend} / ${formatDuration(fastest.meanNanoseconds)}`
       : "—",
   );
-
   summary.hidden = false;
 }
 
@@ -663,13 +607,10 @@ function setBusy(
 ): void {
   observeButton.disabled = running;
   runButton.disabled = running;
-
   observeButton.textContent =
     running && activeTask === "observation" ? "OBSERVING..." : "OBSERVE";
-
   runButton.textContent =
     running && activeTask === "benchmark" ? "RUNNING..." : "RUN BENCHMARK";
-
   if (running) {
     statusElement.textContent = "Running";
   }
@@ -677,16 +618,32 @@ function setBusy(
 
 function syncBenchmarkControls(): void {
   const operation = readBenchmarkOperation();
+  const scalarSelected = operation === "add-scalar-f64";
   const sumSelected = operation === "sum-f64";
-
-  f32PrecisionInput.disabled = sumSelected;
-  if (sumSelected) {
+  const f64Only = scalarSelected || sumSelected;
+  f32PrecisionInput.disabled = f64Only;
+  if (f64Only) {
     f64PrecisionInput.checked = true;
   }
-
+  if (scalarSelected) {
+    if (!inputLengthInput.disabled) {
+      lastNonScalarInputLength = inputLengthInput.value;
+    }
+    inputLengthInput.value = "1";
+    inputLengthInput.disabled = true;
+  } else {
+    if (inputLengthInput.disabled) {
+      inputLengthInput.value = lastNonScalarInputLength;
+    }
+    inputLengthInput.disabled = false;
+  }
   setText(
     "benchmark-eyebrow",
-    sumSelected ? "F64 REDUCTION" : "F32 / F64 ARRAY",
+    scalarSelected
+      ? "F64 SCALAR"
+      : sumSelected
+        ? "F64 REDUCTION"
+        : "F32 / F64 ARRAY",
   );
 }
 
@@ -694,11 +651,13 @@ function readBenchmarkOperation(): BenchmarkOperation {
   const input = requireElement<HTMLInputElement>(
     'input[name="benchmark-operation"]:checked',
   );
-
-  if (input.value !== "add-array" && input.value !== "sum-f64") {
+  if (
+    input.value !== "add-array" &&
+    input.value !== "add-scalar-f64" &&
+    input.value !== "sum-f64"
+  ) {
     throw new Error(`unsupported benchmark operation: ${input.value}`);
   }
-
   return input.value;
 }
 
@@ -706,11 +665,9 @@ function readBenchmarkPrecision(): BenchmarkPrecision {
   const input = requireElement<HTMLInputElement>(
     'input[name="benchmark-precision"]:checked',
   );
-
   if (input.value !== "f32" && input.value !== "f64") {
     throw new Error(`unsupported benchmark precision: ${input.value}`);
   }
-
   return input.value;
 }
 
@@ -722,21 +679,17 @@ function readNumber(id: string): number {
 function readDecimalText(id: string): string {
   const input = requireElement<HTMLInputElement>(`#${id}`);
   const value = input.value.trim();
-
   if (value.length === 0) {
     throw new Error(`${id} must not be empty`);
   }
-
   return value;
 }
 
 function setText(id: string, value: string): void {
   const element = document.getElementById(id);
-
   if (!element) {
     throw new Error(`element was not found: ${id}`);
   }
-
   element.textContent = value;
 }
 
@@ -746,15 +699,12 @@ function formatDuration(
   if (nanoseconds == null) {
     return "—";
   }
-
   if (nanoseconds >= 1_000_000) {
     return `${(nanoseconds / 1_000_000).toFixed(3)} ms`;
   }
-
   if (nanoseconds >= 1_000) {
     return `${(nanoseconds / 1_000).toFixed(3)} μs`;
   }
-
   return `${nanoseconds.toFixed(1)} ns`;
 }
 
@@ -790,11 +740,9 @@ function errorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-
   if (isApiError(error)) {
     return error.message;
   }
-
   return String(error);
 }
 
@@ -802,20 +750,16 @@ async function executeScalarF64Observation(
   request: ScalarF64Request,
 ): Promise<ScalarF64Observation> {
   const route = await executionRoute;
-
   if (route === "tauri") {
     return invoke<ScalarF64Observation>("observe_add_scalar_f64", { request });
   }
-
   if (route === "wasm") {
     return observeAddScalarF64Wasm(
       request.lhs,
       request.rhs,
     ) as ScalarF64Observation;
   }
-
   let response: Response;
-
   try {
     response = await fetch(`${API_BASE_URL}/api/observations/add-scalar-f64`, {
       method: "POST",
@@ -827,16 +771,13 @@ async function executeScalarF64Observation(
   } catch {
     throw new Error("Whitebase Serverとの接続が失われました。");
   }
-
   if (!response.ok) {
     const error = await readApiError(response);
-
     throw new Error(
       error?.message ??
         `scalar f64 observation server returned HTTP ${response.status}`,
     );
   }
-
   return (await response.json()) as ScalarF64Observation;
 }
 
@@ -844,11 +785,9 @@ async function executeBenchmark(
   request: BenchmarkRequest,
 ): Promise<BenchmarkReport> {
   const route = await executionRoute;
-
   if (route === "tauri") {
     return invoke<BenchmarkReport>("run_benchmark", { request });
   }
-
   if (route === "wasm") {
     return runBenchmarkWasm(
       request.operation,
@@ -858,9 +797,7 @@ async function executeBenchmark(
       request.measuredIterations,
     ) as BenchmarkReport;
   }
-
   let response: Response;
-
   try {
     response = await fetch(`${API_BASE_URL}/api/benchmarks/run`, {
       method: "POST",
@@ -872,15 +809,12 @@ async function executeBenchmark(
   } catch {
     throw new Error("Whitebase Serverとの接続が失われました。");
   }
-
   if (!response.ok) {
     const error = await readApiError(response);
-
     throw new Error(
       error?.message ?? `benchmark server returned HTTP ${response.status}`,
     );
   }
-
   return (await response.json()) as BenchmarkReport;
 }
 

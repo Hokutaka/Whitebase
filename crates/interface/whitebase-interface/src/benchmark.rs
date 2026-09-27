@@ -12,6 +12,7 @@ use whitebase_runner::{
 pub enum BenchmarkOperation {
     #[default]
     AddArray,
+    AddScalarF64,
     SumF64,
 }
 
@@ -102,6 +103,7 @@ pub fn execute_benchmark(request: BenchmarkRequest) -> Result<BenchmarkReportDto
     run_runner_benchmark(RunnerBenchmarkRequest {
         operation: match request.operation {
             BenchmarkOperation::AddArray => RunnerBenchmarkOperation::AddArray,
+            BenchmarkOperation::AddScalarF64 => RunnerBenchmarkOperation::AddScalarF64,
             BenchmarkOperation::SumF64 => RunnerBenchmarkOperation::SumF64,
         },
         precision: match request.precision {
@@ -121,6 +123,7 @@ impl From<RunnerBenchmarkReport> for BenchmarkReportDto {
         Self {
             operation: match report.operation {
                 RunnerBenchmarkOperation::AddArray => BenchmarkOperation::AddArray,
+                RunnerBenchmarkOperation::AddScalarF64 => BenchmarkOperation::AddScalarF64,
                 RunnerBenchmarkOperation::SumF64 => BenchmarkOperation::SumF64,
             },
             precision: match report.precision {
@@ -226,5 +229,18 @@ impl From<BackendRunResult> for BackendResultDto {
                 error: Some(error.to_string()),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_scalar_f64_benchmark_operation() {
+        assert_eq!(
+            BenchmarkOperation::parse_wire("add-scalar-f64"),
+            Ok(BenchmarkOperation::AddScalarF64)
+        );
     }
 }

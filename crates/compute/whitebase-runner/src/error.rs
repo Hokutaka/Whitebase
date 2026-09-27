@@ -48,6 +48,9 @@ pub enum RunnerError {
 
     /// ベンチマークの総処理量が上限を超えています。
     BenchmarkWorkloadTooLarge { maximum: usize },
+
+    /// `AddScalarF64`ベンチマークに`F32`精度が指定されています。
+    ScalarF64RequiresF64,
 }
 
 impl fmt::Display for RunnerError {
@@ -121,6 +124,10 @@ impl fmt::Display for RunnerError {
                     formatter,
                     "benchmark workload must not exceed {maximum} element-iterations"
                 )
+            }
+
+            Self::ScalarF64RequiresF64 => {
+                write!(formatter, "add-scalar-f64 benchmark requires f64 precision")
             }
         }
     }
