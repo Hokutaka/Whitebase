@@ -13,6 +13,8 @@ use crate::{
     TimingMeasurement, TimingSummary, decimal::ExactDecimal,
 };
 
+pub(crate) const SCALAR_F64_BATCH_SIZE: usize = 10_000;
+
 /// Whitebase Coreを利用して演算の反復実行、計測、比較を行います。
 pub struct Runner {
     whitebase: Whitebase,
@@ -43,6 +45,46 @@ impl Runner {
             rhs: F64Value::new(rhs),
             result: F64Value::new(result),
         })
+    }
+
+    /// `AddScalarF64`に対応する全バックエンドで`f64`スカラー加算を反復実行し、
+    /// 1呼び出しあたりの実行時間と参照結果との比較結果を返します。
+    ///
+    /// 単発のスカラー加算はタイマー分解能より短い可能性があるため、
+    /// 各計測iterationでは複数回をまとめて実行して計測します。
+    pub fn run_add_scalar_f64_benchmark(
+        &self,
+        lhs: f64,
+        rhs: f64,
+        config: &RunnerConfig,
+    ) -> Result<Vec<BackendRunResult>, RunnerError> {
+        validate_iteration_config(config)?;
+        validate_absolute_tolerance(config.absolute_tolerance_f64)?;
+        self.validate_reference_backend(config.reference_backend)?;
+
+        let reference_result = self
+            .whitebase
+            .add_scalar_f64(config.reference_backend, lhs, rhs)?;
+
+        let backends = self
+            .whitebase
+            .backends()
+            .into_iter()
+            .filter(|info| info.capabilities.supports(OperationKind::AddScalarF64))
+            .map(|info| info.kind)
+            .collect::<Vec<_>>();
+
+        if backends.is_empty() {
+            return Err(RunnerError::NoBackends);
+        }
+
+        let mut results = Vec::with_capacity(backends.len());
+
+        for backend in backends {
+            results.push(self.run_backend_scalar_f64(backend, lhs, rhs, reference_result, config));
+        }
+
+        Ok(results)
     }
 
     /// 入力文字列を10進数として正確に加算しつつ、
@@ -115,7 +157,7 @@ impl Runner {
         rhs: &[f32],
         config: &RunnerConfig,
     ) -> Result<AddF32Report, RunnerError> {
-        validate_common_config(config)?;
+        validate_iteration_config(config)?;
         validate_absolute_tolerance(f64::from(config.absolute_tolerance))?;
         ComputeError::validate_lengths(lhs.len(), rhs.len(), lhs.len())?;
         self.validate_reference_backend(config.reference_backend)?;
@@ -150,7 +192,7 @@ impl Runner {
         rhs: &[f64],
         config: &RunnerConfig,
     ) -> Result<AddF64Report, RunnerError> {
-        validate_common_config(config)?;
+        validate_iteration_config(config)?;
         validate_absolute_tolerance(config.absolute_tolerance_f64)?;
         ComputeError::validate_lengths(lhs.len(), rhs.len(), lhs.len())?;
         self.validate_reference_backend(config.reference_backend)?;
@@ -215,6 +257,71 @@ impl Runner {
         }
 
         Ok(())
+    }
+
+    /// 1つのバックエンドで`f64`スカラー加算をバッチ計測し、
+    /// 参照結果との比較結果を生成します。
+    fn run_backend_scalar_f64(
+        &self,
+        backend: BackendKind,
+        lhs: f64,
+        rhs: f64,
+        reference_result: f64,
+        config: &RunnerConfig,
+    ) -> BackendRunResult {
+        let info = match self.whitebase.backend_info(backend) {
+            Ok(info) => info,
+            Err(error) => return failed_backend_result(backend, error),
+        };
+
+        if !info.available {
+            return unavailable_backend_result(backend);
+        }
+
+        for _ in 0..config.warmup_iterations {
+            for _ in 0..SCALAR_F64_BATCH_SIZE {
+                if let Err(error) =
+                    self.whitebase
+                        .add_scalar_f64(backend, black_box(lhs), black_box(rhs))
+                {
+                    return failed_backend_result(backend, error);
+                }
+            }
+        }
+
+        let measured_iterations = config.measured_iterations.min(MAX_ITERATIONS);
+        let mut durations = Vec::with_capacity(MAX_ITERATIONS);
+        let mut output = None;
+
+        for _ in 0..measured_iterations {
+            let started_at = Instant::now();
+
+            for _ in 0..SCALAR_F64_BATCH_SIZE {
+                match self
+                    .whitebase
+                    .add_scalar_f64(backend, black_box(lhs), black_box(rhs))
+                {
+                    Ok(value) => output = Some(black_box(value)),
+                    Err(error) => return failed_backend_result(backend, error),
+                }
+            }
+
+            durations.push(started_at.elapsed());
+        }
+
+        let output = output.expect("measured iterations are validated");
+
+        BackendRunResult {
+            backend,
+            status: BackendRunStatus::Completed {
+                timing: summarize_scalar_batch_timings(&durations, SCALAR_F64_BATCH_SIZE),
+                comparison: compare_outputs_f64(
+                    std::slice::from_ref(&output),
+                    std::slice::from_ref(&reference_result),
+                    config.absolute_tolerance_f64,
+                ),
+            },
+        }
     }
 
     fn run_backend_f32(
@@ -461,6 +568,10 @@ fn validate_common_config(config: &RunnerConfig) -> Result<(), RunnerError> {
         return Err(RunnerError::NoBackends);
     }
 
+    validate_iteration_config(config)
+}
+
+fn validate_iteration_config(config: &RunnerConfig) -> Result<(), RunnerError> {
     if config.warmup_iterations > MAX_ITERATIONS {
         return Err(RunnerError::WarmupIterationsTooLarge {
             maximum: MAX_ITERATIONS,
@@ -522,6 +633,35 @@ fn failed_backend_result(backend: BackendKind, error: ComputeError) -> BackendRu
         backend,
         status: BackendRunStatus::Failed { error },
     }
+}
+
+fn summarize_scalar_batch_timings(durations: &[Duration], batch_size: usize) -> TimingMeasurement {
+    if durations.iter().any(Duration::is_zero) {
+        return TimingMeasurement::TooFastToMeasure;
+    }
+
+    let total = durations.iter().copied().sum::<Duration>();
+    let minimum = durations
+        .iter()
+        .copied()
+        .min()
+        .expect("measured iterations are validated");
+    let maximum = durations
+        .iter()
+        .copied()
+        .max()
+        .expect("measured iterations are validated");
+
+    let total_nanoseconds = total.as_nanos();
+    let total_calls = durations.len() * batch_size;
+
+    TimingMeasurement::Measured(TimingSummary {
+        iterations: total_calls,
+        total_nanoseconds,
+        minimum_nanoseconds: minimum.as_nanos() / batch_size as u128,
+        maximum_nanoseconds: maximum.as_nanos() / batch_size as u128,
+        mean_nanoseconds: total_nanoseconds as f64 / total_calls as f64,
+    })
 }
 
 fn summarize_timings(durations: &[Duration]) -> TimingMeasurement {
