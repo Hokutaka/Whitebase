@@ -407,7 +407,7 @@ impl Task {
                     "web",
                     "--dev",
                     "--out-dir",
-                    "../../apps/whitebase-app/src/wasm",
+                    "../../../apps/whitebase-app/src/wasm",
                 ],
             },
             Self::BuildWasmRelease => CommandSpec {
@@ -418,7 +418,7 @@ impl Task {
                     "web",
                     "--release",
                     "--out-dir",
-                    "../../apps/whitebase-app/src/wasm",
+                    "../../../apps/whitebase-app/src/wasm",
                 ],
             },
             Self::BuildLinuxNative => CommandSpec {
@@ -533,9 +533,10 @@ impl Task {
 
     fn working_directory(self) -> PathBuf {
         match self {
-            Self::BuildWasm | Self::BuildWasmRelease => {
-                repository_root().join("crates").join("whitebase-wasm")
-            }
+            Self::BuildWasm | Self::BuildWasmRelease => repository_root()
+                .join("crates")
+                .join("interface")
+                .join("whitebase-wasm"),
 
             _ => repository_root(),
         }
@@ -1362,7 +1363,7 @@ mod tests {
                 "web",
                 "--dev",
                 "--out-dir",
-                "../../apps/whitebase-app/src/wasm",
+                "../../../apps/whitebase-app/src/wasm",
             ]
         );
     }
@@ -1373,7 +1374,10 @@ mod tests {
 
         assert_eq!(
             working_directory,
-            repository_root().join("crates").join("whitebase-wasm")
+            repository_root()
+                .join("crates")
+                .join("interface")
+                .join("whitebase-wasm")
         );
     }
 
@@ -1562,12 +1566,15 @@ mod tests {
                 "web",
                 "--release",
                 "--out-dir",
-                "../../apps/whitebase-app/src/wasm",
+                "../../../apps/whitebase-app/src/wasm",
             ]
         );
         assert_eq!(
             Task::BuildWasmRelease.working_directory(),
-            repository_root().join("crates").join("whitebase-wasm")
+            repository_root()
+                .join("crates")
+                .join("interface")
+                .join("whitebase-wasm")
         );
     }
 
