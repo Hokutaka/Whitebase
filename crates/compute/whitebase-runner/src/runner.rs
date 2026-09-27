@@ -736,6 +736,17 @@ mod tests {
         assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn observes_cerune_c_scalar_f64_result() {
+        let report = Runner::new()
+            .run_add_scalar_f64(BackendKind::CeruneC, 0.1, 0.2)
+            .unwrap();
+
+        assert_eq!(report.backend, BackendKind::CeruneC);
+        assert_eq!(report.result.bits, 0x3fd3_3333_3333_3334);
+    }
+
     #[test]
     fn scalar_f64_observation_includes_cerune_vm() {
         let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
@@ -855,5 +866,28 @@ mod tests {
                 maximum: MAX_ITERATIONS,
             })
         );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn scalar_f64_observation_includes_cerune_c() {
+        let report = Runner::new().observe_add_scalar_f64("0.1", "0.2").unwrap();
+
+        let cerune_c = report
+            .results
+            .iter()
+            .find(|result| result.backend == BackendKind::CeruneC)
+            .expect("Cerune C backend should be included");
+
+        match &cerune_c.status {
+            ScalarF64BackendStatus::Completed {
+                result,
+                matches_reference_bits,
+            } => {
+                assert_eq!(result.bits, 0x3fd3_3333_3333_3334);
+                assert!(!matches_reference_bits);
+            }
+            status => panic!("unexpected Cerune C status: {status:?}"),
+        }
     }
 }
