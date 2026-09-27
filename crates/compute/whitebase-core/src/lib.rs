@@ -12,6 +12,10 @@ use whitebase_backend_bridge::{
     WindowsGnuAssemblyAvxBackend, WindowsGnuAssemblyScalarBackend, WindowsGnuCppAvxBackend,
     WindowsGnuCppScalarBackend,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use whitebase_backend_bridge::CeruneCBackend;
+
 pub use whitebase_backend_contract::{
     BackendCapabilities, BackendKind, ComputeBackend, ComputeError, OperationKind,
 };
@@ -169,6 +173,7 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
         Box::new(RustScalarBackend),
         Box::new(RustSimdBackend),
         Box::new(CeruneVmBackend::new()),
+        Box::new(CeruneCBackend::new()),
         Box::new(CppScalarBackend),
         Box::new(CppAvxBackend),
         Box::new(AssemblyScalarBackend),
@@ -182,15 +187,21 @@ fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
 
 #[cfg(not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")))]
 fn standard_backends() -> Vec<Box<dyn ComputeBackend>> {
-    vec![
+    let mut backends: Vec<Box<dyn ComputeBackend>> = vec![
         Box::new(RustScalarBackend),
         Box::new(RustSimdBackend),
         Box::new(CeruneVmBackend::new()),
-        Box::new(CppScalarBackend),
-        Box::new(CppAvxBackend),
-        Box::new(AssemblyScalarBackend),
-        Box::new(AssemblyAvxBackend),
-    ]
+    ];
+
+    #[cfg(not(target_arch = "wasm32"))]
+    backends.push(Box::new(CeruneCBackend::new()));
+
+    backends.push(Box::new(CppScalarBackend));
+    backends.push(Box::new(CppAvxBackend));
+    backends.push(Box::new(AssemblyScalarBackend));
+    backends.push(Box::new(AssemblyAvxBackend));
+
+    backends
 }
 
 impl Default for Whitebase {
