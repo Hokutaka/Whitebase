@@ -11,5 +11,5 @@ cerune-lang = {
 }
 
 [target.'cfg(any(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"), all(target_arch = "x86_64", target_os = "linux", target_env = "gnu")))'.dependencies]
-libloading = "0.8"
+libloading = "0.9"
 tempfile = "3"
