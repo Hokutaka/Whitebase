@@ -6,6 +6,6 @@ publish = false
 
 [dependencies]
 cerune-lang = {
-    git = "https://github.com/Hokutaka/Cerune.git",
+    git = "https://github.com/Cerune-Lang/Cerune.git",
     rev = "85be8ab1719cba577acc7c32404bf481ad141769"
 }
