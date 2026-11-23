@@ -15,6 +15,6 @@
     "diagram": "npm run diagram:structure && npm run diagram:layer"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.16.0"
+    "@mermaid-js/mermaid-cli": "^12.2.0"
   }
 }
